@@ -22,6 +22,8 @@ t_config* g_config;
 
 void iniciar_programa(void);
 void terminar_programa(void);
-
+int enviar_mensaje(int socket_cliente);
+int iniciarCliente();
+void gestionarConexion();
 
 #endif /* KERNEL_H_ */

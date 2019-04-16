@@ -9,12 +9,25 @@
  */
 
 #include "LFS.h"
+#include <stdio.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <commons/log.h>
+#include <commons/collections/list.h>
+#include <unistd.h>
+#include <netdb.h>
 
+
+#define BACKLOG 5
+#define PACKAGESIZE 1024
+#define PUERTO_SALIENTE "8081"
 int main(void) {
 	resultado res;
 	char* mensaje;
 	res.resultado= OK;
 	iniciar_programa();
+	gestionarConexion();
+
 	while(res.resultado != SALIR)
 	{
 		mensaje = readline(">");
@@ -159,3 +172,64 @@ void terminar_programa()
 	config_destroy(g_config);
 
 }
+
+void gestionarConexion(){
+	int estado=1;
+	int server_fd = iniciarServidor();
+	int cliente_fd = esperarCliente(server_fd);
+	while(estado != 0){
+		estado=recibir_mensaje(cliente_fd);
+	}
+    close(cliente_fd);
+    close(server_fd);
+}
+
+int iniciarServidor(){
+	int socket_servidor;
+
+    struct addrinfo hints;
+    struct addrinfo *serverInfo;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    getaddrinfo(NULL, PUERTO_SALIENTE, &hints, &serverInfo);
+
+    int listenningSocket;
+    listenningSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+
+    if(bind(listenningSocket, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1)
+		printf("error");
+
+    freeaddrinfo(serverInfo);
+    listen(listenningSocket, BACKLOG);
+
+    return listenningSocket;
+}
+
+int esperarCliente(int listenningSocket){
+	struct sockaddr_in addr;
+	    socklen_t addrlen = sizeof(addr);
+
+	    int socketCliente = accept(listenningSocket, (struct sockaddr *) &addr, &addrlen);
+	    printf("Se conecto un cliente!\n");
+
+	    	return socketCliente;
+}
+
+int recibir_mensaje(int socketCliente)
+{
+
+	char *buffer;
+	buffer = malloc(100);
+	recv(socketCliente, buffer, 100, MSG_WAITALL);
+
+	printf( "Me llego el mensaje: %s\n", buffer);
+	if(strcmp(buffer,"exit")==0){
+		return 0;
+	}
+	return 1;
+}
+

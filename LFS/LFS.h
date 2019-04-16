@@ -44,4 +44,9 @@ resultado journal();
 
 void terminar_programa(void);
 
+void gestionarConexion();
+int iniciarServidor();
+int esperarCliente(int listenningSocket);
+int recibir_mensaje(int socketCliente);
+
 #endif /* LFS_H_ */
