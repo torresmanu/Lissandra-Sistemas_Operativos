@@ -12,10 +12,10 @@
 
 int main(void) {
 
-	pthread_t hiloKernelLFS;
-	pthread_create(&hiloKernelLFS,NULL,(void*) gestionarConexionEntrante(),NULL);
+	//pthread_t hiloKernelLFS;
+	//pthread_create(&hiloKernelLFS,NULL,(void*) gestionarConexionEntrante(),NULL);
 	iniciar_programa();
-	gestionarConexionEntrante();
+	gestionarConexion();
 	terminar_programa();
 
 }
@@ -48,9 +48,11 @@ void gestionarConexion()
 	int estado=1;
 	char buffer[PACKAGESIZE];
 
-	int socketMem_fd = iniciarServidor(PUERTO_ENTRANTE);		//Conecto el socket de las memorias al puerto "6667"
+	PUERTO_M = config_get_string_value(g_config,"PUERTO_FS");
+
+	int socketMem_fd = iniciarServidor("8001");		//Conecto el socket de las memorias al puerto "6667"
 	int clienteKer_fd = esperarCliente(socketMem_fd,"Se conecto el kernelcito!");
-	int clienteMem = conectarseAlServidor(PUERTO_SALIENTE,"Me conecte a lissandra");
+	int clienteMem = conectarseAlServidor(PUERTO_M,"Me conecte a lissandra");
 
 	while(estado){
 

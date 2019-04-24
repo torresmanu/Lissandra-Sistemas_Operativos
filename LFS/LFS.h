@@ -37,11 +37,9 @@ resultado describe(char*);
 resultado drop(char*);
 resultado journal();
 
+void iniciar_programa(void);
 void terminar_programa(void);
+void gestionarConexion(void);
 
-void gestionarConexion();
-int iniciarServidor();
-int esperarCliente(int listenningSocket);
-int recibir_mensaje(int socketCliente);
 
 #endif /* LFS_H_ */
