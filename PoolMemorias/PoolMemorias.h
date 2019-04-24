@@ -9,7 +9,7 @@
 #define POOLMEMORIAS_H_
 
 
-#include "sockets/sockets.h"
+#include "../sockets/sockets.h"
 
 t_log* g_logger;
 t_config* g_config;

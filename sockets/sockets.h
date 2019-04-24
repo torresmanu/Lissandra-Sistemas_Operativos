@@ -16,6 +16,7 @@
 #include <sys/socket.h>
 #include <commons/log.h>
 #include <commons/collections/list.h>
+#include <commons/config.h>
 #include <unistd.h>
 #include <netdb.h>
 #include <string.h>
@@ -23,7 +24,7 @@
 #define BACKLOG 5
 #define PACKAGESIZE 100
 
-#define PUERTO_ENTRANTE "4000"
+#define PUERTO_ENTRANTE "4000"  // SOLO SE USA PARA PRUEBAS. LOS PUERTOS SE SACAN DE LOS .CONFIG
 #define PUERTO_SALIENTE "5003"
 
 void gestionarConexion();

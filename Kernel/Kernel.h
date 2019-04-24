@@ -8,11 +8,13 @@
 #ifndef KERNEL_H_
 #define KERNEL_H_
 
-#include "sockets/sockets.h"
+#include "../sockets/sockets.h"
 
 t_log* g_logger;
 t_config* g_config;
 
+char* IP;
+char* PUERTO;
 
 void iniciar_programa(void);
 void terminar_programa(void);

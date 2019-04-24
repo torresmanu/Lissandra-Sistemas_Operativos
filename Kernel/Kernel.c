@@ -44,11 +44,10 @@ void terminar_programa()
 void gestionarConexion()
 {
 	int i=1;
-
-	int socketCliente = conectarseAlServidor(PUERTO_ENTRANTE,"Me conecte a la memoria");	//Conecto con las memorias
-
+	PUERTO = config_get_string_value(g_config, "PUERTO_MEMORIA");
+	int socketServer = conectarseAlServidor(PUERTO,"Me conecte a la memoria");	//Conecto con las memorias
 	while(i){
-		i=enviar_mensaje(socketCliente);	//Con "exit" i=0 y salgo
+		i=enviar_mensaje(socketServer);	//Con "exit" i=0 y salgo
 	}
 
 }

@@ -30,21 +30,19 @@ int conectarseAlServidor(char* puerto,char* mensaje)
 	return socket_cliente;
 }
 
-int enviar_mensaje(int socket_cliente)
+int enviar_mensaje(int socketServer)
 {
 	char buffer[PACKAGESIZE];
-
-
 	printf("\nEscriba su mensaje (exit para salir) >");
 	fgets(buffer, PACKAGESIZE, stdin);
-	limpiar(buffer);
 
 	printf("Tamaño: %d\n",strlen(buffer));
 
-	send(socket_cliente, buffer, strlen(buffer)+1, 0);
+	send(socketServer, buffer, strlen(buffer)+1, 0);
 	if(strcmp(buffer,"exit")==0){
 		return 0;
 	}
+	limpiar(buffer);
 	return 1;
 }
 

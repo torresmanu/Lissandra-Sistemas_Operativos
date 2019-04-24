@@ -8,7 +8,7 @@
 #ifndef LFS_H_
 #define LFS_H_
 
-#include "sockets/sockets.h"
+#include "../sockets/sockets.h"
 
 typedef enum
 {
