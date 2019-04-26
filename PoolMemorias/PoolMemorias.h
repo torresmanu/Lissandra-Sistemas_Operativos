@@ -22,6 +22,7 @@ void terminar_programa(void);
 void gestionarConexion(void);
 
 char* PUERTO_M;
+char* PUERTO;
 char* IP_M;
 
 /*

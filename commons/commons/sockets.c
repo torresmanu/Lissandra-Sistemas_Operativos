@@ -25,8 +25,9 @@ int conectarseAlServidor(char* puerto,char* mensaje)
 
 	if(connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen) == -1)
 		printf("error");
+	else
+		printf("%s\n",mensaje);
 
-	printf("%s\n",mensaje);
 	freeaddrinfo(server_info);
 
 	return socket_cliente;
@@ -37,13 +38,13 @@ int enviar_mensaje(int socketServer)
 	char buffer[PACKAGESIZE];
 	printf("\nEscriba su mensaje (exit para salir) >");
 	fgets(buffer, PACKAGESIZE, stdin);
-
-	printf("Tamaño: %d\n",strlen(buffer));
-
-	send(socketServer, buffer, strlen(buffer)+1, 0);
 	if(strcmp(buffer,"exit")==0){
-		return 0;
+			return 0;
+		}
+	else{
+		printf("Tamaño: %d\n",strlen(buffer));
 	}
+	send(socketServer, buffer, strlen(buffer)+1, 0);
 	limpiar(buffer);
 	return 1;
 }

@@ -170,13 +170,14 @@ void gestionarConexion()
 	int estado=1;
 	char buffer[PACKAGESIZE];
 
-	int serverLiss_fd = iniciarServidor(PUERTO_SALIENTE);
+	PUERTO_FS = config_get_string_value(g_config,"PUERTO_ESUCHA");
+
+	int serverLiss_fd = iniciarServidor(PUERTO_FS);	// 5003
 	int clienteMem_fd = esperarCliente(serverLiss_fd,"Se conecto la memoria!");
 
 	while(estado){
 
 		recibir_mensaje(clienteMem_fd,buffer,"La memoria me mando el mensaje");
-
 		if(strcmp(buffer,"exit")==0)
 			estado = 0;
 

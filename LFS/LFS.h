@@ -12,6 +12,10 @@
 #include<commons/config.h>
 #include<commons/sockets.h>
 
+
+char* IP_FS;
+char* PUERTO_FS;
+
 typedef enum
 {
 	OK,

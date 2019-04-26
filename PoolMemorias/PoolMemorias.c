@@ -48,11 +48,12 @@ void gestionarConexion()
 	int estado=1;
 	char buffer[PACKAGESIZE];
 
-	PUERTO_M = config_get_string_value(g_config,"PUERTO_FS");
+	PUERTO_M = config_get_string_value(g_config,"PUERTO_FS");  // 8001
+	PUERTO = config_get_string_value(g_config,"PUERTO");	   // 8000
 
-	int socketMem_fd = iniciarServidor("8001");		//Conecto el socket de las memorias al puerto "6667"
-	int clienteKer_fd = esperarCliente(socketMem_fd,"Se conecto el kernelcito!");
-	int clienteMem = conectarseAlServidor(PUERTO_M,"Me conecte a lissandra");
+	int socketMem_fd = iniciarServidor(PUERTO_M);										//Conecto el socket de las memorias al puerto "8001"
+	int clienteKer_fd = esperarCliente(socketMem_fd,"Se conecto el Kernelcito!");
+	int clienteMem = conectarseAlServidor("5003","Me conecte a Lissandra");             // Si harcodeo poniendo 5003 si funciona
 
 	while(estado){
 
