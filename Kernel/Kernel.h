@@ -8,7 +8,9 @@
 #ifndef KERNEL_H_
 #define KERNEL_H_
 
-#include "../sockets/sockets.h"
+#include<commons/log.h>
+#include<commons/config.h>
+#include<commons/sockets.h>
 
 t_log* g_logger;
 t_config* g_config;
