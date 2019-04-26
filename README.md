@@ -5,7 +5,7 @@
 
 ## Pasos para levantar los proyectos en Eclipse:
 1. Clonarse el repo
-2. Hacer `cd commons` y ejecutar `sudo make install`
+2. Hacer `cd commons` (del repo) y ejecutar `sudo make install`
 3. En el Eclipse ir a `New -> Makefile Project with Existing Code -> Importar Kernel y elegir Linux GCC`
 4. En el Eclipse ir a `New -> Makefile Project with Existing Code -> Importar PoolMemorias y elegir Linux GCC`
 5. En el Eclipse ir a `New -> Makefile Project with Existing Code -> Importar LFS y elegir Linux GCC`
