@@ -40,7 +40,7 @@ registro* memtable_select(char* nombreTabla, int key){
 			}
 		}
 	}
-	log_info("Registro no obtenido tabla %s key %d",nombreTabla,key);
+	log_info(g_logger,"Registro no obtenido tabla %s key %d",nombreTabla,key);
 	return NULL;
 }
 
