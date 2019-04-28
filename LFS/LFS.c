@@ -17,7 +17,7 @@ int main(void) {
 	res.resultado= OK;
 	iniciar_programa();
 
-	gestionarConexion();
+	//gestionarConexion();
 
 	while(res.resultado != SALIR)
 	{
@@ -51,12 +51,12 @@ void iniciar_programa(void)
 	g_config = config_create("LFS.config");
 	log_info(g_logger,"Configuraciones inicializadas");
 
+	//Inicio la memtable
+	iniciar_memtable();
 }
 
 resultado parsear_mensaje(char* mensaje)
 {
-	//Logeo el mensaje que llego
-	log_info(g_logger,mensaje);
 	resultado res;
 	char * accion = strsep(&mensaje," ");
 	if(strcmp(accion,"SELECT") == 0){
@@ -110,15 +110,32 @@ resultado parsear_mensaje(char* mensaje)
 resultado select_acc(char* tabla,int key)
 {
 	resultado res;
-	res.mensaje="Mensaje prueba";
+	//Hago un select a la memtable
+	registro* reg = memtable_select(tabla,key);
+	if(reg == NULL){
+		res.mensaje="Registro no obtenido";
+	}else{
+		res.mensaje= string_duplicate(reg->value);
+	}
+
 	res.resultado=OK;
 	return res;
 }
 
 resultado insert(char* tabla,int key,char* value,long timestamp)
 {
+	//Creo un registro que es con el que voy a llamar a los proyectos
+	registro reg;
+	reg.key=key;
+	reg.value = string_duplicate(value);
+	reg.timestamp = timestamp;
+
+	//Llamo al insert
+	memtable_insert(tabla,reg);
+
+	//Devuelvo el resultado
 	resultado res;
-	res.mensaje="Salida prueba";
+	res.mensaje="Registro insertado exitosamente";
 	res.resultado=OK;
 	return res;
 }
@@ -163,6 +180,8 @@ void terminar_programa()
 	//Destruyo las configs
 	config_destroy(g_config);
 
+	//Finalizar programa
+	finalizar_memtable();
 }
 
 void gestionarConexion()
@@ -185,5 +204,3 @@ void gestionarConexion()
     close(clienteMem_fd);
     close(serverLiss_fd);
 }
-
-

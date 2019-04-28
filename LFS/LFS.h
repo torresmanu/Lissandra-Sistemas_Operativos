@@ -11,6 +11,11 @@
 #include<commons/log.h>
 #include<commons/config.h>
 #include<commons/sockets.h>
+#include<commons/string.h>
+#include "memtable.h"
+#include "metadata.h"
+#include "registro.h"
+
 
 
 char* IP_FS;
