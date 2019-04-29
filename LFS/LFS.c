@@ -166,6 +166,10 @@ resultado drop(char* tabla)
 
 resultado journal()
 {
+	if(existeMetadata("colores") == 0){
+		metadataTabla masd = obtenerMetadata("colores");
+		log_info(g_logger,masd.consistency);
+	}
 	resultado res;
 	res.mensaje="Salida prueba";
 	res.resultado=OK;

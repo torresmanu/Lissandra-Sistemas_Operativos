@@ -15,6 +15,7 @@
 #include "memtable.h"
 #include "metadata.h"
 #include "registro.h"
+#include "fileSystem.h"
 
 
 

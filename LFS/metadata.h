@@ -14,7 +14,7 @@ typedef struct
 	char* consistency;
 	int partitions;
 	int compaction_time;
-} tableMetadata;
+} metadataTabla;
 
 
 
