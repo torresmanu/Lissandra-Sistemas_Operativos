@@ -52,17 +52,22 @@ void gestionarConexion()
 	PUERTO = config_get_string_value(g_config,"PUERTO");	   // 8000
 
 	int socketMem_fd = iniciarServidor(PUERTO_M);										//Conecto el socket de las memorias al puerto "8001"
-	int clienteKer_fd = esperarCliente(socketMem_fd,"Se conecto el Kernelcito!");
+	int clienteKer_fd = esperarCliente(socketMem_fd,"Se conecto el Kernel!");
 	int clienteMem = conectarseAlServidor("5003","Me conecte a Lissandra");             // Si harcodeo poniendo 5003 si funciona
 
 	while(estado){
 
-		recibir_mensaje(clienteKer_fd,buffer,"El kernel me mando el mensaje");
+//		recibir_mensaje(clienteKer_fd,buffer,"El kernel me mando el mensaje");
+		recv(clienteKer_fd, (void*) buffer, PACKAGESIZE, 0);	//Recibo mensaje del kernel
 
-		send(clienteMem,buffer,strlen(buffer)+1,0);
+		send(clienteMem,buffer,strlen(buffer)+1,0);				//Mando a la memoria
 
 		if(strcmp(buffer,"exit")==0)
 			estado=0;
+		else{
+			printf( "\n%s: %s\n","El kernel me mando el mensaje", buffer);
+			printf( "Tamaño: %d\n", strlen(buffer));
+		}
 	}
 
     close(clienteKer_fd);

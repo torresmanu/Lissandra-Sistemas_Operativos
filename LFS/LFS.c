@@ -17,25 +17,25 @@ int main(void) {
 	res.resultado= OK;
 	iniciar_programa();
 
-	//gestionarConexion();
+	gestionarConexion();
 
-	while(res.resultado != SALIR)
-	{
-		mensaje = readline(">");
-		res = parsear_mensaje(mensaje);
-		if(res.resultado == OK)
-		{
-			log_info(g_logger,res.mensaje);
-		}
-		else if(res.resultado == ERROR)
-		{
-			log_info(g_logger,"Ocurrio un error al ejecutar la acción");
-		}
-		else if(res.resultado == MENSAJE_MAL_FORMATEADO)
-		{
-			log_info(g_logger,"Mensaje incorrecto");
-		}
-	}
+//	while(res.resultado != SALIR)
+//	{
+//		mensaje = readline(">");
+//		res = parsear_mensaje(mensaje);
+//		if(res.resultado == OK)
+//		{
+//			log_info(g_logger,res.mensaje);
+//		}
+//		else if(res.resultado == ERROR)
+//		{
+//			log_info(g_logger,"Ocurrio un error al ejecutar la acción");
+//		}
+//		else if(res.resultado == MENSAJE_MAL_FORMATEADO)
+//		{
+//			log_info(g_logger,"Mensaje incorrecto");
+//		}
+//	}
 
 	terminar_programa();
 
@@ -200,9 +200,15 @@ void gestionarConexion()
 
 	while(estado){
 
-		recibir_mensaje(clienteMem_fd,buffer,"La memoria me mando el mensaje");
+//		recibir_mensaje(clienteMem_fd,buffer,"La memoria me mando el mensaje");
+		recv(clienteMem_fd, (void*) buffer, PACKAGESIZE, 0);	//Recibo mensaje de la memorias
+
 		if(strcmp(buffer,"exit")==0)
 			estado = 0;
+		else{
+			printf( "\n%s: %s\n","La memoria me mando el mensaje", buffer);
+			printf( "Tamaño: %d\n", strlen(buffer));
+		}
 
 	}
     close(clienteMem_fd);

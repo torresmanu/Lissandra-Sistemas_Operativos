@@ -30,8 +30,6 @@ int iniciarServidor(char* puerto);
 
 int esperarCliente(int listenningSocket,char* mensaje);
 
-void recibir_mensaje(int cliente_fd,char* buffer,char* mensaje);
-
 int conectarseAlServidor(char* puerto,char* mensaje);
 
 int enviar_mensaje(int socket_cliente);
