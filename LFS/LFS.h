@@ -40,7 +40,6 @@ t_log* g_logger;
 t_config* g_config;
 
 
-void iniciar_programa(void);
 resultado parsear_mensaje(char *);
 resultado select_acc(char *,int);
 resultado insert(char*,int,char*,long);
@@ -49,9 +48,10 @@ resultado describe(char*);
 resultado drop(char*);
 resultado journal();
 
-void iniciar_programa(void);
-void terminar_programa(void);
+void iniciar_programa(int *);
+void terminar_programa(int *);
 void gestionarConexion(void);
+int atender_clientes(void);
 
 
 #endif /* LFS_H_ */

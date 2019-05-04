@@ -15,33 +15,35 @@ int main(void) {
 	resultado res;
 	char* mensaje;
 	res.resultado= OK;
-	iniciar_programa();
+	int server_fd;
+	iniciar_programa(&server_fd);
 
 	gestionarConexion();
 
-//	while(res.resultado != SALIR)
-//	{
-//		mensaje = readline(">");
-//		res = parsear_mensaje(mensaje);
-//		if(res.resultado == OK)
-//		{
-//			log_info(g_logger,res.mensaje);
-//		}
-//		else if(res.resultado == ERROR)
-//		{
-//			log_info(g_logger,"Ocurrio un error al ejecutar la acción");
-//		}
-//		else if(res.resultado == MENSAJE_MAL_FORMATEADO)
-//		{
-//			log_info(g_logger,"Mensaje incorrecto");
-//		}
-//	}
+	while(res.resultado != SALIR)
+	{
+		mensaje = readline(">");
+		res = parsear_mensaje(mensaje);
+		if(res.resultado == OK)
+		{
+			log_info(g_logger,res.mensaje);
+		}
+		else if(res.resultado == ERROR)
+		{
+			log_info(g_logger,"Ocurrio un error al ejecutar la acción");
+		}
+		else if(res.resultado == MENSAJE_MAL_FORMATEADO)
+		{
+			log_info(g_logger,"Mensaje incorrecto");
+		}
+		atender_clientes();
+	}
 
-	terminar_programa();
+	terminar_programa(&server_fd);
 
 }
 
-void iniciar_programa(void)
+void iniciar_programa(int *server_fd)
 {
 	//Inicio el logger
 	g_logger = log_create("LFS.log", "LFS", 1, LOG_LEVEL_INFO);
@@ -53,6 +55,9 @@ void iniciar_programa(void)
 
 	//Inicio la memtable
 	iniciar_memtable();
+
+	*server_fd = iniciarServidor(config_get_string_value(g_config,"PUERTO_SERVIDOR"));
+	int clienteMem_fd = esperarCliente(*server_fd,"Se conecto un cliente\n");
 }
 
 resultado parsear_mensaje(char* mensaje)
@@ -176,7 +181,7 @@ resultado journal()
 	return res;
 }
 
-void terminar_programa()
+void terminar_programa(int *server_fd)
 {
 	//Destruyo el logger
 	log_destroy(g_logger);
@@ -186,6 +191,8 @@ void terminar_programa()
 
 	//Finalizar programa
 	finalizar_memtable();
+
+	close(*server_fd);
 }
 
 void gestionarConexion()
@@ -193,10 +200,8 @@ void gestionarConexion()
 	int estado=1;
 	char buffer[PACKAGESIZE];
 
-	PUERTO_FS = config_get_string_value(g_config,"PUERTO_ESUCHA");
-
-	int serverLiss_fd = iniciarServidor(PUERTO_FS);	// 5003
-	int clienteMem_fd = esperarCliente(serverLiss_fd,"Se conecto la memoria!");
+	//int serverLiss_fd = iniciarServidor(config_get_string_value(g_config,"PUERTO_SERVIDOR"));
+	//int clienteMem_fd = esperarCliente(serverLiss_fd,"Se conecto la memoria!");
 
 	while(estado){
 
@@ -211,6 +216,12 @@ void gestionarConexion()
 		}
 
 	}
+	/*
     close(clienteMem_fd);
     close(serverLiss_fd);
+    */
+}
+
+int atender_clientes() {
+	recibir_mensaje(clienteMem_fd,buffer,"La memoria me mando el mensaje");
 }
