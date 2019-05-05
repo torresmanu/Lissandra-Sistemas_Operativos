@@ -36,7 +36,7 @@ int main(void) {
 		{
 			log_info(g_logger,"Mensaje incorrecto");
 		}
-		atender_clientes();
+		//atender_clientes();
 	}
 
 	terminar_programa(&server_fd);
@@ -56,60 +56,77 @@ void iniciar_programa(int *server_fd)
 	//Inicio la memtable
 	iniciar_memtable();
 
-	*server_fd = iniciarServidor(config_get_string_value(g_config,"PUERTO_SERVIDOR"));
-	int clienteMem_fd = esperarCliente(*server_fd,"Se conecto un cliente\n");
+	//*server_fd = iniciarServidor(config_get_string_value(g_config,"PUERTO_SERVIDOR"));
+	//int clienteMem_fd = esperarCliente(*server_fd,"Se conecto un cliente\n");
 }
 
 resultado parsear_mensaje(char* mensaje)
 {
 	resultado res;
-	char * accion = strsep(&mensaje," ");
-	if(strcmp(accion,"SELECT") == 0){
-		char * tabla = strsep(&mensaje," ");
-		char * str_key = strsep(&mensaje," ");
-		res = select_acc(tabla,atoi(str_key));
-	}
-	else if(strcmp(accion,"INSERT") == 0)
-	{
-		char * tabla = strsep(&mensaje," ");
-		char * str_key = strsep(&mensaje," ");
-		char * value = strsep(&mensaje," ");
-		char * timestamp = strsep(&mensaje," ");
-		res = insert(tabla,atoi(str_key),value,atol(timestamp));
-	}
-	else if(strcmp(accion,"CREATE") == 0)
-	{
-		char * tabla = strsep(&mensaje," ");
-		char * consistencia = strsep(&mensaje," ");
-		char * cant_part = strsep(&mensaje," ");
-		char * tiempo_compr = strsep(&mensaje," ");
-		res = create(tabla,consistencia,atoi(cant_part),atoi(tiempo_compr));
-	}
-	else if(strcmp(accion,"DESCRIBE") == 0)
-	{
-		char * tabla = strsep(&mensaje," ");
-		res = describe(tabla);
-	}
-	else if(strcmp(accion,"DROP") == 0)
-	{
-		char * tabla = strsep(&mensaje," ");
-		res = drop(tabla);
-	}
-	else if(strcmp(accion,"JOURNAL") == 0)
-	{
-		res = journal();
-	}
-	else if(strcmp(accion,"SALIR") == 0)
-	{
-		res.resultado = SALIR;
-		res.mensaje = "";
-	}
-	else
-	{
-		res.resultado = MENSAJE_MAL_FORMATEADO;
-		res.mensaje = "";
+	resultadoParser resParser = parseConsole(mensaje);
+	switch(resParser.accionEjecutar){
+		case SELECT:
+		{
+			contenidoSelect* contSel;
+			contSel = (contenidoSelect*)resParser.contenido;
+			res = select_acc(contSel->nombreTabla,contSel->key);
+			break;
+		}
+		case DESCRIBE:
+		{
+			contenidoDescribe* contDes = resParser.contenido;
+			res = describe(contDes->nombreTabla);
+			break;
+		}
+		case INSERT:
+		{
+			contenidoInsert* contIns = resParser.contenido;
+			res = insert(contIns->nombreTabla,contIns->key,contIns->value,contIns->timestamp);
+			break;
+		}
+		case JOURNAL:
+		{
+			journal();
+			break;
+		}
+		case CREATE:
+		{
+			contenidoCreate* contCreate = resParser.contenido;
+			res = create(contCreate->nombreTabla,contCreate->consistencia,contCreate->cant_part,contCreate->tiempo_compresion);
+			break;
+		}
+		case DROP:
+		{
+			contenidoDrop* contDrop = resParser.contenido;
+			res = drop(contDrop->nombreTabla);
+			break;
+		}
+		case DUMP:
+		{
+			res = dump();
+			break;
+		}
+		case ERROR_PARSER:
+		{
+			res.resultado = MENSAJE_MAL_FORMATEADO;
+			res.mensaje = "";
+			break;
+		}
+		case SALIR_CONSOLA:
+		{
+			res.resultado = SALIR;
+			res.mensaje = "";
+			break;
+		}
+		default:
+		{
+			res.resultado = SALIR;
+			res.mensaje = "";
+			break;
+		}
 	}
 	return res;
+
 }
 
 resultado select_acc(char* tabla,int key)
@@ -155,6 +172,11 @@ resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 
 resultado describe(char* tabla)
 {
+	if(tabla != NULL){
+		obtenerMetadata(tabla);
+	}else{
+		obtenerTodasMetadata();
+	}
 	resultado res;
 	res.mensaje="Salida prueba";
 	res.resultado=OK;
@@ -181,7 +203,14 @@ resultado journal()
 	return res;
 }
 
-void terminar_programa(int *server_fd)
+resultado dump(){
+	resultado res;
+	res.mensaje="Salida prueba";
+	res.resultado=OK;
+	return res;
+}
+
+void terminar_programa()
 {
 	//Destruyo el logger
 	log_destroy(g_logger);
@@ -192,7 +221,7 @@ void terminar_programa(int *server_fd)
 	//Finalizar programa
 	finalizar_memtable();
 
-	close(*server_fd);
+	//close(*server_fd);
 }
 
 void gestionarConexion()
@@ -206,7 +235,7 @@ void gestionarConexion()
 	while(estado){
 
 //		recibir_mensaje(clienteMem_fd,buffer,"La memoria me mando el mensaje");
-		recv(clienteMem_fd, (void*) buffer, PACKAGESIZE, 0);	//Recibo mensaje de la memorias
+		//recv(clienteMem_fd, (void*) buffer, PACKAGESIZE, 0);	//Recibo mensaje de la memorias
 
 		if(strcmp(buffer,"exit")==0)
 			estado = 0;
@@ -222,6 +251,6 @@ void gestionarConexion()
     */
 }
 
-int atender_clientes() {
+/*int atender_clientes() {
 	recibir_mensaje(clienteMem_fd,buffer,"La memoria me mando el mensaje");
-}
+}*/

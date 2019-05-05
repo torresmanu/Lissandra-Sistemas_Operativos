@@ -16,6 +16,8 @@
 #include "metadata.h"
 #include "registro.h"
 #include "fileSystem.h"
+#include<commons/parser.h>
+#include<commons/collections/list.h>
 
 
 
@@ -47,9 +49,10 @@ resultado create(char*,char*,int,int);
 resultado describe(char*);
 resultado drop(char*);
 resultado journal();
+resultado dump();
 
 void iniciar_programa(int *);
-void terminar_programa(int *);
+void terminar_programa();
 void gestionarConexion(void);
 int atender_clientes(void);
 

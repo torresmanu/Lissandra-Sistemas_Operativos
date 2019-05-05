@@ -8,11 +8,11 @@
 #ifndef MEMTABLE_H_
 #define MEMTABLE_H_
 
-#include<commons/collections/list.h>
 #include<stdlib.h>
 #include "metadata.h"
 #include "registro.h"
 #include "LFS.h"
+#include<commons/collections/list.h>
 
 t_list* memtable_list;
 

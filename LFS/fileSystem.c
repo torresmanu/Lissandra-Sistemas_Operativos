@@ -19,12 +19,17 @@ int existeMetadata(char* nombreTabla){
 }
 
 char* obtenerMetadataPath(char* nombreTabla){
+	char* metadataPath= obtenerTablePath();
+	string_append(&metadataPath, nombreTabla);
+	string_append(&metadataPath, "/metadata");
+	return metadataPath;
+}
+
+char* obtenerTablePath(){
 	char* puntoMontura = config_get_string_value(g_config,"PUNTO_MONTAJE");
 	char* metadataPath= string_new();
 	string_append(&metadataPath, puntoMontura);
 	string_append(&metadataPath, "/tables/");
-	string_append(&metadataPath, nombreTabla);
-	string_append(&metadataPath, "/metadata");
 	return metadataPath;
 }
 
@@ -39,3 +44,21 @@ metadataTabla obtenerMetadata(char* nombreTabla){
 	return metadata;
 }
 
+t_list* obtenerTodasMetadata(){
+	t_list* metadataList = list_create();
+	DIR* tablesdir = opendir(obtenerTablePath());
+	struct dirent* tablesde;
+	if(tablesdir == NULL){
+		log_info(g_logger,"Error al obtener el path a las tablas");
+		return NULL;
+	}
+	while((tablesde=readdir(tablesdir))!= NULL){
+		if(!string_contains(tablesde->d_name,".")){
+			metadataTabla meta = obtenerMetadata(tablesde->d_name);
+			metadataTabla* metaIns = malloc(sizeof(metadataTabla));
+			memcpy(metaIns,&meta,sizeof(metadataTabla));
+			list_add(metadataList,metaIns);
+		}
+	}
+	closedir(tablesdir);
+}

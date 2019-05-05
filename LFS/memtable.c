@@ -34,7 +34,7 @@ registro* memtable_select(char* nombreTabla, int key){
 			for(int n = 0; n < list_size(nodo->lista_registros); n++){
 				registro* reg = ((registro*)list_get(nodo->lista_registros,n));
 				if(reg->key == key){
-					log_info("Registro obtenido exitosamente tabla %s key %d value %s",nombreTabla,reg->key,reg->value);
+					log_info(g_logger,"Registro obtenido exitosamente tabla %s key %d value %s",nombreTabla,reg->key,reg->value);
 					return reg;
 				}
 			}
