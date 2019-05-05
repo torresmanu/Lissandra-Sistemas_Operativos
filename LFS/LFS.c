@@ -16,9 +16,9 @@ int main(void) {
 	char* mensaje;
 	res.resultado= OK;
 	int server_fd;
-	iniciar_programa(&server_fd);
+	iniciar_programa();
 
-	gestionarConexion();
+	//gestionarConexion();
 
 	while(res.resultado != SALIR)
 	{
@@ -43,7 +43,7 @@ int main(void) {
 
 }
 
-void iniciar_programa(int *server_fd)
+void iniciar_programa()
 {
 	//Inicio el logger
 	g_logger = log_create("LFS.log", "LFS", 1, LOG_LEVEL_INFO);
