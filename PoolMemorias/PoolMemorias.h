@@ -21,6 +21,8 @@ void iniciar_programa(void);
 void terminar_programa(void);
 void gestionarConexion(void);
 
+int sizeOfRegistro(int);
+
 char* PUERTO_M;
 char* PUERTO;
 char* IP_M;

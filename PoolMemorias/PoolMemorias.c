@@ -9,14 +9,24 @@
  */
 
 #include "PoolMemorias.h"
+#define TAM_VALUE 4
+#define MEMORIA_PRINCIPAL 2048
+
+
+typedef struct
+{
+	char value[TAM_VALUE];
+	int key;
+	long timestamp;
+} registro;
 
 int main(void) {
 
-	//pthread_t hiloKernelLFS;
-	//pthread_create(&hiloKernelLFS,NULL,(void*) gestionarConexionEntrante(),NULL);
+
 	iniciar_programa();
 	gestionarConexion();
 	terminar_programa();
+
 
 }
 
@@ -29,6 +39,11 @@ void iniciar_programa(void)
 	//Inicio las configs
 	g_config = config_create("PoolMemorias.config");
 	log_info(g_logger,"Configuraciones inicializadas");
+
+	//hacer handshake con LFS y obtener tamaño de mem ppl y value
+
+	int cantidadPaginas = MEMORIA_PRINCIPAL/sizeOfRegistro(TAM_VALUE);
+	registro memoria[cantidadPaginas];
 
 }
 
@@ -73,4 +88,9 @@ void gestionarConexion()
     close(clienteKer_fd);
     close(socketMem_fd);
     close(clienteMem);
+}
+
+int sizeOfRegistro(int)
+{
+	return TAM_VALUE+sizeof(int)+sizeof(long);
 }
