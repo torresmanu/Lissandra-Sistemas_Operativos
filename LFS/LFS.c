@@ -39,12 +39,15 @@ int main(void) {
 		//atender_clientes();
 	}
 
-	terminar_programa(&server_fd);
+	terminar_programa();
 
 }
 
 void iniciar_programa()
 {
+	pthread_attr_t attr;
+	pthread_t thread;
+
 	//Inicio el logger
 	g_logger = log_create("LFS.log", "LFS", 1, LOG_LEVEL_INFO);
 	log_info(g_logger,"Inicio Aplicacion LFS");
@@ -56,8 +59,21 @@ void iniciar_programa()
 	//Inicio la memtable
 	iniciar_memtable();
 
-	//*server_fd = iniciarServidor(config_get_string_value(g_config,"PUERTO_SERVIDOR"));
-	//int clienteMem_fd = esperarCliente(*server_fd,"Se conecto un cliente\n");
+	server_fd = iniciarServidor(config_get_string_value(g_config,"PUERTO_SERVIDOR"));
+	printf("[iniciar_programa]Escucho en el puerto %i\n", server_fd);
+
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	int err = pthread_create(&thread, &attr, esperarClienteNuevo, config_get_string_value(g_config,"PUERTO_SERVIDOR"));
+	if(err != 0) {
+		printf("Hubo un problema al crear el thread esperarCliente:[%s]\n", strerror(err));
+		//return err;
+	}
+
+	pthread_attr_destroy(&attr);
+
+	//int clienteMem_fd = esperarCliente(server_fd,"Se conecto un cliente\n");
 }
 
 resultado parsear_mensaje(char* mensaje)
@@ -254,3 +270,4 @@ void gestionarConexion()
 /*int atender_clientes() {
 	recibir_mensaje(clienteMem_fd,buffer,"La memoria me mando el mensaje");
 }*/
+

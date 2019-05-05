@@ -24,11 +24,17 @@
 #define PUERTO_ENTRANTE "4000"  // SOLO SE USA PARA PRUEBAS. LOS PUERTOS SE SACAN DE LOS .CONFIG
 #define PUERTO_SALIENTE "5003"
 
+typedef struct{
+	int fd;
+	struct sockaddr addr;
+} conexion;
+
 void gestionarConexion();
 
 int iniciarServidor(char* puerto);
 
 int esperarCliente(int listenningSocket,char* mensaje);
+void esperarClienteNuevo(int listenningSocket);
 
 int conectarseAlServidor(char* puerto,char* mensaje);
 

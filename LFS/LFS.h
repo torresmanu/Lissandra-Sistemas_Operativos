@@ -18,9 +18,10 @@
 #include "fileSystem.h"
 #include<commons/parser.h>
 #include<commons/collections/list.h>
+#include <pthread.h>
 
 
-
+int server_fd;
 char* IP_FS;
 char* PUERTO_FS;
 

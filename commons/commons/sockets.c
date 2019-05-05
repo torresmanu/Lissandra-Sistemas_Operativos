@@ -68,14 +68,16 @@ int iniciarServidor(char* puerto)
     struct addrinfo *serverInfo;
 
     memset(&hints, 0, sizeof(hints));
+
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
     getaddrinfo(NULL, puerto, &hints, &serverInfo);
+    int listenningSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 
-    int listenningSocket;
-    listenningSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+    printf("puerto: %s\n", puerto);
+    printf("listenningSocket: %i\n", listenningSocket);
 
     int yes=1;
     if (setsockopt(listenningSocket,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(int)) == -1) {	//Esto es para reutilizar los puertos si fallan los procesos y no esperar
@@ -88,7 +90,7 @@ int iniciarServidor(char* puerto)
 
 
     freeaddrinfo(serverInfo);
-    listen(listenningSocket, BACKLOG);
+    int listenReturn = listen(listenningSocket, BACKLOG);
 
     return listenningSocket;
 }
@@ -102,6 +104,22 @@ int esperarCliente(int listenningSocket,char* mensaje)
 	printf("%s\n",mensaje);
 
 	return socketCliente;
+}
+
+void esperarClienteNuevo(int listenningSocket) {
+
+	struct sockaddr_in addr;
+	socklen_t addrlen = sizeof(addr);
+
+	int socketCliente = accept(listenningSocket, (struct sockaddr *) &addr, &addrlen);
+	if(socketCliente > 0) {
+		conexion nuevaConexion;
+		nuevaConexion.fd = socketCliente;
+		//nuevaConexion.addr = addr;
+		printf("Escucho en el socket %i: \n", nuevaConexion.fd);
+	}
+
+	printf("Entro por aca\n");
 }
 
 
