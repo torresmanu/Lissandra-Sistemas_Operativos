@@ -16,6 +16,8 @@
 #include "metadata.h"
 #include "registro.h"
 #include "fileSystem.h"
+#include<commons/parser.h>
+#include<commons/collections/list.h>
 
 
 
@@ -40,7 +42,6 @@ t_log* g_logger;
 t_config* g_config;
 
 
-void iniciar_programa(void);
 resultado parsear_mensaje(char *);
 resultado select_acc(char *,int);
 resultado insert(char*,int,char*,long);
@@ -48,10 +49,12 @@ resultado create(char*,char*,int,int);
 resultado describe(char*);
 resultado drop(char*);
 resultado journal();
+resultado dump();
 
-void iniciar_programa(void);
-void terminar_programa(void);
+void iniciar_programa();
+void terminar_programa();
 void gestionarConexion(void);
+int atender_clientes(void);
 
 
 #endif /* LFS_H_ */
