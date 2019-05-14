@@ -173,9 +173,17 @@ resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 resultado describe(char* tabla)
 {
 	if(tabla != NULL){
-		obtenerMetadata(tabla);
+		if(existeMetadata(tabla)){
+			obtenerMetadata(tabla);
+		}
 	}else{
-		obtenerTodasMetadata();
+		t_list* listaMetadata = obtenerTodasMetadata();
+		if(listaMetadata != NULL){
+			for(int i=0;i<list_size(listaMetadata);i++){
+				metadataTabla* metadata = (metadataTabla*) list_get(listaMetadata,i);
+				log_info(g_logger,metadata->consistency);
+			}
+		}
 	}
 	resultado res;
 	res.mensaje="Salida prueba";

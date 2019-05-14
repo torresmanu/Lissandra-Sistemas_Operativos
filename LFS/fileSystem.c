@@ -61,4 +61,5 @@ t_list* obtenerTodasMetadata(){
 		}
 	}
 	closedir(tablesdir);
+	return metadataList;
 }
