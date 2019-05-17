@@ -9,6 +9,7 @@
 #define KERNEL_H_
 
 #include <commons/collections/queue.h>
+#include <commons/parser.h>
 #include <commons/log.h>
 #include <commons/config.h>
 #include <commons/sockets.h>
@@ -18,16 +19,27 @@ t_config* g_config;
 char* IP;
 char* PUERTO;
 
+// Cantidad procesos en el estado EXEC
+int nivelMultiprocesamiento;
+int nivelActual;
+
 // SCRIPT (Con tratamiento de procesos, por eso usaremos colas como estados)
+// Estados
 
 t_queue* NEW;
 t_queue* READY;
 t_queue* EXEC;
 t_queue* EXIT;
+
+typedef struct{
+	t_queue* cola;
+	int cantProcesos;
+}Estado;
+
+
+
 void iniciarEstados();
 void finalizarEstados();
-
-
 
 void iniciar_programa(void);
 void terminar_programa(void);

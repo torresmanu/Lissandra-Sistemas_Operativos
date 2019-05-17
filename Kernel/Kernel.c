@@ -28,6 +28,12 @@ void iniciar_programa(void)
 	g_config = config_create("Kernel.config");
 	log_info(g_logger,"Configuraciones inicializadas");
 
+	//Inicializo los estados
+	iniciarEstados()();
+
+	// Nivel de multiprocesamiento
+
+	nivelMultiprocesamiento = config_get_int_value(g_config,"MULTIPROCESAMIENTO");
 }
 
 void terminar_programa()
@@ -38,6 +44,8 @@ void terminar_programa()
 	//Destruyo las configs
 	config_destroy(g_config);
 
+	//Libero los estados y elimino sus elementos
+	finalizarEstados();
 }
 
 void gestionarConexion()
@@ -56,7 +64,8 @@ void iniciarEstados(){
 	NEW = queue_create();
 	READY = queue_create();
 	EXEC = queue_create();
-	EXIT = queue_create();
+	NEW = queue_create();
+
 }
 
 void finalizarEstados(){
@@ -64,6 +73,7 @@ void finalizarEstados(){
 	queue_clean_and_destroy_elements(READY,liberarEstado);
 	queue_clean_and_destroy_elements(EXEC,liberarEstado);
 	queue_clean_and_destroy_elements(EXIT,liberarEstado);
+
 }
 
 void liberarEstado(void* elem){
@@ -72,25 +82,47 @@ void liberarEstado(void* elem){
 	// free(t_proceso*); por asi decirlo
 }
 
-void agregarScriptAEstado(){}
+void agregarScriptAEstado(resultadoParser res, t_queue estado)  // Aca hace las comprobaciones si pueden
+{
+	if(estado == NEW || READY){
+		queue_push(estado,res);
+	}
+	else if(estado == EXEC){
+		if(nivelActual < nivelMultiprocesamiento)
+		{
+			queue_push(estado,res);
+		}
+		else
+		{
+			// Que hacer si ya esta ejecutando 3 procesos a la vez?
+		}
+	}
+}
 void moverScriptDeEstado(){}
 void finalizarScript(){} // Debe hacer un free y sacarlo de la cola
 
+//
 // Leer LQL
 
-void leerArchivoLQL(){		// Itera ejecutando leer ScriptLQL
-
+resultadoParser leerScriptLQL(FILE* path){
+	char* linea;
+	resultadoParser res;
+	fread(&linea,sizeof(char*),1,path);
+	res = parseConsole(linea);
+	return res;
 }
 
-void leerScriptLQL(){}
 
-void RUN(FILE* path){
-	FILE* lql = fopen(path,"r+b");
-	// t_proceso* proc;
-	while(!feof(lql)){
-		//
+void run(FILE* path){
+	FILE* arch = fopen(path, "r+b");
+	resultadoParser res;
+	res = leerScriptLQL(arch);
+	while(!feof(arch))
+	{
+		agregarScriptAEstado(res,NEW);
+		res = leerScriptLQL(path);
 	}
+	fclose(path);
 }
 
-/* Necesito parsear_mensaje() para ir haciendolo con cada script. Asi no uso otra funcion igual */
 
