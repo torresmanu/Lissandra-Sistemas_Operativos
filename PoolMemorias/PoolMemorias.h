@@ -12,16 +12,37 @@
 #include <commons/sockets.h>
 #include<commons/log.h>
 #include<commons/config.h>
+#include<commons/collections/list.h>
 
 t_log* g_logger;
 t_config* g_config;
 
+t_list* tabla_paginas;
+Registro* memoria;
+
+#define TAM_VALUE 4
+#define TAM_MEMORIA_PRINCIPAL 2048
+
+typedef struct
+{
+	char value[TAM_VALUE];
+	int key;
+	long timestamp;
+} Registro;
+
+typedef struct
+{
+	int numero_pagina;
+	void* puntero_pagina;
+	int flag_modificado;
+
+} Nodo;
 
 void iniciar_programa(void);
 void terminar_programa(void);
 void gestionarConexion(void);
-
-int sizeOfRegistro(int);
+void destroy_nodo_tabla(void *);
+void iniciar_tabla_paginas();
 
 char* PUERTO_M;
 char* PUERTO;

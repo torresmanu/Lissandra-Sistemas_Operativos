@@ -9,16 +9,8 @@
  */
 
 #include "PoolMemorias.h"
-#define TAM_VALUE 4
-#define MEMORIA_PRINCIPAL 2048
 
 
-typedef struct
-{
-	char value[TAM_VALUE];
-	int key;
-	long timestamp;
-} registro;
 
 int main(void) {
 
@@ -42,8 +34,20 @@ void iniciar_programa(void)
 
 	//hacer handshake con LFS y obtener tamaño de mem ppl y value
 
-	int cantidadPaginas = MEMORIA_PRINCIPAL/sizeOfRegistro(TAM_VALUE);
-	registro memoria[cantidadPaginas];
+	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
+	int cantidad_paginas = TAM_MEMORIA_PRINCIPAL / sizeof(Registro);
+	iniciar_tabla_paginas();
+
+	for(int i=0;i==cantidad_paginas;i++){
+
+		Nodo* nodo=NULL;
+		nodo= malloc(sizeof(Nodo));
+		nodo->numero_pagina=i;
+		nodo->puntero_pagina=&memoria[i];
+		nodo->flag_modificado=0;
+		list_add(tabla_paginas, &nodo);
+
+	}
 
 }
 
@@ -55,6 +59,12 @@ void terminar_programa()
 
 	//Destruyo las configs
 	config_destroy(g_config);
+
+	//Destruyo la tabla de paginas
+	list_destroy_and_destroy_elements(tabla_paginas, destroy_nodo_tabla);
+
+	//Liberar memoria
+	free(memoria);
 
 }
 
@@ -90,7 +100,11 @@ void gestionarConexion()
     close(clienteMem);
 }
 
-int sizeOfRegistro(int)
-{
-	return TAM_VALUE+sizeof(int)+sizeof(long);
+void iniciar_tabla_paginas(){
+	tabla_paginas = list_create();
+}
+
+void destroy_nodo_tabla(void * elem){
+	Nodo* nodo_tabla_elem = (Nodo *) elem;
+	free(nodo_tabla_elem);
 }
