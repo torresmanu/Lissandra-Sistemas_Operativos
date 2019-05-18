@@ -24,6 +24,11 @@ int main(void) {
 
 void iniciar_programa(void)
 {
+	Registro reg1;
+	reg1.key	= 10;
+	strcpy(reg1.value,"creativOS");
+	reg1.timestamp = 500;
+
 	//Inicio el logger
 	g_logger = log_create("PoolMemorias.log", "LFS", 1, LOG_LEVEL_INFO);
 	log_info(g_logger,"Inicio Aplicacion Pool Memorias");
@@ -35,6 +40,9 @@ void iniciar_programa(void)
 	//hacer handshake con LFS y obtener tamaño de mem ppl y value
 
 	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
+
+	memoria[0] = reg1;
+
 	int cantidad_paginas = TAM_MEMORIA_PRINCIPAL / sizeof(Registro);
 
 	cantidad_paginas = 1; //Solo por el hito 2
@@ -45,7 +53,7 @@ void iniciar_programa(void)
 
 	Segmento seg_prueba;
 	seg_prueba.numero_segmento	= 1;
-	seg_prueba.nombre_tabla 	= "Tabla1";
+	strcpy(seg_prueba.nombre_tabla,"Tabla1");
 	seg_prueba.puntero_tpaginas = &tabla_paginas;
 
 	for(int i=0;i==cantidad_paginas;i++){
@@ -116,6 +124,6 @@ void iniciar_tabla_paginas(){
 }
 
 void destroy_nodo_tabla(void * elem){
-	Nodo* nodo_tabla_elem = (Nodo *) elem;
+	Pagina* nodo_tabla_elem = (Pagina *) elem;
 	free(nodo_tabla_elem);
 }

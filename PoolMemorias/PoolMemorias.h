@@ -20,7 +20,7 @@ t_config* g_config;
 t_list* tabla_paginas;
 
 
-#define TAM_VALUE 4
+#define TAM_VALUE 20
 #define TAM_MEMORIA_PRINCIPAL 2048
 #define NOMBRE_TABLA 7
 
