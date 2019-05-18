@@ -18,10 +18,11 @@ t_log* g_logger;
 t_config* g_config;
 
 t_list* tabla_paginas;
-Registro* memoria;
+
 
 #define TAM_VALUE 4
 #define TAM_MEMORIA_PRINCIPAL 2048
+#define NOMBRE_TABLA 7
 
 typedef struct
 {
@@ -30,13 +31,23 @@ typedef struct
 	long timestamp;
 } Registro;
 
+Registro* memoria;
+
 typedef struct
 {
 	int numero_pagina;
 	void* puntero_pagina;
 	int flag_modificado;
 
-} Nodo;
+} Pagina;
+
+typedef struct
+{
+	int numero_segmento;
+	char nombre_tabla[NOMBRE_TABLA];
+	void* puntero_tpaginas;
+
+} Segmento;
 
 void iniciar_programa(void);
 void terminar_programa(void);

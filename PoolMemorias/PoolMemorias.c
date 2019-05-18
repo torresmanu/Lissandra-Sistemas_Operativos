@@ -36,18 +36,29 @@ void iniciar_programa(void)
 
 	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
 	int cantidad_paginas = TAM_MEMORIA_PRINCIPAL / sizeof(Registro);
+
+	cantidad_paginas = 1; //Solo por el hito 2
+
 	iniciar_tabla_paginas();
+
+	Segmento tabla_segmentos[1]; //Solo por el hito 2
+
+	Segmento seg_prueba;
+	seg_prueba.numero_segmento	= 1;
+	seg_prueba.nombre_tabla 	= "Tabla1";
+	seg_prueba.puntero_tpaginas = &tabla_paginas;
 
 	for(int i=0;i==cantidad_paginas;i++){
 
-		Nodo* nodo=NULL;
-		nodo= malloc(sizeof(Nodo));
+		Pagina* nodo=NULL;
+		nodo= malloc(sizeof(Pagina));
 		nodo->numero_pagina=i;
 		nodo->puntero_pagina=&memoria[i];
 		nodo->flag_modificado=0;
 		list_add(tabla_paginas, &nodo);
 
 	}
+
 
 }
 
