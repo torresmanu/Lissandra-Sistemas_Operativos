@@ -22,7 +22,7 @@ t_list* tabla_paginas;
 
 
 #define TAM_VALUE 20
-#define TAM_MEMORIA_PRINCIPAL 2048
+#define TAM_MEMORIA_PRINCIPAL 100
 #define NOMBRE_TABLA 7
 
 typedef struct

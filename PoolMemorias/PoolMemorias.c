@@ -36,8 +36,7 @@ void iniciar_programa(void)
 
 	//hacer handshake con LFS y obtener tamaño de mem ppl y value
 
-//	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
-	memoria=malloc(50);
+	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
 
 	memoria[0] = reg1;
 
@@ -49,7 +48,7 @@ void iniciar_programa(void)
 
 	Segmento* seg_prueba = malloc(sizeof(Segmento));
 	seg_prueba->numero_segmento	= 1;
-	strcpy(seg_prueba->nombre_tabla,"Tabla1");
+	seg_prueba->nombre_tabla="Tabla1";
 	seg_prueba->puntero_tpaginas = list_create();
 
 	list_add(tabla_segmentos,seg_prueba);
@@ -77,7 +76,7 @@ void select_t(char *nombre_tabla,int key){
 		return;
 	}
 	else{
-		printf("Algo salio mal");	//Tengo que pedirselo al LFS y agregarlo en la pagina
+		printf("Algo salio mal\n");	//Tengo que pedirselo al LFS y agregarlo en la pagina
 		return;
 	}
 }
@@ -88,21 +87,21 @@ int contieneRegistro(char *nombre_tabla,int key, char *value){
 	if(encuentraSegmento(nombre_tabla,&segmento)){
 
 		if(encuentraPagina(segmento,key,value))
-			return 1;
+			return true;
 	}
 
-	return 0;
+	return false;
 }
 
 bool encuentraSegmento(char *ntabla,Segmento *segmento){
 
 	bool tieneTabla(void *elemento){
-		return strcmp(((Segmento *)elemento)->nombre_tabla, ntabla);
+		return strcmp(((Segmento *)elemento)->nombre_tabla, ntabla)==0;
 	}
 
 	memcpy(segmento,list_find(tabla_segmentos,tieneTabla),sizeof(Segmento));
 
-	return segmento!=NULL;
+	return strcmp(segmento->nombre_tabla,ntabla)==0;
 }
 
 bool encuentraPagina(Segmento segmento,int key, char* value){
