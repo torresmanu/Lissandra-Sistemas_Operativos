@@ -10,13 +10,10 @@
 
 #include "PoolMemorias.h"
 
-
-
 int main(void) {
 
-
 	iniciar_programa();
-	gestionarConexion();
+//	gestionarConexion();
 	terminar_programa();
 
 
@@ -39,7 +36,8 @@ void iniciar_programa(void)
 
 	//hacer handshake con LFS y obtener tamaño de mem ppl y value
 
-	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
+//	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
+	memoria=malloc(50);
 
 	memoria[0] = reg1;
 
@@ -47,29 +45,83 @@ void iniciar_programa(void)
 
 	cantidad_paginas = 1; //Solo por el hito 2
 
-	iniciar_tabla_paginas();
+	iniciar_tablas();
 
-	Segmento tabla_segmentos[1]; //Solo por el hito 2
+	Segmento* seg_prueba = malloc(sizeof(Segmento));
+	seg_prueba->numero_segmento	= 1;
+	strcpy(seg_prueba->nombre_tabla,"Tabla1");
+	seg_prueba->puntero_tpaginas = list_create();
 
-	Segmento seg_prueba;
-	seg_prueba.numero_segmento	= 1;
-	strcpy(seg_prueba.nombre_tabla,"Tabla1");
-	seg_prueba.puntero_tpaginas = &tabla_paginas;
+	list_add(tabla_segmentos,seg_prueba);
 
-	for(int i=0;i==cantidad_paginas;i++){
+	for(int i=0;i<cantidad_paginas;i++){
 
-		Pagina* nodo=NULL;
-		nodo= malloc(sizeof(Pagina));
+		Pagina* nodo=malloc(sizeof(Pagina));
 		nodo->numero_pagina=i;
-		nodo->puntero_pagina=&memoria[i];
+		nodo->puntero_registro=&(memoria[i]);
 		nodo->flag_modificado=0;
-		list_add(tabla_paginas, &nodo);
+		list_add(seg_prueba->puntero_tpaginas,nodo);
 
 	}
 
+	printf("\nSELECT TABLA1 10\n");
+	select_t("Tabla1",10);
 
+	free(seg_prueba);
 }
 
+void select_t(char *nombre_tabla,int key){
+	char value[TAM_VALUE];
+	if(contieneRegistro(nombre_tabla,key,value)){
+		printf("Resultado select: %s\n",value);
+		return;
+	}
+	else{
+		printf("Algo salio mal");	//Tengo que pedirselo al LFS y agregarlo en la pagina
+		return;
+	}
+}
+
+int contieneRegistro(char *nombre_tabla,int key, char *value){
+	Segmento segmento;
+
+	if(encuentraSegmento(nombre_tabla,&segmento)){
+
+		if(encuentraPagina(segmento,key,value))
+			return 1;
+	}
+
+	return 0;
+}
+
+bool encuentraSegmento(char *ntabla,Segmento *segmento){
+
+	bool tieneTabla(void *elemento){
+		return strcmp(((Segmento *)elemento)->nombre_tabla, ntabla);
+	}
+
+	memcpy(segmento,list_find(tabla_segmentos,tieneTabla),sizeof(Segmento));
+
+	return segmento!=NULL;
+}
+
+bool encuentraPagina(Segmento segmento,int key, char* value){
+
+	bool tieneKey(void *elemento){
+
+		int i=(((Pagina *)elemento)->puntero_registro)->key;
+
+		return i==key;
+	}
+
+	Pagina *paginaAux = malloc(sizeof(Pagina));
+	memcpy(paginaAux,list_find(segmento.puntero_tpaginas,tieneKey),sizeof(Pagina));
+
+	strcpy(value,paginaAux->puntero_registro->value);
+
+	free(paginaAux);
+	return paginaAux!=NULL;
+}
 
 void terminar_programa()
 {
@@ -78,6 +130,9 @@ void terminar_programa()
 
 	//Destruyo las configs
 	config_destroy(g_config);
+
+	//Destruyo la tabla de segmentos
+	list_destroy_and_destroy_elements(tabla_segmentos, destroy_nodo_tabla);
 
 	//Destruyo la tabla de paginas
 	list_destroy_and_destroy_elements(tabla_paginas, destroy_nodo_tabla);
@@ -119,7 +174,8 @@ void gestionarConexion()
     close(clienteMem);
 }
 
-void iniciar_tabla_paginas(){
+void iniciar_tablas(){
+	tabla_segmentos = list_create();
 	tabla_paginas = list_create();
 }
 
