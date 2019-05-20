@@ -20,6 +20,8 @@ t_config* g_config;
 t_list* tabla_segmentos;
 t_list* tabla_paginas;
 
+int posLibres;
+
 
 #define TAM_VALUE 20
 #define TAM_MEMORIA_PRINCIPAL 100
@@ -60,6 +62,12 @@ void select_t(char *nombre_tabla,int key);
 int contieneRegistro(char *nombre_tabla,int key, char *value);
 bool encuentraSegmento(char *ntabla,Segmento *segmento);
 bool encuentraPagina(Segmento segmento,int key, char* value);
+void pedirAlLFS(char* nombre_tabla, int key, char *value);
+bool hayEspacio();
+void almacenarRegistro(char *nombre_tabla,int key,char *value);
+void agregarSegmento(char *nombre_tabla,Segmento segmento);
+void agregarPagina(char *nombre_tabla,Segmento *segmento);
+void iniciarReemplazo(char *nombre_tabla,int key,char *value);
 
 char* PUERTO_M;
 char* PUERTO;

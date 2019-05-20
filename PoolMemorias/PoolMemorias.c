@@ -44,6 +44,8 @@ void iniciar_programa(void)
 
 	cantidad_paginas = 1; //Solo por el hito 2
 
+	posLibres= cantidad_paginas;
+
 	iniciar_tablas();
 
 	Segmento* seg_prueba = malloc(sizeof(Segmento));
@@ -71,14 +73,51 @@ void iniciar_programa(void)
 
 void select_t(char *nombre_tabla,int key){
 	char value[TAM_VALUE];
+//	Registro *registro = malloc(sizeof(Registro));	//Pensaba hacer un registro para agrupar los datos o que el select reciba un registro
 	if(contieneRegistro(nombre_tabla,key,value)){
 		printf("Resultado select: %s\n",value);
-		return;
 	}
 	else{
-		printf("Algo salio mal\n");	//Tengo que pedirselo al LFS y agregarlo en la pagina
-		return;
+		printf("Algo salio mal, ya vengo, voy a hablar con el LFS\n");	//Tengo que pedirselo al LFS y agregarlo en la pagina
+		pedirAlLFS(nombre_tabla,key,value);	//mejor pasar un Segmento
+
+		if(hayEspacio()){
+			almacenarRegistro(nombre_tabla,key,value);
+		}
+		iniciarReemplazo(nombre_tabla,key,value);
 	}
+	return;
+}
+
+void pedirAlLFS(char* nombre_tabla, int key,char *value){ //incompleta
+//	strcpy(value,mandarLFS("SELECT",nombre_tabla,key));
+
+	printf("Sos el LFS, dame el value: ");
+	fgets(value,TAM_VALUE,stdin);
+	limpiar(value);
+}
+
+bool hayEspacio(){	//una cola con el primero libre? hay que ver lo del LRU
+	return posLibres>0;
+}
+
+void almacenarRegistro(char *nombre_tabla,int key,char *value){
+	Segmento segmento;
+	if(!encuentraSegmento(nombre_tabla,&segmento))
+		agregarSegmento(nombre_tabla,segmento); //ojo
+	agregarPagina(nombre_tabla,&segmento);
+}
+
+void agregarSegmento(char *nombre_tabla,Segmento segmento){
+	//creo segmento con el ntabla
+}
+
+void agregarPagina(char *nombre_tabla,Segmento *segmento){
+
+}
+
+void iniciarReemplazo(char *nombre_tabla,int key,char *value){
+
 }
 
 int contieneRegistro(char *nombre_tabla,int key, char *value){
