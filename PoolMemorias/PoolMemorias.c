@@ -79,45 +79,68 @@ void select_t(char *nombre_tabla,int key){
 	}
 	else{
 		printf("Algo salio mal, ya vengo, voy a hablar con el LFS\n");	//Tengo que pedirselo al LFS y agregarlo en la pagina
-		pedirAlLFS(nombre_tabla,key,value);	//mejor pasar un Segmento
+		Registro registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
 
 		if(hayEspacio()){
-			almacenarRegistro(nombre_tabla,key,value);
+			almacenarRegistro(nombre_tabla,registro);
 		}
-		iniciarReemplazo(nombre_tabla,key,value);
+		else
+			iniciarReemplazo(nombre_tabla,registro);
 	}
 	return;
 }
 
-void pedirAlLFS(char* nombre_tabla, int key,char *value){ //incompleta
+Registro pedirAlLFS(char* nombre_tabla, int key){
 //	strcpy(value,mandarLFS("SELECT",nombre_tabla,key));
 
-	printf("Sos el LFS, dame el value: ");
-	fgets(value,TAM_VALUE,stdin);
-	limpiar(value);
+	Registro registro;
+	registro.key=2;
+	registro.timestamp=10;
+	strcpy(registro.value,"Ale puto");
+
+	return registro;
+
 }
 
 bool hayEspacio(){	//una cola con el primero libre? hay que ver lo del LRU
 	return posLibres>0;
 }
 
-void almacenarRegistro(char *nombre_tabla,int key,char *value){
-	Segmento segmento;
-	if(!encuentraSegmento(nombre_tabla,&segmento))
-		agregarSegmento(nombre_tabla,segmento); //ojo
-	agregarPagina(nombre_tabla,&segmento);
+void almacenarRegistro(char *nombre_tabla,Registro registro){
+	Segmento *segmento;
+	if(!encuentraSegmento(nombre_tabla,segmento))
+		segmento = agregarSegmento(nombre_tabla);
+	agregarPagina(registro, segmento);
 }
 
-void agregarSegmento(char *nombre_tabla,Segmento segmento){
+Segmento *agregarSegmento(char *nombre_tabla){
 	//creo segmento con el ntabla
+	Segmento* segmento=malloc(sizeof(Segmento));
+	strcpy(segmento->nombre_tabla, nombre_tabla);
+	segmento->numero_segmento=tabla_segmentos->elements_count;
+	segmento->puntero_tpaginas=NULL;
+
+	list_add(tabla_segmentos,segmento);
+	return segmento;
 }
 
-void agregarPagina(char *nombre_tabla,Segmento *segmento){
+void agregarPagina(Registro registro, Segmento *segmento){
+	Pagina* pagina=malloc(sizeof(Pagina));
+	Registro* direccion = guardarEnMemoria(registro);
+	pagina->puntero_registro=direccion;
+	pagina->numero_pagina=segmento->puntero_tpaginas->elements_count;
+	pagina->flag_modificado=0;
+
+	list_add(segmento->puntero_tpaginas, pagina);
+}
+
+void iniciarReemplazo(char *nombre_tabla,Registro registro){
 
 }
 
-void iniciarReemplazo(char *nombre_tabla,int key,char *value){
-
+Registro *guardarEnMemoria(Registro registro){
+	Registro *r;
+	return r;
 }
 
 int contieneRegistro(char *nombre_tabla,int key, char *value){

@@ -62,12 +62,13 @@ void select_t(char *nombre_tabla,int key);
 int contieneRegistro(char *nombre_tabla,int key, char *value);
 bool encuentraSegmento(char *ntabla,Segmento *segmento);
 bool encuentraPagina(Segmento segmento,int key, char* value);
-void pedirAlLFS(char* nombre_tabla, int key, char *value);
+Registro pedirAlLFS(char* nombre_tabla, int key);
 bool hayEspacio();
-void almacenarRegistro(char *nombre_tabla,int key,char *value);
-void agregarSegmento(char *nombre_tabla,Segmento segmento);
-void agregarPagina(char *nombre_tabla,Segmento *segmento);
-void iniciarReemplazo(char *nombre_tabla,int key,char *value);
+void almacenarRegistro(char *nombre_tabla,Registro registro);
+Segmento *agregarSegmento(char *nombre_tabla);
+void agregarPagina(Registro registro, Segmento *segmento);
+void iniciarReemplazo(char *nombre_tabla,Registro registro);
+Registro *guardarEnMemoria(Registro registro);
 
 char* PUERTO_M;
 char* PUERTO;
