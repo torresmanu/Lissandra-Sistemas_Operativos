@@ -13,7 +13,16 @@
 int main(void) {
 
 	iniciar_programa();
-	gestionarConexion();
+	//gestionarConexion();
+
+
+	leerConsola();
+
+
+
+
+
+
 	terminar_programa();
 	return 0;
 }
@@ -29,10 +38,9 @@ void iniciar_programa(void)
 	log_info(g_logger,"Configuraciones inicializadas");
 
 	//Inicializo los estados
-	iniciarEstados()();
+	iniciarEstados();
 
 	// Nivel de multiprocesamiento
-
 	nivelMultiprocesamiento = config_get_int_value(g_config,"MULTIPROCESAMIENTO");
 }
 
@@ -60,12 +68,26 @@ void gestionarConexion()
 
 // Propias de Kernel
 // Estados -> Colas
-void iniciarEstados(){
-	NEW = queue_create();
-	READY = queue_create();
-	EXEC = queue_create();
-	NEW = queue_create();
 
+Estado iniciarEstado(nombreEstado nom){
+	Estado est;
+	est.nombre = nom;
+	est.cola = queue_create();
+	return est;
+}
+
+void iniciarEstados(){ 			// Son colas?? O solo registro de un solo espacio? // Puedo hacer tambien un resultadoParser NEW;
+	iniciarEstado(NEW);
+	iniciarEstado(READY);
+	iniciarEstado(EXEC);
+	iniciarEstado(EXIT);
+}
+
+void liberarEstado(void* elem){
+	// Falta inicializar una estructura que contenga el proceso
+	// y hacerle un free. Pero me falta pensar que estructura lo contiene.
+	// free(t_proceso*); por asi decirlo
+	return;
 }
 
 void finalizarEstados(){
@@ -73,24 +95,18 @@ void finalizarEstados(){
 	queue_clean_and_destroy_elements(READY,liberarEstado);
 	queue_clean_and_destroy_elements(EXEC,liberarEstado);
 	queue_clean_and_destroy_elements(EXIT,liberarEstado);
-
 }
 
-void liberarEstado(void* elem){
-	// Falta inicializar una estructura que contenga el proceso
-	// y hacerle un free. Pero me falta pensar que estructura lo contiene.
-	// free(t_proceso*); por asi decirlo
-}
-
-void agregarScriptAEstado(resultadoParser res, t_queue estado)  // Aca hace las comprobaciones si pueden
+void agregarScriptAEstado(resultadoParser res, t_queue* estado)  // Aca hace las comprobaciones si pueden
 {
 	if(estado == NEW || READY){
-		queue_push(estado,res);
+		//queue_push(estado,res);
 	}
 	else if(estado == EXEC){
 		if(nivelActual < nivelMultiprocesamiento)
 		{
-			queue_push(estado,res);
+			//queue_push(estado,res);
+			nivelActual++;
 		}
 		else
 		{
@@ -98,31 +114,74 @@ void agregarScriptAEstado(resultadoParser res, t_queue estado)  // Aca hace las 
 		}
 	}
 }
+
 void moverScriptDeEstado(){}
 void finalizarScript(){} // Debe hacer un free y sacarlo de la cola
 
-//
+//////////////////////////////////////////////////////////
 // Leer LQL
+// Por archivo
 
-resultadoParser leerScriptLQL(FILE* path){
-	char* linea;
-	resultadoParser res;
-	fread(&linea,sizeof(char*),1,path);
-	res = parseConsole(linea);
-	return res;
+resultadoParser leerScriptLQL(FILE* fd){
+	char linea[MAX_BUFFER];
+	resultadoParser r;
+	fgets(linea,sizeof(linea),fd);
+	r = parseConsole(linea);
+	return r;
 }
 
-
-void run(FILE* path){
-	FILE* arch = fopen(path, "r+b");
+void run(char* path){
+	FILE* arch = fopen(path, "r");
 	resultadoParser res;
-	res = leerScriptLQL(arch);
 	while(!feof(arch))
 	{
-		agregarScriptAEstado(res,NEW);
-		res = leerScriptLQL(path);
+		res = leerScriptLQL(arch);
+		//agregarScriptAEstado(res,NEW);        POR AHORA NO LA USO
+
 	}
-	fclose(path);
+	fclose(arch);
 }
 
+// Linea por consola
 
+resultadoParser leerLineaSQL(char* mensaje)
+{
+	resultadoParser r;
+	r = parseConsole(mensaje);
+	return r;
+}
+
+void leerConsola(){
+	char* linea;
+	char* accion;
+	char* path;
+	char* contenido;
+	char* consola;
+	resultadoParser r;
+
+	printf("\nBienvenido! Welcome! Youkoso!\n");
+	while(1)
+	{
+		linea = readline(">");
+		add_history(linea);
+		consola = strdup(linea);
+
+		accion = strsep(&linea," ");
+		printf("Request: %s\n", accion);
+		if(strcmp(accion,"RUN") == 0)
+		{
+			path = strsep(&linea,"\n");
+			printf("Path: %s\n", path);
+			run(path);
+		}
+		else
+		{
+			contenido = strsep(&linea,"\n");
+			printf("Contenido: %s\n",contenido);
+			r = leerLineaSQL(consola);
+			agregarScriptAEstado(r,NEW); 			// Pendiente de revision
+		}
+		free(linea);
+		free(consola);
+	}
+}
