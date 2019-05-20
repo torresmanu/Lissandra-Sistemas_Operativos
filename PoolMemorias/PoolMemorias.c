@@ -135,7 +135,63 @@ void agregarPagina(Registro registro, Segmento *segmento){
 }
 
 void iniciarReemplazo(char *nombre_tabla,Registro registro){
+	//completar cuando veamos memoria en teoria
+	Segmento *segmentoAnterior;
+	Pagina* direccion = paginaMenosUsada(&segmentoAnterior);
 
+	if(direccion==NULL){
+		journal();
+	}
+	else{
+		Segmento *segmento;
+		if(!encuentraSegmento(nombre_tabla,segmento)){
+			segmento = agregarSegmento(nombre_tabla);
+		}
+		list_remove(segmentoAnterior->puntero_tpaginas,direccion->numero_pagina);
+		cambiarIndices(segmentoAnterior->puntero_tpaginas);
+
+		list_add(segmento->puntero_tpaginas,direccion);
+		cambiarIndices(segmento->puntero_tpaginas);
+		int indice = direccion->puntero_registro - memoria;//memoria+indice
+		memoria[indice]=registro;
+
+	}
+}
+
+Pagina* paginaMenosUsada(Segmento* segmento){
+	//por ahora porque solo tenemos un segmento y una pagina(hito2)
+	if(memoriaFull()){
+		return NULL;
+	}
+	else{
+		segmento = list_get(tabla_segmentos, 0);
+		return segmento->puntero_tpaginas;
+	}
+}
+
+bool memoriaFull(){
+
+	bool algunSegmentoEstaModificado(void *elemento){
+
+		bool estaModificada(void *element){
+			return ((Pagina *)element)->flag_modificado==1;
+		}
+
+		return list_all_satisfy(((Segmento *)elemento)->puntero_tpaginas,estaModificada);
+	}
+
+	return list_any_satisfy(tabla_segmentos,!algunSegmentoEstaModificado);
+}
+
+void journal(){
+
+}
+
+void cambiarIndices(t_list* listaPaginas){
+	for(int i;i<listaPaginas->elements_count;i++){
+		//queremos que los numeros de pagina sean consistentes(0,1,2,..) por ejemplo cuando sacmos una pagina y nos queda 1,2,4,5..
+		//lo ibamos a hacer con list_get pero creemos que nos da una copia de la pagina y necesitamos la pagina
+	}
 }
 
 Registro *guardarEnMemoria(Registro registro){
@@ -158,7 +214,7 @@ int contieneRegistro(char *nombre_tabla,int key, char *value){
 	return false;
 }
 
-bool encuentraSegmento(char *ntabla,Segmento *segmento){
+bool encuentraSegmento(char *ntabla,Segmento *segmento){ 	//Me dice si ya existe un segmento de esa tabla y lo mete en la variable segmento, si no NULL
 
 	bool tieneTabla(void *elemento){
 		return strcmp(((Segmento *)elemento)->nombre_tabla, ntabla)==0;
