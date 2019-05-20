@@ -139,8 +139,11 @@ void iniciarReemplazo(char *nombre_tabla,Registro registro){
 }
 
 Registro *guardarEnMemoria(Registro registro){
+	//guardar el registro que nos mandó el lfs
 	Registro *r;
-	return r;
+	int posLibre=0; //nos falta saber como tratar posiciones libres en memoria
+	memoria[posLibre]=registro;
+	return memoria+posLibre;
 }
 
 int contieneRegistro(char *nombre_tabla,int key, char *value){
@@ -193,10 +196,10 @@ void terminar_programa()
 	config_destroy(g_config);
 
 	//Destruyo la tabla de segmentos
-	list_destroy_and_destroy_elements(tabla_segmentos, destroy_nodo_tabla);
+	list_destroy_and_destroy_elements(tabla_segmentos, destroy_nodo_segmento);
 
 	//Destruyo la tabla de paginas
-	list_destroy_and_destroy_elements(tabla_paginas, destroy_nodo_tabla);
+	list_destroy_and_destroy_elements(tabla_paginas, destroy_nodo_pagina);
 
 	//Liberar memoria
 	free(memoria);
@@ -240,7 +243,13 @@ void iniciar_tablas(){
 	tabla_paginas = list_create();
 }
 
-void destroy_nodo_tabla(void * elem){
+void destroy_nodo_pagina(void * elem){
 	Pagina* nodo_tabla_elem = (Pagina *) elem;
+	free(nodo_tabla_elem);
+}
+
+
+void destroy_nodo_segmento(void * elem){
+	Segmento* nodo_tabla_elem = (Segmento *) elem;
 	free(nodo_tabla_elem);
 }

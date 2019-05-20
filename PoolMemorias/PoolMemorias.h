@@ -55,7 +55,8 @@ typedef struct
 void iniciar_programa(void);
 void terminar_programa(void);
 void gestionarConexion(void);
-void destroy_nodo_tabla(void *);
+void destroy_nodo_pagina(void *);
+void destroy_nodo_segmento(void *);
 void iniciar_tablas();
 
 void select_t(char *nombre_tabla,int key);
