@@ -66,7 +66,7 @@ void iniciar_programa(void)
 	}
 
 	printf("\nSELECT TABLA1 10\n");
-	select_t("Tabla1",10);
+	select_t("Tabla1",11);
 
 	free(seg_prueba);
 }
@@ -220,9 +220,15 @@ bool encuentraSegmento(char *ntabla,Segmento *segmento){ 	//Me dice si ya existe
 		return strcmp(((Segmento *)elemento)->nombre_tabla, ntabla)==0;
 	}
 
-	memcpy(segmento,list_find(tabla_segmentos,tieneTabla),sizeof(Segmento));
+	Segmento *s=list_find(tabla_segmentos,tieneTabla);
 
-	return strcmp(segmento->nombre_tabla,ntabla)==0;
+	if(s==NULL)
+		return false;
+	else{
+		memcpy(segmento,s,sizeof(Segmento));
+
+		return strcmp(segmento->nombre_tabla,ntabla)==0;
+	}
 }
 
 bool encuentraPagina(Segmento segmento,int key, char* value){
@@ -234,13 +240,14 @@ bool encuentraPagina(Segmento segmento,int key, char* value){
 		return i==key;
 	}
 
-	Pagina *paginaAux = malloc(sizeof(Pagina));
-	memcpy(paginaAux,list_find(segmento.puntero_tpaginas,tieneKey),sizeof(Pagina));
-
+	Pagina *paginaAux = list_find(segmento.puntero_tpaginas,tieneKey);
+//	memcpy(paginaAux,,sizeof(Pagina));
+	if(paginaAux==NULL)
+		return false;
 	strcpy(value,paginaAux->puntero_registro->value);
 
-	free(paginaAux);
-	return paginaAux!=NULL;
+//	free(paginaAux);
+	return true;
 }
 
 void terminar_programa()
