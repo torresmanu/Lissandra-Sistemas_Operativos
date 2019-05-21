@@ -70,7 +70,7 @@ Segmento *agregarSegmento(char *nombre_tabla);
 void agregarPagina(Registro registro, Segmento *segmento);
 void iniciarReemplazo(char *nombre_tabla,Registro registro);
 Registro *guardarEnMemoria(Registro registro);
-Pagina* paginaMenosUsada(Segmento* segmento);
+Pagina* paginaMenosUsada(Segmento** segmento);
 void cambiarIndices(t_list* listaPaginas);
 bool memoriaFull();
 void journal();

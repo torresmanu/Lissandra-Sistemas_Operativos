@@ -107,7 +107,8 @@ Registro pedirAlLFS(char* nombre_tabla, int key){
 }
 
 bool hayEspacio(){	//una cola con el primero libre? hay que ver lo del LRU
-	return posLibres>0;
+//	return posLibres>0;
+	return false;
 }
 
 void almacenarRegistro(char *nombre_tabla,Registro registro){
@@ -119,10 +120,17 @@ void almacenarRegistro(char *nombre_tabla,Registro registro){
 
 Segmento *agregarSegmento(char *nombre_tabla){
 	//creo segmento con el ntabla
-	Segmento* segmento=malloc(sizeof(Segmento));
-	strcpy(segmento->nombre_tabla, nombre_tabla);
+	Segmento* segmento=(Segmento *)malloc(sizeof(Segmento));
+	segmento->nombre_tabla = malloc(10);
+//	strcpy(segmento->nombre_tabla, nombre_tabla);
 	segmento->numero_segmento=tabla_segmentos->elements_count;
 	segmento->puntero_tpaginas=list_create();
+	strcpy(segmento->nombre_tabla, nombre_tabla);
+
+	/* Aca cuando "no hay espacio"  el segmento->nombre tabla se inicia en 0x0 entonces no puedo strcpy.
+	 * Lo raro es que en el caso de que si hay memoria se inicializa bien y se hace ok
+	 * (Todo esto sin el malloc(10)
+	 */
 
 	list_add(tabla_segmentos,segmento);
 	return segmento;
@@ -141,6 +149,7 @@ void agregarPagina(Registro registro, Segmento *segmento){
 void iniciarReemplazo(char *nombre_tabla,Registro registro){
 	//completar cuando veamos memoria en teoria
 	Segmento *segmentoAnterior;
+	int a=5;
 	Pagina* direccion = paginaMenosUsada(&segmentoAnterior);
 
 	if(direccion==NULL){
@@ -148,9 +157,9 @@ void iniciarReemplazo(char *nombre_tabla,Registro registro){
 	}
 	else{
 		Segmento *segmento;
-		if(!encuentraSegmento(nombre_tabla,segmento)){
+		if(!encuentraSegmento(nombre_tabla,segmento))
 			segmento = agregarSegmento(nombre_tabla);
-		}
+
 		list_remove(segmentoAnterior->puntero_tpaginas,direccion->numero_pagina);
 		cambiarIndices(segmentoAnterior->puntero_tpaginas);
 
@@ -162,29 +171,30 @@ void iniciarReemplazo(char *nombre_tabla,Registro registro){
 	}
 }
 
-Pagina* paginaMenosUsada(Segmento* segmento){
+Pagina* paginaMenosUsada(Segmento** segmento){
 	//por ahora porque solo tenemos un segmento y una pagina(hito2)
 	if(memoriaFull()){
 		return NULL;
 	}
 	else{
-		segmento = list_get(tabla_segmentos, 0);
-		return segmento->puntero_tpaginas;
+		Segmento* s =list_get(tabla_segmentos, 0);
+		memcpy(segmento,&s,sizeof(Segmento *));
+		return list_get((*(segmento))->puntero_tpaginas, 0);
 	}
 }
 
 bool memoriaFull(){
 
-	bool algunSegmentoEstaModificado(void *elemento){
+	bool segmentoEstaModificado(void *elemento){
 
 		bool estaModificada(void *element){
-			return ((Pagina *)element)->flag_modificado==1;
+			return (((Pagina *)element)->flag_modificado)==1;
 		}
 
 		return list_all_satisfy(((Segmento *)elemento)->puntero_tpaginas,estaModificada);
 	}
 
-	return list_any_satisfy(tabla_segmentos,!algunSegmentoEstaModificado);
+	return list_all_satisfy(tabla_segmentos,segmentoEstaModificado);
 }
 
 void journal(){
