@@ -49,7 +49,7 @@ void iniciar_programa(void)
 	iniciar_tablas();
 
 	Segmento* seg_prueba = malloc(sizeof(Segmento));
-	seg_prueba->numero_segmento	= 1;
+	seg_prueba->numero_segmento	= 0;
 	seg_prueba->nombre_tabla="Tabla1";
 	seg_prueba->puntero_tpaginas = list_create();
 
@@ -66,7 +66,7 @@ void iniciar_programa(void)
 	}
 
 	printf("\nSELECT TABLA1 10\n");
-	select_t("Tabla1",11);
+	select_t("Tabla",11);
 
 	free(seg_prueba);
 }
@@ -78,7 +78,8 @@ void select_t(char *nombre_tabla,int key){
 		printf("Resultado select: %s\n",value);
 	}
 	else{
-		printf("Algo salio mal, ya vengo, voy a hablar con el LFS\n");	//Tengo que pedirselo al LFS y agregarlo en la pagina
+		printf("Algo salio mal, ya vengo, voy a hablar con el LFS \n");	//Tengo que pedirselo al LFS y agregarlo en la pagina
+		fflush(stdout);
 		Registro registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
 
 		if(hayEspacio()){
@@ -86,6 +87,9 @@ void select_t(char *nombre_tabla,int key){
 		}
 		else
 			iniciarReemplazo(nombre_tabla,registro);
+
+		printf("Resultado select: %s\n",registro.value);
+
 	}
 	return;
 }
@@ -96,7 +100,7 @@ Registro pedirAlLFS(char* nombre_tabla, int key){
 	Registro registro;
 	registro.key=2;
 	registro.timestamp=10;
-	strcpy(registro.value,"Ale puto");
+	strcpy(registro.value,"Ale");
 
 	return registro;
 
@@ -118,7 +122,7 @@ Segmento *agregarSegmento(char *nombre_tabla){
 	Segmento* segmento=malloc(sizeof(Segmento));
 	strcpy(segmento->nombre_tabla, nombre_tabla);
 	segmento->numero_segmento=tabla_segmentos->elements_count;
-	segmento->puntero_tpaginas=NULL;
+	segmento->puntero_tpaginas=list_create();
 
 	list_add(tabla_segmentos,segmento);
 	return segmento;
