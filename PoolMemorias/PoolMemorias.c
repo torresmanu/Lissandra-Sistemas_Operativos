@@ -60,13 +60,13 @@ void iniciar_programa(void)
 		Pagina* nodo=malloc(sizeof(Pagina));
 		nodo->numero_pagina=i;
 		nodo->puntero_registro=&(memoria[i]);
-		nodo->flag_modificado=0;
+		nodo->flag_modificado=1;
 		list_add(seg_prueba->puntero_tpaginas,nodo);
 
 	}
 
 	printf("\nSELECT TABLA1 10\n");
-	select_t("Tabla",11);
+	select_t("Tabla1",11);
 
 	free(seg_prueba);
 }
@@ -86,7 +86,7 @@ void select_t(char *nombre_tabla,int key){
 			almacenarRegistro(nombre_tabla,registro);
 		}
 		else
-			iniciarReemplazo(nombre_tabla,registro);
+			iniciarReemplazo(nombre_tabla,registro); //se cambia el value del registro cuando existe el segmento
 
 		printf("Resultado select: %s\n",registro.value);
 
@@ -149,7 +149,7 @@ void agregarPagina(Registro registro, Segmento *segmento){
 void iniciarReemplazo(char *nombre_tabla,Registro registro){
 	//completar cuando veamos memoria en teoria
 	Segmento *segmentoAnterior;
-	int a=5;
+	double a=10;	//BOOM con un int no muestra nada y con un double anda bien magicamente (la variable no se usa en ningun lado)
 	Pagina* direccion = paginaMenosUsada(&segmentoAnterior);
 
 	if(direccion==NULL){
@@ -198,7 +198,7 @@ bool memoriaFull(){
 }
 
 void journal(){
-
+	printf("Journaling\n");
 }
 
 void cambiarIndices(t_list* listaPaginas){
