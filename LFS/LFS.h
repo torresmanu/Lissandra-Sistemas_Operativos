@@ -20,6 +20,7 @@
 #include<commons/collections/list.h>
 #include <pthread.h>
 
+#define PACKAGESIZE 100
 
 int server_fd;
 char* IP_FS;

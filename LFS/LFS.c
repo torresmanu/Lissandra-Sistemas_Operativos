@@ -15,7 +15,6 @@ int main(void) {
 	resultado res;
 	char* mensaje;
 	res.resultado= OK;
-	int server_fd;
 	iniciar_programa();
 
 	//gestionarConexion();
@@ -60,12 +59,11 @@ void iniciar_programa()
 	iniciar_memtable();
 
 	server_fd = iniciarServidor(config_get_string_value(g_config,"PUERTO_SERVIDOR"));
-	printf("[iniciar_programa]Escucho en el puerto %i\n", server_fd);
 
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-	int err = pthread_create(&thread, &attr, esperarClienteNuevo, config_get_string_value(g_config,"PUERTO_SERVIDOR"));
+	int err = pthread_create(&thread, &attr, esperarClienteNuevo, server_fd);
 	if(err != 0) {
 		printf("Hubo un problema al crear el thread esperarCliente:[%s]\n", strerror(err));
 		//return err;
@@ -73,7 +71,6 @@ void iniciar_programa()
 
 	pthread_attr_destroy(&attr);
 
-	//int clienteMem_fd = esperarCliente(server_fd,"Se conecto un cliente\n");
 }
 
 resultado parsear_mensaje(char* mensaje)
@@ -267,7 +264,66 @@ void gestionarConexion()
     */
 }
 
-/*int atender_clientes() {
-	recibir_mensaje(clienteMem_fd,buffer,"La memoria me mando el mensaje");
-}*/
+int esperarClienteNuevo(int conexion_servidor) {
+
+	int conexion_cliente, recibiendo = 1;
+	struct sockaddr_in cliente;
+	socklen_t longc; //Debemos declarar una variable que contendrá la longitud de la estructura
+	char buffer[100]; //Declaramos una variable que contendrá los mensajes que recibamos
+
+	longc = sizeof(cliente);
+	conexion_cliente = accept(conexion_servidor, (struct sockaddr *)&cliente, &longc);
+
+	if(conexion_cliente<0) {
+		printf("Error al aceptar trafico\n");
+		close(conexion_servidor);
+		return 1;
+	}
+
+	printf("Conectando con %s:%d\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
+
+	while(recibiendo) {
+		if(recv(conexion_cliente, buffer, 100, 0) < 0) { //Comenzamos a recibir datos del cliente
+			//Si recv() recibe 0 el cliente ha cerrado la conexion. Si es menor que 0 ha habido algún error.
+			printf("Error al recibir los datos\n");
+			close(conexion_servidor);
+			recibiendo = 0;
+			//return 1;
+		} else {
+			printf("%s\n", buffer);
+			bzero((char *)&buffer, sizeof(buffer));
+			send(conexion_cliente, "Recibido\n", 13, 0);
+		}
+	}
+
+	printf("Cierro la conexion normalmente\n");
+	close(conexion_servidor);
+	return 0;
+
+}
+
+int iniciarServidor(char* configPuerto) {
+
+	int conexion_servidor, puerto;
+	struct sockaddr_in servidor;
+
+	puerto = atoi(configPuerto);
+	conexion_servidor = socket(AF_INET, SOCK_STREAM, 0);
+
+	bzero((char *)&servidor, sizeof(servidor));
+	servidor.sin_family = AF_INET;
+	servidor.sin_port = htons(puerto);
+	servidor.sin_addr.s_addr = INADDR_ANY;
+
+	if(bind(conexion_servidor, (struct sockaddr *)&servidor, sizeof(servidor)) < 0) {
+		printf("Error al asociar el puerto a la conexion\n");
+	    close(conexion_servidor);
+	    return 1;
+	}
+
+	listen(conexion_servidor, 3);
+	printf("A la escucha en el puerto %d\n", ntohs(servidor.sin_port));
+
+	return conexion_servidor;
+}
 

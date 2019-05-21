@@ -34,7 +34,7 @@ void gestionarConexion();
 int iniciarServidor(char* puerto);
 
 int esperarCliente(int listenningSocket,char* mensaje);
-void esperarClienteNuevo(int listenningSocket);
+int esperarClienteNuevo(int listenningSocket);
 
 int conectarseAlServidor(char* puerto,char* mensaje);
 

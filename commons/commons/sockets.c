@@ -69,7 +69,7 @@ int iniciarServidor(char* puerto)
 
     memset(&hints, 0, sizeof(hints));
 
-    hints.ai_family = AF_UNSPEC;
+    hints.ai_family = PF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
@@ -88,13 +88,14 @@ int iniciarServidor(char* puerto)
     if(bind(listenningSocket, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1)
     	perror("Error en bind");
 
-
     freeaddrinfo(serverInfo);
+
     int listenReturn = listen(listenningSocket, BACKLOG);
 
     return listenningSocket;
 }
 
+// ----BORRAR
 int esperarCliente(int listenningSocket,char* mensaje)
 {
 	struct sockaddr_in addr;
@@ -106,20 +107,6 @@ int esperarCliente(int listenningSocket,char* mensaje)
 	return socketCliente;
 }
 
-void esperarClienteNuevo(int listenningSocket) {
 
-	struct sockaddr_in addr;
-	socklen_t addrlen = sizeof(addr);
-
-	int socketCliente = accept(listenningSocket, (struct sockaddr *) &addr, &addrlen);
-	if(socketCliente > 0) {
-		conexion nuevaConexion;
-		nuevaConexion.fd = socketCliente;
-		//nuevaConexion.addr = addr;
-		printf("Escucho en el socket %i: \n", nuevaConexion.fd);
-	}
-
-	printf("Entro por aca\n");
-}
 
 
