@@ -55,7 +55,7 @@ resultado dump();
 
 void iniciar_programa();
 void terminar_programa();
-void gestionarConexion(void);
+void gestionarConexion(int);
 int atender_clientes(void);
 
 

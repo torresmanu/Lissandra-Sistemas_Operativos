@@ -29,8 +29,6 @@ typedef struct{
 	struct sockaddr addr;
 } conexion;
 
-void gestionarConexion();
-
 int iniciarServidor(char* puerto);
 
 int esperarCliente(int listenningSocket,char* mensaje);
