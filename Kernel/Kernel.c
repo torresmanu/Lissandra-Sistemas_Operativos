@@ -13,16 +13,9 @@
 int main(void) {
 
 	iniciar_programa();
+	//obtenerMemorias();
 	//gestionarConexion();
-
-
 	leerConsola();
-
-
-
-
-
-
 	terminar_programa();
 	return 0;
 }
@@ -76,7 +69,7 @@ Estado iniciarEstado(nombreEstado nom){
 	return est;
 }
 
-void iniciarEstados(){ 			// Son colas?? O solo registro de un solo espacio? // Puedo hacer tambien un resultadoParser NEW;
+void iniciarEstados(){ 			// Son 4 colas.
 	iniciarEstado(NEW);
 	iniciarEstado(READY);
 	iniciarEstado(EXEC);
@@ -137,6 +130,7 @@ void run(char* path){
 	{
 		res = leerScriptLQL(arch);
 		//agregarScriptAEstado(res,NEW);        POR AHORA NO LA USO
+		//printf("%s\n",res.contenido);			Solo sirve para mostrar que parsea
 
 	}
 	fclose(arch);
@@ -184,4 +178,19 @@ void leerConsola(){
 		free(linea);
 		free(consola);
 	}
+}
+
+//////////////////////////////////////////////////////////
+// Criterios y memorias
+//
+
+t_memoria obtenerMemorias(){
+	t_memoria t = list_create();
+	Memoria mem;
+	int id = config_get_int_value(g_config,"MEMORIA");
+	mem.idMemoria = id;
+	list_add(t,mem);
+
+	// La parte de averiguar el gossiping e ir recorriendola para ir a metiendola en la lista
+	// casi que te la debo
 }

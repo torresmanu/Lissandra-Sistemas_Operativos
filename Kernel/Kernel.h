@@ -15,6 +15,7 @@
 #include <commons/sockets.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include "Criterio.h"
 
 #define MAX_BUFFER 100
 
@@ -49,16 +50,18 @@ Estado iniciarEstado(nombreEstado nom);
 void iniciarEstados();
 void finalizarEstados();
 
+// Sockets
 void iniciar_programa(void);
 void terminar_programa(void);
 int enviar_mensaje(int socket_cliente);
 int iniciarCliente();
 void gestionarConexion();
-void iniciarEstados();
 
+
+// Parsear archivo LQL
 void leerConsola();
-void run();
+void run(char*);
 resultadoParser leerScriptLQL(FILE* fd);
-
+resultadoParser leerLineaSQL(char*);
 
 #endif /* KERNEL_H_ */
