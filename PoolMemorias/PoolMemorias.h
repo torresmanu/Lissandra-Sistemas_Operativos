@@ -34,12 +34,13 @@ typedef struct
 	long timestamp;
 } Registro;
 
+
 Registro* memoria;
 
 typedef struct
 {
 	int numero_pagina;
-	Registro* puntero_registro;
+	int indice_registro;
 	int flag_modificado;
 
 } Pagina;
@@ -69,9 +70,9 @@ void almacenarRegistro(char *nombre_tabla,Registro registro);
 Segmento *agregarSegmento(char *nombre_tabla);
 void agregarPagina(Registro registro, Segmento *segmento);
 void iniciarReemplazo(char *nombre_tabla,Registro registro);
-Registro *guardarEnMemoria(Registro registro);
+int guardarEnMemoria(Registro registro);
 Pagina* paginaMenosUsada(Segmento** segmento);
-void cambiarIndices(t_list* listaPaginas);
+void cambiarNumerosPaginas(t_list* listaPaginas);
 bool memoriaFull();
 void journal();
 

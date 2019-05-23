@@ -38,13 +38,14 @@ void iniciar_programa(void)
 
 	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
 
+
+	int cantidadFrames = TAM_MEMORIA_PRINCIPAL / sizeof(Registro);
+
+
+
+	//cantidad_frames = 1; //Solo por el hito 2
 	memoria[0] = reg1;
-
-	int cantidad_paginas = TAM_MEMORIA_PRINCIPAL / sizeof(Registro);
-
-	cantidad_paginas = 1; //Solo por el hito 2
-
-	posLibres= cantidad_paginas;
+	posLibres= cantidadFrames;
 
 	iniciar_tablas();
 
@@ -55,18 +56,18 @@ void iniciar_programa(void)
 
 	list_add(tabla_segmentos,seg_prueba);
 
-	for(int i=0;i<cantidad_paginas;i++){
+	for(int i=0;i<cantidadFrames;i++){
 
 		Pagina* nodo=malloc(sizeof(Pagina));
 		nodo->numero_pagina=i;
-		nodo->puntero_registro=&(memoria[i]);
+		nodo->indice_registro=i;
 		nodo->flag_modificado=1;
 		list_add(seg_prueba->puntero_tpaginas,nodo);
 
 	}
 
 	printf("\nSELECT TABLA1 10\n");
-	select_t("Tabla1",11);
+	select_t("Tabla",10);
 
 	free(seg_prueba);
 }
@@ -108,7 +109,7 @@ Registro pedirAlLFS(char* nombre_tabla, int key){
 
 bool hayEspacio(){	//una cola con el primero libre? hay que ver lo del LRU
 //	return posLibres>0;
-	return false;
+	return true;
 }
 
 void almacenarRegistro(char *nombre_tabla,Registro registro){
@@ -138,8 +139,8 @@ Segmento *agregarSegmento(char *nombre_tabla){
 
 void agregarPagina(Registro registro, Segmento *segmento){
 	Pagina* pagina=malloc(sizeof(Pagina));
-	Registro* direccion = guardarEnMemoria(registro);
-	pagina->puntero_registro=direccion;
+	int indice = guardarEnMemoria(registro);
+	pagina->indice_registro=indice;
 	pagina->numero_pagina=segmento->puntero_tpaginas->elements_count;
 	pagina->flag_modificado=0;
 
@@ -150,9 +151,9 @@ void iniciarReemplazo(char *nombre_tabla,Registro registro){
 	//completar cuando veamos memoria en teoria
 	Segmento *segmentoAnterior;
 	double a=10;	//BOOM con un int no muestra nada y con un double anda bien magicamente (la variable no se usa en ningun lado)
-	Pagina* direccion = paginaMenosUsada(&segmentoAnterior);
+	Pagina* direccionPagina = paginaMenosUsada(&segmentoAnterior);
 
-	if(direccion==NULL){
+	if(direccionPagina==NULL){
 		journal();
 	}
 	else{
@@ -160,12 +161,13 @@ void iniciarReemplazo(char *nombre_tabla,Registro registro){
 		if(!encuentraSegmento(nombre_tabla,segmento))
 			segmento = agregarSegmento(nombre_tabla);
 
-		list_remove(segmentoAnterior->puntero_tpaginas,direccion->numero_pagina);
-		cambiarIndices(segmentoAnterior->puntero_tpaginas);
+		list_remove(segmentoAnterior->puntero_tpaginas,direccionPagina->numero_pagina);
+		cambiarNumerosPaginas(segmentoAnterior->puntero_tpaginas);
 
-		list_add(segmento->puntero_tpaginas,direccion);
-		cambiarIndices(segmento->puntero_tpaginas);
-		int indice = direccion->puntero_registro - memoria;//memoria+indice
+		list_add(segmento->puntero_tpaginas,direccionPagina);
+		cambiarNumerosPaginas(segmento->puntero_tpaginas);
+		//int indice = direccionPagina->puntero_registro - memoria;//memoria+indice
+		int indice = (direccionPagina->indice_registro)*sizeof(Registro);
 		memoria[indice]=registro;
 
 	}
@@ -201,19 +203,18 @@ void journal(){
 	printf("Journaling\n");
 }
 
-void cambiarIndices(t_list* listaPaginas){
-	for(int i;i<listaPaginas->elements_count;i++){
+void cambiarNumerosPaginas(t_list* listaPaginas){
+	for(int i=0;i<listaPaginas->elements_count;i++){
 		//queremos que los numeros de pagina sean consistentes(0,1,2,..) por ejemplo cuando sacmos una pagina y nos queda 1,2,4,5..
 		//lo ibamos a hacer con list_get pero creemos que nos da una copia de la pagina y necesitamos la pagina
 	}
 }
 
-Registro *guardarEnMemoria(Registro registro){
+int guardarEnMemoria(Registro registro){
 	//guardar el registro que nos mandó el lfs
-	Registro *r;
 	int posLibre=0; //nos falta saber como tratar posiciones libres en memoria
 	memoria[posLibre]=registro;
-	return memoria+posLibre;
+	return posLibre*sizeof(Registro);
 }
 
 int contieneRegistro(char *nombre_tabla,int key, char *value){
@@ -249,7 +250,8 @@ bool encuentraPagina(Segmento segmento,int key, char* value){
 
 	bool tieneKey(void *elemento){
 
-		int i=(((Pagina *)elemento)->puntero_registro)->key;
+		//int i=(((Pagina *)elemento)->puntero_registro)->key;
+		int i=memoria[(((Pagina *)elemento)->indice_registro)].key;
 
 		return i==key;
 	}
@@ -258,7 +260,8 @@ bool encuentraPagina(Segmento segmento,int key, char* value){
 //	memcpy(paginaAux,,sizeof(Pagina));
 	if(paginaAux==NULL)
 		return false;
-	strcpy(value,paginaAux->puntero_registro->value);
+	//strcpy(value,paginaAux->puntero_registro->value);
+	strcpy(value, memoria[(paginaAux->indice_registro)*sizeof(Registro)].value);
 
 //	free(paginaAux);
 	return true;
