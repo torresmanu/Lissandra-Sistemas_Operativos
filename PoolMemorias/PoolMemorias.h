@@ -75,6 +75,8 @@ Pagina* paginaMenosUsada(Segmento** segmento);
 void cambiarNumerosPaginas(t_list* listaPaginas);
 bool memoriaFull();
 void journal();
+void insert(char *nombre_tabla,int key,char *value);
+void actualizarRegistro(Pagina *pagina,char *value);
 
 
 

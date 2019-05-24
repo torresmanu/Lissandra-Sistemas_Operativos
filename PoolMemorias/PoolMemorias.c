@@ -267,6 +267,46 @@ bool encuentraPagina(Segmento segmento,int key, char* value){
 	return true;
 }
 
+void insert(char *nombre_tabla,int key,char *value){
+	Segmento *segmento;
+	char *basura;
+	Pagina *pagina;
+
+	Registro registro;
+	registro.timestamp=time(NULL);
+	registro.key=key;
+	strcpy(registro.value,value);
+
+	if(encuentraSegmento(nombre_tabla,&segmento)){
+
+		if(encuentraPagina(segmento,key,basura)){	//en vez de basura(char *) pasarle una pagina
+			actualizarRegistro(pagina,value);
+		}
+		else
+			agregarPagina(registro,segmento);
+	}
+	else{
+
+		if(hayEspacio()){
+			almacenarRegistro(nombre_tabla,registro);
+		}
+		else
+			iniciarReemplazo(nombre_tabla,registro);
+		}
+}
+
+void actualizarRegistro(Pagina *pagina,char *value){
+	Registro *registro= pagina->puntero_registro;
+	strcpy(registro->value,value);
+	registro->timestamp=time(NULL);
+
+	int indice=registro-memoria;
+
+	memoria[indice]=*registro;
+
+	pagina->flag_modificado=1;
+}
+
 void terminar_programa()
 {
 	//Destruyo el logger
