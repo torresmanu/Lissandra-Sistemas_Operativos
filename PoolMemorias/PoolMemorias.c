@@ -67,7 +67,7 @@ void iniciar_programa(void)
 	}
 
 	printf("\nSELECT TABLA1 10\n");
-	select_t("Tabla",10);
+	select_t("Tabla0",11);
 
 	free(seg_prueba);
 }
@@ -96,6 +96,7 @@ void select_t(char *nombre_tabla,int key){
 }
 
 Registro pedirAlLFS(char* nombre_tabla, int key){
+
 //	strcpy(value,mandarLFS("SELECT",nombre_tabla,key));
 
 	Registro registro;
@@ -109,7 +110,7 @@ Registro pedirAlLFS(char* nombre_tabla, int key){
 
 bool hayEspacio(){	//una cola con el primero libre? hay que ver lo del LRU
 //	return posLibres>0;
-	return true;
+	return false;
 }
 
 void almacenarRegistro(char *nombre_tabla,Registro registro){
@@ -123,10 +124,13 @@ Segmento *agregarSegmento(char *nombre_tabla){
 	//creo segmento con el ntabla
 	Segmento* segmento=(Segmento *)malloc(sizeof(Segmento));
 	segmento->nombre_tabla = malloc(10);
+
 //	strcpy(segmento->nombre_tabla, nombre_tabla);
 	segmento->numero_segmento=tabla_segmentos->elements_count;
 	segmento->puntero_tpaginas=list_create();
-	strcpy(segmento->nombre_tabla, nombre_tabla);
+	//strcpy(segmento->nombre_tabla, nombre_tabla);
+
+	segmento->nombre_tabla=nombre_tabla;
 
 	/* Aca cuando "no hay espacio"  el segmento->nombre tabla se inicia en 0x0 entonces no puedo strcpy.
 	 * Lo raro es que en el caso de que si hay memoria se inicializa bien y se hace ok
@@ -140,6 +144,7 @@ Segmento *agregarSegmento(char *nombre_tabla){
 void agregarPagina(Registro registro, Segmento *segmento){
 	Pagina* pagina=malloc(sizeof(Pagina));
 	int indice = guardarEnMemoria(registro);
+
 	pagina->indice_registro=indice;
 	pagina->numero_pagina=segmento->puntero_tpaginas->elements_count;
 	pagina->flag_modificado=0;
@@ -167,7 +172,8 @@ void iniciarReemplazo(char *nombre_tabla,Registro registro){
 		list_add(segmento->puntero_tpaginas,direccionPagina);
 		cambiarNumerosPaginas(segmento->puntero_tpaginas);
 		//int indice = direccionPagina->puntero_registro - memoria;//memoria+indice
-		int indice = (direccionPagina->indice_registro)*sizeof(Registro);
+		//int indice = (direccionPagina->indice_registro)*sizeof(Registro);
+		int indice = direccionPagina->indice_registro;
 		memoria[indice]=registro;
 
 	}
@@ -258,17 +264,19 @@ bool encuentraPagina(Segmento segmento,int key, char* value){
 
 	Pagina *paginaAux = list_find(segmento.puntero_tpaginas,tieneKey);
 //	memcpy(paginaAux,,sizeof(Pagina));
+
 	if(paginaAux==NULL)
 		return false;
 	//strcpy(value,paginaAux->puntero_registro->value);
-	strcpy(value, memoria[(paginaAux->indice_registro)*sizeof(Registro)].value);
+	//strcpy(value, memoria[(paginaAux->indice_registro)*sizeof(Registro)].value);
+	strcpy(value, memoria[paginaAux->indice_registro].value);
 
 //	free(paginaAux);
 	return true;
 }
 
 void insert(char *nombre_tabla,int key,char *value){
-	Segmento *segmento;
+	Segmento* segmento;
 	char *basura;
 	Pagina *pagina;
 
@@ -279,7 +287,7 @@ void insert(char *nombre_tabla,int key,char *value){
 
 	if(encuentraSegmento(nombre_tabla,&segmento)){
 
-		if(encuentraPagina(segmento,key,basura)){	//en vez de basura(char *) pasarle una pagina
+		if(encuentraPagina(*segmento,key,basura)){	//en vez de basura(char *) pasarle una pagina
 			actualizarRegistro(pagina,value);
 		}
 		else
@@ -296,7 +304,7 @@ void insert(char *nombre_tabla,int key,char *value){
 }
 
 void actualizarRegistro(Pagina *pagina,char *value){
-	Registro *registro= pagina->puntero_registro;
+	Registro *registro= pagina->indice_registro;
 	strcpy(registro->value,value);
 	registro->timestamp=time(NULL);
 
