@@ -13,6 +13,7 @@
 #include<commons/log.h>
 #include<commons/config.h>
 #include<commons/collections/list.h>
+#include<commons/parser.h>
 
 t_log* g_logger;
 t_config* g_config;
@@ -53,6 +54,20 @@ typedef struct
 
 } Segmento;
 
+typedef enum
+{
+	OK,
+	SALIR,
+	MENSAJE_MAL_FORMATEADO,
+	ERROR
+}estado;
+
+typedef struct
+{
+	estado resultado;
+	char* mensaje;
+} resultado;
+
 void iniciar_programa(void);
 void terminar_programa(void);
 void gestionarConexion(void);
@@ -60,7 +75,7 @@ void destroy_nodo_pagina(void *);
 void destroy_nodo_segmento(void *);
 void iniciar_tablas();
 
-void select_t(char *nombre_tabla,int key);
+resultado select_t(char *nombre_tabla,int key);
 int contieneRegistro(char *nombre_tabla,int key, char *value);
 bool encuentraSegmento(char *ntabla,Segmento *segmento);
 bool encuentraPagina(Segmento segmento,int key, char* value);
@@ -75,7 +90,7 @@ Pagina* paginaMenosUsada(Segmento** segmento);
 void cambiarNumerosPaginas(t_list* listaPaginas);
 bool memoriaFull();
 void journal();
-void insert(char *nombre_tabla,int key,char *value);
+resultado insert(char *nombre_tabla,int key,char *value);
 void actualizarRegistro(Pagina *pagina,char *value);
 
 

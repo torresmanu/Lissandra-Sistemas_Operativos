@@ -26,6 +26,12 @@ void iniciar_programa(void)
 	strcpy(reg1.value,"creativOS");
 	reg1.timestamp = 500;
 
+	Registro reg2;
+	reg1.key	= 1000;
+	strcpy(reg1.value,"chacovolve");
+	reg1.timestamp = 1500;
+
+
 	//Inicio el logger
 	g_logger = log_create("PoolMemorias.log", "LFS", 1, LOG_LEVEL_INFO);
 	log_info(g_logger,"Inicio Aplicacion Pool Memorias");
@@ -45,6 +51,7 @@ void iniciar_programa(void)
 
 	//cantidad_frames = 1; //Solo por el hito 2
 	memoria[0] = reg1;
+	memoria[1] = reg2;
 	posLibres= cantidadFrames;
 
 	iniciar_tablas();
@@ -67,16 +74,20 @@ void iniciar_programa(void)
 	}
 
 	printf("\nSELECT TABLA1 10\n");
-	select_t("Tabla0",11);
+	select_t("Tabla1",11);
 
 	free(seg_prueba);
 }
 
-void select_t(char *nombre_tabla,int key){
+//void select_t(char *nombre_tabla,int key){  primera edicion ahora lo adapto al parcer de chaco
+resultado select_t(char *nombre_tabla, int key){
 	char value[TAM_VALUE];
+	resultado res;
 //	Registro *registro = malloc(sizeof(Registro));	//Pensaba hacer un registro para agrupar los datos o que el select reciba un registro
 	if(contieneRegistro(nombre_tabla,key,value)){
-		printf("Resultado select: %s\n",value);
+		//printf("Resultado select: %s\n",value);
+		res.mensaje= string_duplicate(value);
+		res.resultado=OK;
 	}
 	else{
 		printf("Algo salio mal, ya vengo, voy a hablar con el LFS \n");	//Tengo que pedirselo al LFS y agregarlo en la pagina
@@ -89,10 +100,12 @@ void select_t(char *nombre_tabla,int key){
 		else
 			iniciarReemplazo(nombre_tabla,registro); //se cambia el value del registro cuando existe el segmento
 
-		printf("Resultado select: %s\n",registro.value);
+		//printf("Resultado select: %s\n",registro.value);
+		res.mensaje= string_duplicate((&registro)->value);
+		res.resultado=OK;
 
 	}
-	return;
+	return res;
 }
 
 Registro pedirAlLFS(char* nombre_tabla, int key){
@@ -100,7 +113,7 @@ Registro pedirAlLFS(char* nombre_tabla, int key){
 //	strcpy(value,mandarLFS("SELECT",nombre_tabla,key));
 
 	Registro registro;
-	registro.key=2;
+	registro.key=key;
 	registro.timestamp=10;
 	strcpy(registro.value,"Ale");
 
@@ -275,7 +288,8 @@ bool encuentraPagina(Segmento segmento,int key, char* value){
 	return true;
 }
 
-void insert(char *nombre_tabla,int key,char *value){
+//void insert(char *nombre_tabla,int key,char *value){    primera version
+resultado insert(char *nombre_tabla,int key,char *value){
 	Segmento* segmento;
 	char *basura;
 	Pagina *pagina;
@@ -285,7 +299,7 @@ void insert(char *nombre_tabla,int key,char *value){
 	registro.key=key;
 	strcpy(registro.value,value);
 
-	if(encuentraSegmento(nombre_tabla,&segmento)){
+	if(encuentraSegmento(nombre_tabla,segmento)){
 
 		if(encuentraPagina(*segmento,key,basura)){	//en vez de basura(char *) pasarle una pagina
 			actualizarRegistro(pagina,value);
@@ -301,7 +315,35 @@ void insert(char *nombre_tabla,int key,char *value){
 		else
 			iniciarReemplazo(nombre_tabla,registro);
 		}
+
+	//Devuelvo el resultado
+	resultado res;
+	res.mensaje="Registro insertado exitosamente";
+	res.resultado=OK;
+	return res;
 }
+
+
+resultado drop(char* nombre_tabla){
+
+	resultado res;
+	Segmento* segmento;
+	int indice; // deberia ser el indice de la tabla de segmentos del segmento que encuentra
+
+	if(encuentraSegmento(nombre_tabla,segmento)){
+		list_remove_and_destroy_element(tabla_segmentos, indice, destroy_nodo_segmento);
+		res.mensaje="Registro eliminado exitosamente";
+		res.resultado=OK;
+	}
+	else{
+
+		res.mensaje="Tabla no encontrada";
+		res.resultado=ERROR;
+
+	}
+	return res;
+}
+
 
 void actualizarRegistro(Pagina *pagina,char *value){
 	Registro *registro= pagina->indice_registro;
@@ -381,3 +423,84 @@ void destroy_nodo_segmento(void * elem){
 	Segmento* nodo_tabla_elem = (Segmento *) elem;
 	free(nodo_tabla_elem);
 }
+
+
+
+//version de chaco LFS
+resultado parsear_mensaje(char* mensaje)
+{
+	resultado res;
+	resultadoParser resParser = parseConsole(mensaje);
+	switch(resParser.accionEjecutar){
+		case SELECT: //ya adaptado a memorias
+		{
+			contenidoSelect* contSel;
+			contSel = (contenidoSelect*)resParser.contenido;
+			res = select_t(contSel->nombreTabla,contSel->key);
+			break;
+		}
+		case DESCRIBE:
+		{
+			contenidoDescribe* contDes = resParser.contenido;
+
+			//send al lfs el describe para obtener la metadata de las tablas
+
+			break;
+		}
+		case INSERT: //ya adaptado a memorias
+		{
+			contenidoInsert* contenido = resParser.contenido;
+			res = insert(contenido->nombreTabla,contenido->key,contenido->value);
+			break;
+		}
+		case JOURNAL:
+		{
+			journal();
+			break;
+		}
+		case CREATE:
+		{
+			contenidoCreate* contCreate = resParser.contenido;
+
+			//send al lfs para que haga el create
+
+			break;
+		}
+		case DROP:
+		{
+			contenidoDrop* contDrop = resParser.contenido;
+			res = drop(contDrop->nombreTabla);
+			break;
+		}
+		case DUMP:
+		{
+			res = dump();
+			break;
+		}
+		case ERROR_PARSER:
+		{
+			res.resultado = MENSAJE_MAL_FORMATEADO;
+			res.mensaje = "";
+			break;
+		}
+		case SALIR_CONSOLA:
+		{
+			res.resultado = SALIR;
+			res.mensaje = "";
+			break;
+		}
+		default:
+		{
+			res.resultado = SALIR;
+			res.mensaje = "";
+			break;
+		}
+	}
+	return res;
+
+}
+
+
+
+
+
