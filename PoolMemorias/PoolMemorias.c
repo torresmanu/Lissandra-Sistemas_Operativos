@@ -11,9 +11,35 @@
 #include "PoolMemorias.h"
 
 int main(void) {
-
+	resultado res;
+	char* mensaje;
+	res.resultado= OK;
 	iniciar_programa();
 //	gestionarConexion();
+
+
+	while(res.resultado != SALIR)
+	{
+		mensaje = readline(">");
+		res = parsear_mensaje(mensaje);
+		if(res.resultado == OK)
+		{
+			log_info(g_logger,res.mensaje);
+		}
+		else if(res.resultado == ERROR)
+		{
+			log_info(g_logger,"Ocurrio un error al ejecutar la acción");
+		}
+		else if(res.resultado == MENSAJE_MAL_FORMATEADO)
+		{
+			log_info(g_logger,"Mensaje incorrecto");
+		}
+		//atender_clientes();
+	}
+
+
+
+
 	terminar_programa();
 
 
@@ -26,10 +52,10 @@ void iniciar_programa(void)
 	strcpy(reg1.value,"creativOS");
 	reg1.timestamp = 500;
 
-	Registro reg2;
-	reg1.key	= 1000;
-	strcpy(reg1.value,"chacovolve");
-	reg1.timestamp = 1500;
+//	Registro reg2;
+//	reg2.key	= 1000;
+//	strcpy(reg1.value,"chacovolve");
+//	reg2.timestamp = 1500;
 
 
 	//Inicio el logger
@@ -51,7 +77,7 @@ void iniciar_programa(void)
 
 	//cantidad_frames = 1; //Solo por el hito 2
 	memoria[0] = reg1;
-	memoria[1] = reg2;
+	//memoria[1] = reg2;
 	posLibres= cantidadFrames;
 
 	iniciar_tablas();
@@ -73,8 +99,9 @@ void iniciar_programa(void)
 
 	}
 
-	printf("\nSELECT TABLA1 10\n");
-	select_t("Tabla1",11);
+	//printf("\nSELECT TABLA1 10\n");
+	//select_t("Tabla1",10);
+
 
 	free(seg_prueba);
 }
@@ -105,6 +132,7 @@ resultado select_t(char *nombre_tabla, int key){
 		res.resultado=OK;
 
 	}
+
 	return res;
 }
 
@@ -426,13 +454,12 @@ void destroy_nodo_segmento(void * elem){
 
 
 
-//version de chaco LFS
 resultado parsear_mensaje(char* mensaje)
 {
 	resultado res;
 	resultadoParser resParser = parseConsole(mensaje);
 	switch(resParser.accionEjecutar){
-		case SELECT: //ya adaptado a memorias
+		case SELECT:
 		{
 			contenidoSelect* contSel;
 			contSel = (contenidoSelect*)resParser.contenido;
@@ -447,7 +474,7 @@ resultado parsear_mensaje(char* mensaje)
 
 			break;
 		}
-		case INSERT: //ya adaptado a memorias
+		case INSERT:
 		{
 			contenidoInsert* contenido = resParser.contenido;
 			res = insert(contenido->nombreTabla,contenido->key,contenido->value);
@@ -470,11 +497,14 @@ resultado parsear_mensaje(char* mensaje)
 		{
 			contenidoDrop* contDrop = resParser.contenido;
 			res = drop(contDrop->nombreTabla);
+
+			//send al lfs para que realice la opercacion necesaria
+
 			break;
 		}
 		case DUMP:
 		{
-			res = dump();
+			//res = dump();    acá nose que hay que hacer supongo que manderselo a lfs
 			break;
 		}
 		case ERROR_PARSER:
@@ -499,8 +529,5 @@ resultado parsear_mensaje(char* mensaje)
 	return res;
 
 }
-
-
-
 
 

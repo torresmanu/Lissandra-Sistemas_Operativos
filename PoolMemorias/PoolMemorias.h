@@ -92,6 +92,8 @@ bool memoriaFull();
 void journal();
 resultado insert(char *nombre_tabla,int key,char *value);
 void actualizarRegistro(Pagina *pagina,char *value);
+resultado parsear_mensaje(char *);
+
 
 
 
