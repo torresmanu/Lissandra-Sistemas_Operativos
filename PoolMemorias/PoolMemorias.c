@@ -9,22 +9,11 @@
  */
 
 #include "PoolMemorias.h"
-#define TAM_VALUE 4
-#define MEMORIA_PRINCIPAL 2048
-
-
-typedef struct
-{
-	char value[TAM_VALUE];
-	int key;
-	long timestamp;
-} registro;
 
 int main(void) {
 
-
 	iniciar_programa();
-	gestionarConexion();
+//	gestionarConexion();
 	terminar_programa();
 
 
@@ -32,6 +21,11 @@ int main(void) {
 
 void iniciar_programa(void)
 {
+	Registro reg1;
+	reg1.key	= 10;
+	strcpy(reg1.value,"creativOS");
+	reg1.timestamp = 500;
+
 	//Inicio el logger
 	g_logger = log_create("PoolMemorias.log", "LFS", 1, LOG_LEVEL_INFO);
 	log_info(g_logger,"Inicio Aplicacion Pool Memorias");
@@ -42,11 +36,236 @@ void iniciar_programa(void)
 
 	//hacer handshake con LFS y obtener tamaño de mem ppl y value
 
-	int cantidadPaginas = MEMORIA_PRINCIPAL/sizeOfRegistro(TAM_VALUE);
-	registro memoria[cantidadPaginas];
+	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
+
+
+	int cantidadFrames = TAM_MEMORIA_PRINCIPAL / sizeof(Registro);
+
+
+
+	//cantidad_frames = 1; //Solo por el hito 2
+	memoria[0] = reg1;
+	posLibres= cantidadFrames;
+
+	iniciar_tablas();
+
+	Segmento* seg_prueba = malloc(sizeof(Segmento));
+	seg_prueba->numero_segmento	= 0;
+	seg_prueba->nombre_tabla="Tabla1";
+	seg_prueba->puntero_tpaginas = list_create();
+
+	list_add(tabla_segmentos,seg_prueba);
+
+	for(int i=0;i<cantidadFrames;i++){
+
+		Pagina* nodo=malloc(sizeof(Pagina));
+		nodo->numero_pagina=i;
+		nodo->indice_registro=i;
+		nodo->flag_modificado=1;
+		list_add(seg_prueba->puntero_tpaginas,nodo);
+
+	}
+
+	printf("\nSELECT TABLA1 10\n");
+	select_t("Tabla",10);
+
+	free(seg_prueba);
+}
+
+void select_t(char *nombre_tabla,int key){
+	char value[TAM_VALUE];
+//	Registro *registro = malloc(sizeof(Registro));	//Pensaba hacer un registro para agrupar los datos o que el select reciba un registro
+	if(contieneRegistro(nombre_tabla,key,value)){
+		printf("Resultado select: %s\n",value);
+	}
+	else{
+		printf("Algo salio mal, ya vengo, voy a hablar con el LFS \n");	//Tengo que pedirselo al LFS y agregarlo en la pagina
+		fflush(stdout);
+		Registro registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
+
+		if(hayEspacio()){
+			almacenarRegistro(nombre_tabla,registro);
+		}
+		else
+			iniciarReemplazo(nombre_tabla,registro); //se cambia el value del registro cuando existe el segmento
+
+		printf("Resultado select: %s\n",registro.value);
+
+	}
+	return;
+}
+
+Registro pedirAlLFS(char* nombre_tabla, int key){
+//	strcpy(value,mandarLFS("SELECT",nombre_tabla,key));
+
+	Registro registro;
+	registro.key=2;
+	registro.timestamp=10;
+	strcpy(registro.value,"Ale");
+
+	return registro;
 
 }
 
+bool hayEspacio(){	//una cola con el primero libre? hay que ver lo del LRU
+//	return posLibres>0;
+	return true;
+}
+
+void almacenarRegistro(char *nombre_tabla,Registro registro){
+	Segmento *segmento;
+	if(!encuentraSegmento(nombre_tabla,segmento))
+		segmento = agregarSegmento(nombre_tabla);
+	agregarPagina(registro, segmento);
+}
+
+Segmento *agregarSegmento(char *nombre_tabla){
+	//creo segmento con el ntabla
+	Segmento* segmento=(Segmento *)malloc(sizeof(Segmento));
+	segmento->nombre_tabla = malloc(10);
+//	strcpy(segmento->nombre_tabla, nombre_tabla);
+	segmento->numero_segmento=tabla_segmentos->elements_count;
+	segmento->puntero_tpaginas=list_create();
+	strcpy(segmento->nombre_tabla, nombre_tabla);
+
+	/* Aca cuando "no hay espacio"  el segmento->nombre tabla se inicia en 0x0 entonces no puedo strcpy.
+	 * Lo raro es que en el caso de que si hay memoria se inicializa bien y se hace ok
+	 * (Todo esto sin el malloc(10)
+	 */
+
+	list_add(tabla_segmentos,segmento);
+	return segmento;
+}
+
+void agregarPagina(Registro registro, Segmento *segmento){
+	Pagina* pagina=malloc(sizeof(Pagina));
+	int indice = guardarEnMemoria(registro);
+	pagina->indice_registro=indice;
+	pagina->numero_pagina=segmento->puntero_tpaginas->elements_count;
+	pagina->flag_modificado=0;
+
+	list_add(segmento->puntero_tpaginas, pagina);
+}
+
+void iniciarReemplazo(char *nombre_tabla,Registro registro){
+	//completar cuando veamos memoria en teoria
+	Segmento *segmentoAnterior;
+	double a=10;	//BOOM con un int no muestra nada y con un double anda bien magicamente (la variable no se usa en ningun lado)
+	Pagina* direccionPagina = paginaMenosUsada(&segmentoAnterior);
+
+	if(direccionPagina==NULL){
+		journal();
+	}
+	else{
+		Segmento *segmento;
+		if(!encuentraSegmento(nombre_tabla,segmento))
+			segmento = agregarSegmento(nombre_tabla);
+
+		list_remove(segmentoAnterior->puntero_tpaginas,direccionPagina->numero_pagina);
+		cambiarNumerosPaginas(segmentoAnterior->puntero_tpaginas);
+
+		list_add(segmento->puntero_tpaginas,direccionPagina);
+		cambiarNumerosPaginas(segmento->puntero_tpaginas);
+		//int indice = direccionPagina->puntero_registro - memoria;//memoria+indice
+		int indice = (direccionPagina->indice_registro)*sizeof(Registro);
+		memoria[indice]=registro;
+
+	}
+}
+
+Pagina* paginaMenosUsada(Segmento** segmento){
+	//por ahora porque solo tenemos un segmento y una pagina(hito2)
+	if(memoriaFull()){
+		return NULL;
+	}
+	else{
+		Segmento* s =list_get(tabla_segmentos, 0);
+		memcpy(segmento,&s,sizeof(Segmento *));
+		return list_get((*(segmento))->puntero_tpaginas, 0);
+	}
+}
+
+bool memoriaFull(){
+
+	bool segmentoEstaModificado(void *elemento){
+
+		bool estaModificada(void *element){
+			return (((Pagina *)element)->flag_modificado)==1;
+		}
+
+		return list_all_satisfy(((Segmento *)elemento)->puntero_tpaginas,estaModificada);
+	}
+
+	return list_all_satisfy(tabla_segmentos,segmentoEstaModificado);
+}
+
+void journal(){
+	printf("Journaling\n");
+}
+
+void cambiarNumerosPaginas(t_list* listaPaginas){
+	for(int i=0;i<listaPaginas->elements_count;i++){
+		//queremos que los numeros de pagina sean consistentes(0,1,2,..) por ejemplo cuando sacmos una pagina y nos queda 1,2,4,5..
+		//lo ibamos a hacer con list_get pero creemos que nos da una copia de la pagina y necesitamos la pagina
+	}
+}
+
+int guardarEnMemoria(Registro registro){
+	//guardar el registro que nos mandó el lfs
+	int posLibre=0; //nos falta saber como tratar posiciones libres en memoria
+	memoria[posLibre]=registro;
+	return posLibre*sizeof(Registro);
+}
+
+int contieneRegistro(char *nombre_tabla,int key, char *value){
+	Segmento segmento;
+
+	if(encuentraSegmento(nombre_tabla,&segmento)){
+
+		if(encuentraPagina(segmento,key,value))
+			return true;
+	}
+
+	return false;
+}
+
+bool encuentraSegmento(char *ntabla,Segmento *segmento){ 	//Me dice si ya existe un segmento de esa tabla y lo mete en la variable segmento, si no NULL
+
+	bool tieneTabla(void *elemento){
+		return strcmp(((Segmento *)elemento)->nombre_tabla, ntabla)==0;
+	}
+
+	Segmento *s=list_find(tabla_segmentos,tieneTabla);
+
+	if(s==NULL)
+		return false;
+	else{
+		memcpy(segmento,s,sizeof(Segmento));
+
+		return strcmp(segmento->nombre_tabla,ntabla)==0;
+	}
+}
+
+bool encuentraPagina(Segmento segmento,int key, char* value){
+
+	bool tieneKey(void *elemento){
+
+		//int i=(((Pagina *)elemento)->puntero_registro)->key;
+		int i=memoria[(((Pagina *)elemento)->indice_registro)].key;
+
+		return i==key;
+	}
+
+	Pagina *paginaAux = list_find(segmento.puntero_tpaginas,tieneKey);
+//	memcpy(paginaAux,,sizeof(Pagina));
+	if(paginaAux==NULL)
+		return false;
+	//strcpy(value,paginaAux->puntero_registro->value);
+	strcpy(value, memoria[(paginaAux->indice_registro)*sizeof(Registro)].value);
+
+//	free(paginaAux);
+	return true;
+}
 
 void terminar_programa()
 {
@@ -55,6 +274,15 @@ void terminar_programa()
 
 	//Destruyo las configs
 	config_destroy(g_config);
+
+	//Destruyo la tabla de segmentos
+	list_destroy_and_destroy_elements(tabla_segmentos, destroy_nodo_segmento);
+
+	//Destruyo la tabla de paginas
+	list_destroy_and_destroy_elements(tabla_paginas, destroy_nodo_pagina);
+
+	//Liberar memoria
+	free(memoria);
 
 }
 
@@ -90,7 +318,18 @@ void gestionarConexion()
     close(clienteMem);
 }
 
-int sizeOfRegistro(int)
-{
-	return TAM_VALUE+sizeof(int)+sizeof(long);
+void iniciar_tablas(){
+	tabla_segmentos = list_create();
+	tabla_paginas = list_create();
+}
+
+void destroy_nodo_pagina(void * elem){
+	Pagina* nodo_tabla_elem = (Pagina *) elem;
+	free(nodo_tabla_elem);
+}
+
+
+void destroy_nodo_segmento(void * elem){
+	Segmento* nodo_tabla_elem = (Segmento *) elem;
+	free(nodo_tabla_elem);
 }
