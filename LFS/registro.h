@@ -8,6 +8,7 @@
 #ifndef REGISTRO_H_
 #define REGISTRO_H_
 
+
 typedef struct
 {
 	char* value;
@@ -15,5 +16,7 @@ typedef struct
 	long timestamp;
 } registro;
 
+
+void parseRegistro(char*,registro*);
 
 #endif /* REGISTRO_H_ */

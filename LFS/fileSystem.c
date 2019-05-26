@@ -63,3 +63,36 @@ t_list* obtenerTodasMetadata(){
 	closedir(tablesdir);
 	return metadataList;
 }
+
+registro* fs_select(char* nombreTabla, int key, int partition){
+	return fs_select_partition(nombreTabla,key,partition);
+}
+
+registro* fs_select_partition(char* nombreTabla, int key, int partition){
+	registro* reg = NULL;
+	char* partitionPath= obtenerTablePath();
+	string_append(&partitionPath, nombreTabla);
+	string_append(&partitionPath, "/");
+	string_append(&partitionPath, string_itoa(partition));
+	string_append(&partitionPath, ".bin");
+	FILE* partitionFile = fopen(partitionPath,"r");
+	//Si el file es null significa que no encuentro la particion
+	if(partitionFile == NULL){
+		return reg;
+	}
+	char linea[1024];
+	while(fgets(linea,1024,(FILE*)partitionFile)){
+		registro auxReg;
+		parseRegistro(linea,&auxReg);
+		//Primero pregunto si el registro tiene el mismo value que yo quiero tomar
+		if(auxReg.key == key){
+			//Si son iguales entonces pregunto si el timestamp es mayor al que tengo hasta el momento
+			if(reg == NULL || (auxReg.timestamp > reg->timestamp)){
+				//Copio auxReg en reg
+				mempcpy(reg,&auxReg,sizeof(registro));
+			}
+		}
+	}
+	fclose(partitionFile);
+	return reg;
+}

@@ -133,13 +133,17 @@ resultado select_acc(char* tabla,int key)
 {
 	resultado res;
 	//Hago un select a la memtable
-	registro* reg = memtable_select(tabla,key);
+	registro* reg = NULL;
+	/*reg = memtable_select(tabla,key);
 	if(reg == NULL){
 		res.mensaje="Registro no obtenido";
 	}else{
 		res.mensaje= string_duplicate(reg->value);
-	}
+	}*/
+	//Hago un select a la fileSystem
 
+	reg = fs_select(tabla,key,1);
+	res.mensaje="Prueba";
 	res.resultado=OK;
 	return res;
 }
