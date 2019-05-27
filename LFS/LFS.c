@@ -66,7 +66,6 @@ void iniciar_programa()
 		int err = pthread_create(&thread, &attr, esperarClienteNuevo, server_fd);
 		if(err != 0) {
 			printf("[iniciar_programa] Hubo un problema al crear el thread esperarClienteNuevo:[%s]\n", strerror(err));
-			//return err;
 		}
 		pthread_attr_destroy(&attr);
 	}
@@ -238,7 +237,7 @@ void terminar_programa()
 
 void gestionarConexion(int conexion_cliente) {
 	int recibiendo = 1;
-	char buffer[100]; //Declaramos una variable que contendrá los mensajes que recibamos
+	char buffer[100];
 
 	while(recibiendo) {
 		int valueResponse = recv(conexion_cliente, buffer, 100, 0);
@@ -258,8 +257,6 @@ void gestionarConexion(int conexion_cliente) {
 		}
 
 		printf("Cierro la conexion normalmente\n");
-		//close(conexion_servidor);
-		//return 0;
 }
 
 int esperarClienteNuevo(int conexion_servidor) {
@@ -272,7 +269,6 @@ int esperarClienteNuevo(int conexion_servidor) {
 		conexion_cliente = accept(conexion_servidor, (struct sockaddr *)&cliente, &longc);
 		if(conexion_cliente<0) {
 			printf("Error al aceptar trafico\n");
-			//close(conexion_servidor);
 			return 1;
 		} else {
 			pthread_attr_t attr;
@@ -287,7 +283,6 @@ int esperarClienteNuevo(int conexion_servidor) {
 			int err = pthread_create(&thread, &attr, gestionarConexion, conexion_cliente);
 			if(err != 0) {
 				printf("[esperarClienteNuevo] Hubo un problema al crear el thread gestionarConexion:[%s]\n", strerror(err));
-				//return err;
 			}
 			pthread_attr_destroy(&attr);
 		}
