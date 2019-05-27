@@ -19,6 +19,8 @@
 #include<commons/parser.h>
 #include<commons/collections/list.h>
 #include <pthread.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 
 #define PACKAGESIZE 100
 
@@ -57,6 +59,7 @@ void iniciar_programa();
 void terminar_programa();
 void gestionarConexion(int);
 int atender_clientes(void);
+int esperarClienteNuevo(int);
 
 
 #endif /* LFS_H_ */
