@@ -8,6 +8,17 @@
  ============================================================================
  */
 
+/*
+ * parte principal
+ * requests
+ * tad bitmap(hay espacio() etc)
+ */
+
+
+
+
+
+
 #include "PoolMemorias.h"
 
 int main(void) {
@@ -72,7 +83,7 @@ void iniciar_programa(void)
 
 
 	int cantidadFrames = TAM_MEMORIA_PRINCIPAL / sizeof(Registro);
-
+	//necesitariamos un bitmap global pero la cantidad de frames no es global
 
 
 	//cantidad_frames = 1; //Solo por el hito 2
@@ -254,6 +265,10 @@ void cambiarNumerosPaginas(t_list* listaPaginas){
 	for(int i=0;i<listaPaginas->elements_count;i++){
 		//queremos que los numeros de pagina sean consistentes(0,1,2,..) por ejemplo cuando sacmos una pagina y nos queda 1,2,4,5..
 		//lo ibamos a hacer con list_get pero creemos que nos da una copia de la pagina y necesitamos la pagina
+		Pagina *aux = list_get(listaPaginas,i);
+		aux->numero_pagina = i;
+
+		list_replace(listaPaginas,i,aux);
 	}
 }
 
