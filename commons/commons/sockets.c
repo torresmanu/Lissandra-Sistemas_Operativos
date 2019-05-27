@@ -9,7 +9,7 @@
 #include "log.h"
 #include "config.h"
 
-int conectarseAlServidor(char* puerto,char* mensaje)
+/*int conectarseAlServidor(char* puerto,char* mensaje)
 {
 	struct addrinfo hints;
 	struct addrinfo *server_info;
@@ -31,9 +31,9 @@ int conectarseAlServidor(char* puerto,char* mensaje)
 	freeaddrinfo(server_info);
 
 	return socket_cliente;
-}
+}*/
 
-int enviar_mensaje(int socket_cliente)
+/*int enviar_mensaje(int socket_cliente)
 {
 	char buffer[PACKAGESIZE];
 
@@ -58,9 +58,9 @@ void limpiar (char *cadena)		//Reemplazo el '\n' con un '\0'
   if (p)
     *p = '\0';
 }
+*/
 
-
-int iniciarServidor(char* puerto)
+/*int iniciarServidor(char* puerto)
 {
 	//int socket_servidor;
 
@@ -107,6 +107,6 @@ int esperarCliente(int listenningSocket,char* mensaje)
 	return socketCliente;
 }
 
-
+*/
 
 
