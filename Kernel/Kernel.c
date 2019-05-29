@@ -17,6 +17,8 @@ int main(void) {
 	//gestionarConexion();
 	leerConsola();
 	terminar_programa();
+
+
 	return 0;
 }
 
@@ -35,6 +37,12 @@ void iniciar_programa(void)
 
 	// Nivel de multiprocesamiento
 	nivelMultiprocesamiento = config_get_int_value(g_config,"MULTIPROCESAMIENTO");
+
+	pool = list_create();
+
+	iniciarCriterios();
+
+
 }
 
 void terminar_programa()
@@ -47,6 +55,12 @@ void terminar_programa()
 
 	//Libero los estados y elimino sus elementos
 	finalizarEstados();
+
+	//Libero el pool de memorias
+	list_destroy_and_destroy_elements(pool,destroy_nodo_memoria);
+
+	//Libero las memorias de los criterios
+	liberarCriterios();
 }
 
 void gestionarConexion()
@@ -130,7 +144,7 @@ void run(char* path){
 	{
 		res = leerScriptLQL(arch);
 		//agregarScriptAEstado(res,NEW);        POR AHORA NO LA USO
-		//printf("%s\n",res.contenido);			Solo sirve para mostrar que parsea
+		printf("Accion: %d\n",res.accionEjecutar);			//Solo sirve para mostrar que parsea
 
 	}
 	fclose(arch);
@@ -182,15 +196,47 @@ void leerConsola(){
 
 //////////////////////////////////////////////////////////
 // Criterios y memorias
-//
 
-t_memoria obtenerMemorias(){
-	t_memoria t = list_create();
-	Memoria mem;
+void obtenerMemorias(){
+	t_list *t = list_create();
+	Memoria *mem;
 	int id = config_get_int_value(g_config,"MEMORIA");
-	mem.idMemoria = id;
-	list_add(t,mem);
+	mem->idMemoria = id;
 
-	// La parte de averiguar el gossiping e ir recorriendola para ir a metiendola en la lista
-	// casi que te la debo
+	gossiping(mem);//meto en pool la lista de memorias encontradas
+
+}
+
+void gossiping(Memoria *mem){
+	Memoria *m1 = malloc(sizeof(Memoria));
+	m1->idMemoria = 1;
+	list_add(pool,m1);
+
+	Memoria *m2 = malloc(sizeof(Memoria));
+	m2->idMemoria = 2;
+	list_add(pool,m2);
+
+	Memoria *m3 = malloc(sizeof(Memoria));
+	m3->idMemoria = 3;
+	list_add(pool,m3);
+
+}
+
+//Agrego la memoria en la lista de memorias del criterio
+void add(Memoria *memoria,t_consist tipo){
+
+	switch(tipo){
+		case SC:
+			list_add(sc.memorias,memoria);
+			break;
+
+		case SHC:
+			list_add(shc.memorias,memoria);
+			break;
+
+		case EC:
+			list_add(shc.memorias,memoria);
+			break;
+	}
+
 }

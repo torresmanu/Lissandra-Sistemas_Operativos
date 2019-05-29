@@ -9,16 +9,22 @@
 #define CRITERIO_H_
 
 #include <commons/config.h>
+#include <commons/collections/list.h>
+#include "PoolMem.h"
+
 
 typedef enum{SC, SHC, EC} t_consist;
 
 typedef struct{
-	int idMemoria;
-}Memoria;
+	t_consist tipo;
+	t_list *memorias;
+}Criterio;
 
-// Pool de Memorias
-typedef t_list* t_memoria;
+Criterio sc,shc,ec;
 
 Memoria criterioSC();
+void iniciarCriterios();
+void liberarCriterios();
+void destroy_nodo_memoria(void * elem);
 
 #endif /* CRITERIO_H_ */
