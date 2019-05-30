@@ -59,7 +59,7 @@ int main(void) {
 void iniciar_programa(void)
 {
 	Registro reg1;
-	reg1.key	= 10;
+	reg1.key= 10;
 	strcpy(reg1.value,"creativOS");
 	reg1.timestamp = 500;
 
@@ -82,8 +82,10 @@ void iniciar_programa(void)
 	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
 
 
-	int cantidadFrames = TAM_MEMORIA_PRINCIPAL / sizeof(Registro);
+	cantidadFrames = TAM_MEMORIA_PRINCIPAL / sizeof(Registro);
 	//necesitariamos un bitmap global pero la cantidad de frames no es global
+
+	bitmap=calloc(cantidadFrames, sizeof(bool));
 
 
 	//cantidad_frames = 1; //Solo por el hito 2
@@ -110,8 +112,11 @@ void iniciar_programa(void)
 
 	}
 
-	//printf("\nSELECT TABLA1 10\n");
-	//select_t("Tabla1",10);
+//	printf("\nINSERT TABLA1 10\n");
+//	insert("Tabla1",10,"hola");
+//
+//	printf("\nSELECT TABLA1 10\n");
+//	select_t("Tabla1",10);
 
 
 	free(seg_prueba);
@@ -119,11 +124,12 @@ void iniciar_programa(void)
 
 //void select_t(char *nombre_tabla,int key){  primera edicion ahora lo adapto al parcer de chaco
 resultado select_t(char *nombre_tabla, int key){
-	char value[TAM_VALUE];
+	Pagina* pagina;
 	resultado res;
 //	Registro *registro = malloc(sizeof(Registro));	//Pensaba hacer un registro para agrupar los datos o que el select reciba un registro
-	if(contieneRegistro(nombre_tabla,key,value)){
+	if(contieneRegistro(nombre_tabla,key,pagina)){
 		//printf("Resultado select: %s\n",value);
+		char* value=memoria[pagina->indice_registro].value;
 		res.mensaje= string_duplicate(value);
 		res.resultado=OK;
 	}
@@ -132,13 +138,14 @@ resultado select_t(char *nombre_tabla, int key){
 		fflush(stdout);
 		Registro registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
 
-		if(hayEspacio()){
-			almacenarRegistro(nombre_tabla,registro);
+		int posLibre= espacioLibre();
+		if(posLibre>=0){
+			almacenarRegistro(nombre_tabla,registro,posLibre);
 		}
 		else
 			iniciarReemplazo(nombre_tabla,registro); //se cambia el value del registro cuando existe el segmento
 
-		//printf("Resultado select: %s\n",registro.value);
+		printf("Resultado select: %s\n",registro.value);
 		res.mensaje= string_duplicate((&registro)->value);
 		res.resultado=OK;
 
@@ -160,16 +167,23 @@ Registro pedirAlLFS(char* nombre_tabla, int key){
 
 }
 
-bool hayEspacio(){	//una cola con el primero libre? hay que ver lo del LRU
-//	return posLibres>0;
-	return false;
+int espacioLibre(){
+
+	for(int posicion=0;posicion==cantidadFrames;posicion++){
+		if(bitmap[posicion]==0){
+			return posicion;
+		}
+	}
+
+	return -1;
+
 }
 
-void almacenarRegistro(char *nombre_tabla,Registro registro){
+void almacenarRegistro(char *nombre_tabla,Registro registro, int posLibre){
 	Segmento *segmento;
 	if(!encuentraSegmento(nombre_tabla,segmento))
 		segmento = agregarSegmento(nombre_tabla);
-	agregarPagina(registro, segmento);
+	agregarPagina(registro, segmento, posLibre);
 }
 
 Segmento *agregarSegmento(char *nombre_tabla){
@@ -193,11 +207,11 @@ Segmento *agregarSegmento(char *nombre_tabla){
 	return segmento;
 }
 
-void agregarPagina(Registro registro, Segmento *segmento){
+void agregarPagina(Registro registro, Segmento *segmento, int posLibre){
 	Pagina* pagina=malloc(sizeof(Pagina));
-	int indice = guardarEnMemoria(registro);
+	guardarEnMemoria(registro, posLibre);
 
-	pagina->indice_registro=indice;
+	pagina->indice_registro=posLibre;
 	pagina->numero_pagina=segmento->puntero_tpaginas->elements_count;
 	pagina->flag_modificado=0;
 
@@ -272,19 +286,18 @@ void cambiarNumerosPaginas(t_list* listaPaginas){
 	}
 }
 
-int guardarEnMemoria(Registro registro){
-	//guardar el registro que nos mandó el lfs
-	int posLibre=0; //nos falta saber como tratar posiciones libres en memoria
+
+
+void guardarEnMemoria(Registro registro, int posLibre){
 	memoria[posLibre]=registro;
-	return posLibre*sizeof(Registro);
 }
 
-int contieneRegistro(char *nombre_tabla,int key, char *value){
+int contieneRegistro(char *nombre_tabla,int key, Pagina* pagina){
 	Segmento segmento;
 
 	if(encuentraSegmento(nombre_tabla,&segmento)){
 
-		if(encuentraPagina(segmento,key,value))
+		if(encuentraPagina(segmento,key,pagina))
 			return true;
 	}
 
@@ -303,12 +316,15 @@ bool encuentraSegmento(char *ntabla,Segmento *segmento){ 	//Me dice si ya existe
 		return false;
 	else{
 		memcpy(segmento,s,sizeof(Segmento));
+		return true;
 
-		return strcmp(segmento->nombre_tabla,ntabla)==0;
+		//me parece que esto no hace falta porque si llego hasta acá quiere decir que encontré el segmento
+		//ademas nose porque no anda, ntabla queda con basura
+		//return strcmp(segmento->nombre_tabla,ntabla)==0;
 	}
 }
 
-bool encuentraPagina(Segmento segmento,int key, char* value){
+bool encuentraPagina(Segmento segmento,int key, Pagina* pagina){
 
 	bool tieneKey(void *elemento){
 
@@ -325,35 +341,38 @@ bool encuentraPagina(Segmento segmento,int key, char* value){
 		return false;
 	//strcpy(value,paginaAux->puntero_registro->value);
 	//strcpy(value, memoria[(paginaAux->indice_registro)*sizeof(Registro)].value);
-	strcpy(value, memoria[paginaAux->indice_registro].value);
+	//strcpy(value, memoria[paginaAux->indice_registro].value);
+	memcpy(pagina,paginaAux,sizeof(Pagina));
 
-//	free(paginaAux);
+	free(paginaAux);
 	return true;
 }
 
 //void insert(char *nombre_tabla,int key,char *value){    primera version
 resultado insert(char *nombre_tabla,int key,char *value){
 	Segmento* segmento;
-	char *basura;
-	Pagina *pagina;
+
+	Pagina* pagina=malloc(sizeof(pagina));
 
 	Registro registro;
 	registro.timestamp=time(NULL);
 	registro.key=key;
 	strcpy(registro.value,value);
+	int posLibre=espacioLibre();
 
 	if(encuentraSegmento(nombre_tabla,segmento)){
 
-		if(encuentraPagina(*segmento,key,basura)){	//en vez de basura(char *) pasarle una pagina
+		if(encuentraPagina(*segmento,key,pagina)){	//en vez de basura(char *) pasarle una pagina
 			actualizarRegistro(pagina,value);
 		}
 		else
-			agregarPagina(registro,segmento);
+			agregarPagina(registro,segmento, posLibre);
 	}
 	else{
 
-		if(hayEspacio()){
-			almacenarRegistro(nombre_tabla,registro);
+
+		if(posLibre>=0){
+			almacenarRegistro(nombre_tabla,registro, posLibre);
 		}
 		else
 			iniciarReemplazo(nombre_tabla,registro);

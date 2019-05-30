@@ -37,6 +37,8 @@ typedef struct
 
 
 Registro* memoria;
+bool* bitmap;
+int cantidadFrames;
 
 typedef struct
 {
@@ -76,16 +78,16 @@ void destroy_nodo_segmento(void *);
 void iniciar_tablas();
 
 resultado select_t(char *nombre_tabla,int key);
-int contieneRegistro(char *nombre_tabla,int key, char *value);
+int contieneRegistro(char *nombre_tabla,int key, Pagina* pagina);
 bool encuentraSegmento(char *ntabla,Segmento *segmento);
-bool encuentraPagina(Segmento segmento,int key, char* value);
+bool encuentraPagina(Segmento segmento,int key, Pagina* pagina);
 Registro pedirAlLFS(char* nombre_tabla, int key);
-bool hayEspacio();
-void almacenarRegistro(char *nombre_tabla,Registro registro);
+int espacioLibre();
+void almacenarRegistro(char *nombre_tabla,Registro registro, int posLibre);
 Segmento *agregarSegmento(char *nombre_tabla);
-void agregarPagina(Registro registro, Segmento *segmento);
+void agregarPagina(Registro registro, Segmento *segmento, int posLibre);
 void iniciarReemplazo(char *nombre_tabla,Registro registro);
-int guardarEnMemoria(Registro registro);
+void guardarEnMemoria(Registro registro, int posLibre);
 Pagina* paginaMenosUsada(Segmento** segmento);
 void cambiarNumerosPaginas(t_list* listaPaginas);
 bool memoriaFull();
