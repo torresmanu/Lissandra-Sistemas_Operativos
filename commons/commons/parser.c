@@ -60,6 +60,13 @@ resultadoParser parseConsole(char* mensaje){
 	{
 		resParser.accionEjecutar=JOURNAL;
 	}
+	else if(strcmp(accion,"RUN") == 0)
+	{
+		resParser.accionEjecutar=RUN;
+		contenidoRun* cont = malloc(sizeof(contenidoRun));
+		cont->path = strsep(&mensaje,"\n");
+		resParser.contenido = cont;
+	}
 	else if(strcmp(accion,"SALIR") == 0)
 	{
 		resParser.accionEjecutar=SALIR_CONSOLA;
