@@ -37,7 +37,7 @@ typedef struct
 
 
 Registro* memoria;
-bool* bitmap;
+int* bitmap;
 int cantidadFrames;
 
 typedef struct

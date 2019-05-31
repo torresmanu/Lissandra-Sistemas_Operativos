@@ -85,11 +85,12 @@ void iniciar_programa(void)
 	cantidadFrames = TAM_MEMORIA_PRINCIPAL / sizeof(Registro);
 	//necesitariamos un bitmap global pero la cantidad de frames no es global
 
-	bitmap=calloc(cantidadFrames, sizeof(bool));
+	bitmap=calloc(cantidadFrames, sizeof(int));
 
 
 	//cantidad_frames = 1; //Solo por el hito 2
 	memoria[0] = reg1;
+	bitmap[0]=1;
 	//memoria[1] = reg2;
 	posLibres= cantidadFrames;
 
@@ -102,12 +103,14 @@ void iniciar_programa(void)
 
 	list_add(tabla_segmentos,seg_prueba);
 
+
+	//esto esta bien?? nose porqué esta
 	for(int i=0;i<cantidadFrames;i++){
 
 		Pagina* nodo=malloc(sizeof(Pagina));
 		nodo->numero_pagina=i;
 		nodo->indice_registro=i;
-		nodo->flag_modificado=1;
+		nodo->flag_modificado=0;
 		list_add(seg_prueba->puntero_tpaginas,nodo);
 
 	}
@@ -169,7 +172,7 @@ Registro pedirAlLFS(char* nombre_tabla, int key){
 
 int espacioLibre(){
 
-	for(int posicion=0;posicion==cantidadFrames;posicion++){
+	for(int posicion=0;posicion<cantidadFrames;posicion++){
 		if(bitmap[posicion]==0){
 			return posicion;
 		}
@@ -290,6 +293,7 @@ void cambiarNumerosPaginas(t_list* listaPaginas){
 
 void guardarEnMemoria(Registro registro, int posLibre){
 	memoria[posLibre]=registro;
+	bitmap[posLibre]=1;
 }
 
 int contieneRegistro(char *nombre_tabla,int key, Pagina* pagina){
@@ -334,7 +338,7 @@ bool encuentraPagina(Segmento segmento,int key, Pagina* pagina){
 		return i==key;
 	}
 
-	Pagina *paginaAux = list_find(segmento.puntero_tpaginas,tieneKey);
+	Pagina* paginaAux = list_find(segmento.puntero_tpaginas,tieneKey);
 //	memcpy(paginaAux,,sizeof(Pagina));
 
 	if(paginaAux==NULL)
@@ -344,15 +348,15 @@ bool encuentraPagina(Segmento segmento,int key, Pagina* pagina){
 	//strcpy(value, memoria[paginaAux->indice_registro].value);
 	memcpy(pagina,paginaAux,sizeof(Pagina));
 
-	free(paginaAux);
+	//free(paginaAux);
 	return true;
 }
 
 //void insert(char *nombre_tabla,int key,char *value){    primera version
 resultado insert(char *nombre_tabla,int key,char *value){
-	Segmento* segmento;
+	Segmento* segmento=malloc(sizeof(Segmento));
 
-	Pagina* pagina=malloc(sizeof(pagina));
+	Pagina* pagina=malloc(sizeof(Pagina));
 
 	Registro registro;
 	registro.timestamp=time(NULL);
@@ -370,7 +374,6 @@ resultado insert(char *nombre_tabla,int key,char *value){
 	}
 	else{
 
-
 		if(posLibre>=0){
 			almacenarRegistro(nombre_tabla,registro, posLibre);
 		}
@@ -382,6 +385,10 @@ resultado insert(char *nombre_tabla,int key,char *value){
 	resultado res;
 	res.mensaje="Registro insertado exitosamente";
 	res.resultado=OK;
+
+	//free(pagina);
+	//free(segmento);
+
 	return res;
 }
 
@@ -408,13 +415,14 @@ resultado drop(char* nombre_tabla){
 
 
 void actualizarRegistro(Pagina *pagina,char *value){
-	Registro *registro= pagina->indice_registro;
-	strcpy(registro->value,value);
-	registro->timestamp=time(NULL);
+	//Registro *registro=(Registro*)pagina->indice_registro;
+	//strcpy(registro->value,value);
+	strcpy(memoria[pagina->indice_registro].value,value);
+	memoria[pagina->indice_registro].timestamp=time(NULL);
 
-	int indice=registro-memoria;
-
-	memoria[indice]=*registro;
+//	int indice=registro-memoria;
+//
+//	memoria[indice]=*registro;
 
 	pagina->flag_modificado=1;
 }
@@ -551,6 +559,7 @@ resultado parsear_mensaje(char* mensaje)
 		{
 			res.resultado = SALIR;
 			res.mensaje = "";
+			terminar_programa();
 			break;
 		}
 		default:
