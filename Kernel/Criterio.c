@@ -7,13 +7,28 @@
 
 #include "Criterio.h"
 
-Memoria obtenerMemoria(t_config* config){
-	Memoria mem;
-	int id = config_get_int_value(config,"MEMORIA");
-	mem.idMemoria = id;
-	return mem;
+
+void iniciarCriterios(){
+	sc.tipo = SC;
+	sc.memorias = list_create();
+
+	shc.tipo = SHC;
+	shc.memorias = list_create();
+
+	ec.tipo = EC;
+	ec.memorias = list_create();
 }
 
+void liberarCriterios(){
+	list_destroy_and_destroy_elements(sc.memorias,destroy_nodo_memoria);
+	list_destroy_and_destroy_elements(shc.memorias,destroy_nodo_memoria);
+	list_destroy_and_destroy_elements(ec.memorias,destroy_nodo_memoria);
+}
+
+void destroy_nodo_memoria(void * elem){
+	Memoria* nodo_tabla_elem = (Memoria *) elem;
+	free(nodo_tabla_elem);
+}
 
 Memoria criterioSC(){}
 

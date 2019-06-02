@@ -10,13 +10,46 @@
 
 #include "Kernel.h"
 
+sem_t sNuevo;
+sem_t sListo;
+
+pthread_mutex_t mNew;
+pthread_mutex_t mReady;
+pthread_mutex_t mExit;
+
+
+
 int main(void) {
+
+	sem_init(&sNuevo,0,0);
+	sem_init(&sListo,0,0);
+
+	pthread_mutex_init(&mNew,NULL);
+	pthread_mutex_init(&mReady,NULL);
+	pthread_mutex_init(&mExit,NULL);
+
+
+	//Lanzamos tantos hilos como nivelMultiprocesamiento haya
+	pthread_t *executer = malloc( nivelMultiprocesamiento * sizeof(pthread_t) );
+
+	for(int i=0; i<nivelMultiprocesamiento; i++ )//mepa que
+	    pthread_create( &executer[i], NULL, ejecutador, NULL );
+
+	pthread_t plp;
+	pthread_create(&plp,NULL,(void*) planificadorLargoPlazo,NULL);
 
 	iniciar_programa();
 	//obtenerMemorias();
 	//gestionarConexion();
 	leerConsola();
+
+	pthread_join(&plp,NULL);
+	for(int i=0; i<nivelMultiprocesamiento; i++ )
+		pthread_join( &executer[i], NULL);
+
 	terminar_programa();
+
+
 	return 0;
 }
 
@@ -33,8 +66,16 @@ void iniciar_programa(void)
 	//Inicializo los estados
 	iniciarEstados();
 
+	quantum = config_get_int_value(g_config,"QUANTUM");
+
 	// Nivel de multiprocesamiento
 	nivelMultiprocesamiento = config_get_int_value(g_config,"MULTIPROCESAMIENTO");
+
+	pool = list_create();
+
+	iniciarCriterios();
+
+
 }
 
 void terminar_programa()
@@ -47,6 +88,12 @@ void terminar_programa()
 
 	//Libero los estados y elimino sus elementos
 	finalizarEstados();
+
+	//Libero el pool de memorias
+	list_destroy_and_destroy_elements(pool,destroy_nodo_memoria);
+
+	//Libero las memorias de los criterios
+	liberarCriterios();
 }
 
 void gestionarConexion()
@@ -62,51 +109,59 @@ void gestionarConexion()
 // Propias de Kernel
 // Estados -> Colas
 
-Estado iniciarEstado(nombreEstado nom){
-	Estado est;
-	est.nombre = nom;
-	est.cola = queue_create();
-	return est;
+void iniciarEstado(Estado *est){
+	est = queue_create();
 }
 
 void iniciarEstados(){ 			// Son 4 colas.
-	iniciarEstado(NEW);
-	iniciarEstado(READY);
-	iniciarEstado(EXEC);
-	iniciarEstado(EXIT);
+	iniciarEstado(new);
+	iniciarEstado(ready);
+	iniciarEstado(exec);
+	iniciarEstado(exi);
 }
 
-void liberarEstado(void* elem){
-	// Falta inicializar una estructura que contenga el proceso
-	// y hacerle un free. Pero me falta pensar que estructura lo contiene.
-	// free(t_proceso*); por asi decirlo
-	return;
+void liberarRequest(void* elem){
+	resultadoParser* nodo_elem = (resultadoParser *) elem;
+	free(nodo_elem);
+}
+
+void liberarScript(void* elem){
+	Script* nodo_elem = (Script *) elem;
+	list_destroy_and_destroy_elements(nodo_elem->instrucciones,liberarRequest);
 }
 
 void finalizarEstados(){
-	queue_clean_and_destroy_elements(NEW,liberarEstado);
-	queue_clean_and_destroy_elements(READY,liberarEstado);
-	queue_clean_and_destroy_elements(EXEC,liberarEstado);
-	queue_clean_and_destroy_elements(EXIT,liberarEstado);
+	queue_clean_and_destroy_elements(new,liberarScript);
+	queue_clean_and_destroy_elements(ready,liberarScript);
+	queue_clean_and_destroy_elements(exec,liberarScript);
+	queue_clean_and_destroy_elements(exi,liberarScript);
 }
 
-void agregarScriptAEstado(resultadoParser res, t_queue* estado)  // Aca hace las comprobaciones si pueden
+void agregarScriptAEstado(Script *script, nombreEstado estado)  // Aca hace las comprobaciones si pueden
 {
-	if(estado == NEW || READY){
-		//queue_push(estado,res);
-	}
-	else if(estado == EXEC){
-		if(nivelActual < nivelMultiprocesamiento)
-		{
-			//queue_push(estado,res);
-			nivelActual++;
+	switch(estado){
+		case NEW:
+			queue_push(new,script);
+			break;
+		case READY:
+			queue_push(ready,script);
+			break;
+
+		case EXEC:
+			if(nivelActual < nivelMultiprocesamiento){
+				//queue_push(estado,res);
+				nivelActual++;
+			}
+			else{
+				// Que hacer si ya esta ejecutando 3 procesos a la vez?
+			}
+			break;
+		case EXIT:
+			queue_push(exi,script);
 		}
-		else
-		{
-			// Que hacer si ya esta ejecutando 3 procesos a la vez?
-		}
-	}
+
 }
+
 
 void moverScriptDeEstado(){}
 void finalizarScript(){} // Debe hacer un free y sacarlo de la cola
@@ -115,28 +170,43 @@ void finalizarScript(){} // Debe hacer un free y sacarlo de la cola
 // Leer LQL
 // Por archivo
 
-resultadoParser leerScriptLQL(FILE* fd){
+resultadoParser leerRequest(FILE* fd){
 	char linea[MAX_BUFFER];
 	resultadoParser r;
 	fgets(linea,sizeof(linea),fd);
 	r = parseConsole(linea);
+
 	return r;
+}
+
+Script *parsearScript(FILE* arch){
+	Script *script = (Script*) malloc(sizeof(Script));
+	script->instrucciones = list_create();
+	script->pc=0;
+
+	while(!feof(arch)){
+		resultadoParser *req = malloc(sizeof(resultadoParser));
+		resultadoParser aux = leerRequest(arch);
+		memcpy(req,&aux,sizeof(aux));
+
+		list_add(script->instrucciones,req);
+	}
+	return script;
 }
 
 void run(char* path){
 	FILE* arch = fopen(path, "r");
-	resultadoParser res;
-	while(!feof(arch))
-	{
-		res = leerScriptLQL(arch);
-		//agregarScriptAEstado(res,NEW);        POR AHORA NO LA USO
-		//printf("%s\n",res.contenido);			Solo sirve para mostrar que parsea
 
-	}
+	Script *script = parsearScript(arch);
+
+	queue_push(new,script);
+	//agregarScriptAEstado(script,NEW); //no va a hacer falta mepa xq los cambios entre colas lo hacen solo los hilos
+
 	fclose(arch);
 }
 
 // Linea por consola
+
 
 resultadoParser leerLineaSQL(char* mensaje)
 {
@@ -146,51 +216,155 @@ resultadoParser leerLineaSQL(char* mensaje)
 }
 
 void leerConsola(){
-	char* linea;
-	char* accion;
-	char* path;
-	char* contenido;
-	char* consola;
-	resultadoParser r;
 
 	printf("\nBienvenido! Welcome! Youkoso!\n");
 	while(1)
 	{
-		linea = readline(">");
-		add_history(linea);
-		consola = strdup(linea);
+		resultadoParser *res = parsearConsola();
 
-		accion = strsep(&linea," ");
-		printf("Request: %s\n", accion);
-		if(strcmp(accion,"RUN") == 0)
-		{
-			path = strsep(&linea,"\n");
-			printf("Path: %s\n", path);
-			run(path);
-		}
-		else
-		{
-			contenido = strsep(&linea,"\n");
-			printf("Contenido: %s\n",contenido);
-			r = leerLineaSQL(consola);
-			agregarScriptAEstado(r,NEW); 			// Pendiente de revision
-		}
-		free(linea);
-		free(consola);
+		pthread_mutex_lock(&mNew);
+		queue_push(new,res);
+		pthread_mutex_unlock(&mNew);
+
+		sem_post(&sNuevo);
 	}
+}
+
+void planificadorLargoPlazo(){
+	resultadoParser *r;
+
+	while(1){
+		sem_wait(&sNuevo);
+
+		pthread_mutex_lock(&mNew);
+		r = queue_pop(new);
+		pthread_mutex_unlock(&mNew);
+
+		Script *s = crearScript(r);
+
+		pthread_mutex_lock(&mReady);
+		queue_push(ready,s);
+		pthread_mutex_unlock(&mReady);
+
+		sem_post(&sListo);
+
+		if(r->accionEjecutar==TERMINAR)
+			break;
+
+		free(r);
+	}
+	free(r);
+}
+
+Script* crearScript(resultadoParser *r){
+	Script *s;
+
+	if(r->accionEjecutar==RUN){
+		s = parsearScript(r->contenido);
+	}else{
+		s = (Script*) malloc(sizeof(Script));
+		s->instrucciones = list_create();
+		s->pc = 0;
+
+		list_add(s->instrucciones,r);
+	}
+	return s;
+}
+
+void ejecutador(){
+	while(1){
+		sem_wait(&sListo);
+
+		pthread_mutex_lock(&mReady);
+		Script *s = queue_pop(ready);
+		pthread_mutex_unlock(&mReady);
+
+		if(list_get(s->instrucciones,0))//hay que ver cuando termina, buscar una mejor forma
+			return;
+
+		for(int i=0; i <= quantum ;i++){//ver caso en que falla, ejecutarS podria retornar un estado
+			if(!terminoScript(s)){
+				ejecutarScript(s);
+			} else {
+				break;
+			}
+		}
+
+		if(!terminoScript(s))
+			mandarAready(s);
+		else
+			mandarAexit(s);
+	}
+}
+
+bool terminoScript(Script *s){
+	return s->pc == list_size(s->instrucciones);
+}
+
+void mandarAready(Script *s){
+	pthread_mutex_lock(&mReady);
+	queue_push(ready,s);
+	pthread_mutex_unlock(&mReady);
+
+	sem_post(&sListo);
+}
+
+void mandarAexit(Script *s){
+	pthread_mutex_lock(&mExit);
+	queue_push(exi,s);
+	pthread_mutex_unlock(&mExit);
+
+}
+
+void ejecutarScript(Script *s){
+	resultadoParser *r = list_get(s->instrucciones,s->pc);
+	ejecutarRequest(r);
+	(s->pc)++;
 }
 
 //////////////////////////////////////////////////////////
 // Criterios y memorias
-//
 
-t_memoria obtenerMemorias(){
-	t_memoria t = list_create();
-	Memoria mem;
+void obtenerMemorias(){
+	Memoria *mem;
 	int id = config_get_int_value(g_config,"MEMORIA");
-	mem.idMemoria = id;
-	list_add(t,mem);
+	mem->idMemoria = id;
 
-	// La parte de averiguar el gossiping e ir recorriendola para ir a metiendola en la lista
-	// casi que te la debo
+	gossiping(mem);//meto en pool la lista de memorias encontradas
+
 }
+
+void gossiping(Memoria *mem){
+	Memoria *m1 = malloc(sizeof(Memoria));
+	m1->idMemoria = 1;
+	list_add(pool,m1);
+
+	Memoria *m2 = malloc(sizeof(Memoria));
+	m2->idMemoria = 2;
+	list_add(pool,m2);
+
+	Memoria *m3 = malloc(sizeof(Memoria));
+	m3->idMemoria = 3;
+	list_add(pool,m3);
+
+}
+
+//Agrego la memoria en la lista de memorias del criterio
+void add(Memoria *memoria,t_consist tipo){
+
+	switch(tipo){
+		case SC:
+			list_add(sc.memorias,memoria);
+			break;
+
+		case SHC:
+			list_add(shc.memorias,memoria);
+			break;
+
+		case EC:
+			list_add(shc.memorias,memoria);
+			break;
+	}
+}
+
+

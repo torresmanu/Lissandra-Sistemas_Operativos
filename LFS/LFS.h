@@ -12,15 +12,19 @@
 #include<commons/config.h>
 #include<commons/sockets.h>
 #include<commons/string.h>
+#include<commons/collections/list.h>
+#include<commons/parser.h>
 #include "memtable.h"
 #include "metadata.h"
-#include "registro.h"
 #include "fileSystem.h"
-#include<commons/parser.h>
-#include<commons/collections/list.h>
+#include <pthread.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include "registro.h"
 
+#define PACKAGESIZE 100
 
-
+int server_fd;
 char* IP_FS;
 char* PUERTO_FS;
 
@@ -53,8 +57,9 @@ resultado dump();
 
 void iniciar_programa();
 void terminar_programa();
-void gestionarConexion(void);
+void gestionarConexion(int);
 int atender_clientes(void);
+int esperarClienteNuevo(int);
 
 
 #endif /* LFS_H_ */
