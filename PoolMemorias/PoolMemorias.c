@@ -71,6 +71,11 @@ void iniciar_programa(void)
 
 	//Me conecto al LFS
 	gestionarConexionALFS();
+//	char* message="hola";
+//	char* value;
+//	send(serverSocket, message, strlen(message) + 1, 0); 	// Solo envio si el usuario no quiere salir.
+//	recv(serverSocket, value, 100, 0);						// LFS me manda el value en el buffer
+//	printf("%s\n", value);
 
 
 	//hacer handshake con LFS y obtener tamaño de mem ppl y value
@@ -155,7 +160,14 @@ resultado select_t(char *nombre_tabla, int key){
 Registro pedirAlLFS(char* nombre_tabla, int key){
 
 	Registro registro;
-	strcpy(registro.value, mandarALFS(SELECT,nombre_tabla,key));
+	char* valuenuevo=mandarALFS(SELECT,nombre_tabla,key);
+	printf("A\n");
+	//strcpy(registro.value, valuenuevo);
+	printf("valueNuevo: %s\n", valuenuevo);
+	char* valueAux = string_duplicate(valuenuevo);
+	free(valuenuevo);
+	strcpy(registro.value, valueAux);
+	printf("B\n");
 	registro.key=key;
 	registro.timestamp=time(NULL);
 
@@ -166,11 +178,12 @@ Registro pedirAlLFS(char* nombre_tabla, int key){
 
 char* mandarALFS(char* accion, char* nombre_tabla, int key){
 
-	char *value;
-	char message[PACKAGESIZE];
+	char* value=malloc(sizeof(char)*20);
+	char* message=nombre_tabla;
 	//message = accion nombre tabla key
 	send(serverSocket, message, strlen(message) + 1, 0); 	// Solo envio si el usuario no quiere salir.
-	recv(serverSocket, value, 100, 0);						// LFS me manda el value en el buffer
+	recv(serverSocket, value, 20, 0);						// LFS me manda el value en el buffer
+	printf("%s\n", value);
 
 	//free(message);
 	return value;
@@ -478,7 +491,6 @@ void gestionarConexionALFS()
 	connect(serverSocket, serverInfo->ai_addr, serverInfo->ai_addrlen);
 	freeaddrinfo(serverInfo);	// No lo necesitamos mas
 
-	int enviar = 1;
 
 
 }
