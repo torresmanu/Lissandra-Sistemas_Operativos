@@ -20,6 +20,7 @@ typedef enum
 	CREATE,
 	DROP,
 	DUMP,
+	RUN,
 	ERROR_PARSER
 }accion;
 
@@ -54,6 +55,11 @@ typedef struct
 {
 	char* nombreTabla;
 } contenidoDrop;
+
+typedef struct
+{
+	char* path;
+} contenidoRun;
 
 typedef struct
 {

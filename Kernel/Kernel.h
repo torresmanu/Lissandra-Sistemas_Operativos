@@ -41,12 +41,12 @@ t_queue* EXIT;
 
 typedef enum {NEW, READY, EXEC, EXIT} nombreEstado;
 
-typedef struct{
-	t_queue* cola;
-	nombreEstado nombre;
-}Estado;
+typedef t_list Script;
+typedef t_queue Estado;
 
-Estado iniciarEstado(nombreEstado nom);
+Estado *new,*ready,*exec,*exi;
+
+void iniciarEstado(Estado *est);
 void iniciarEstados();
 void finalizarEstados();
 
