@@ -26,8 +26,6 @@ int main(void) {
 	char* mensaje;
 	res.resultado= OK;
 	iniciar_programa();
-//	gestionarConexion();
-
 
 	while(res.resultado != SALIR)
 	{
@@ -48,9 +46,7 @@ int main(void) {
 		//atender_clientes();
 	}
 
-
-
-
+	gestionarConexionALFS();
 	terminar_programa();
 
 
@@ -451,36 +447,42 @@ void terminar_programa()
 
 }
 
-void gestionarConexion()
+void gestionarConexionALFS()
 {
-	int estado=1;
-	char buffer[PACKAGESIZE];
+	struct addrinfo hints;
+	struct addrinfo *serverInfo;
 
-	PUERTO_M = config_get_string_value(g_config,"PUERTO_FS");  // 8001
-	PUERTO = config_get_string_value(g_config,"PUERTO");	   // 8000
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;		// Permite que la maquina se encargue de verificar si usamos IPv4 o IPv6
+	hints.ai_socktype = SOCK_STREAM;	// Indica que usaremos el protocolo TCP
 
-	int socketMem_fd = iniciarServidor(PUERTO_M);										//Conecto el socket de las memorias al puerto "8001"
-	int clienteKer_fd = esperarCliente(socketMem_fd,"Se conecto el Kernel!");
-	int clienteMem = conectarseAlServidor("5003","Me conecte a Lissandra");             // Si harcodeo poniendo 5003 si funciona
+	getaddrinfo(config_get_string_value(g_config, "IP_LFS"), config_get_string_value(g_config, "PUERTO_LFS"), &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
 
-	while(estado){
+	int serverSocket;
+	serverSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 
-//		recibir_mensaje(clienteKer_fd,buffer,"El kernel me mando el mensaje");
-		recv(clienteKer_fd, (void*) buffer, PACKAGESIZE, 0);	//Recibo mensaje del kernel
+	connect(serverSocket, serverInfo->ai_addr, serverInfo->ai_addrlen);
+	freeaddrinfo(serverInfo);	// No lo necesitamos mas
 
-		send(clienteMem,buffer,strlen(buffer)+1,0);				//Mando a la memoria
+	int enviar = 1;
+	char message[PACKAGESIZE];
 
-		if(strcmp(buffer,"exit")==0)
-			estado=0;
-		else{
-			printf( "\n%s: %s\n","El kernel me mando el mensaje", buffer);
-			printf( "Tamaño: %d\n", strlen(buffer));
+	printf("Conectado al servidor. Bienvenido al sistema, ya puede enviar mensajes. Escriba 'exit' para salir\n");
+
+	while(enviar){
+		char buffer[100];
+		fgets(message, PACKAGESIZE, stdin);			// Lee una linea en el stdin (lo que escribimos en la consola) hasta encontrar un \n (y lo incluye) o llegar a PACKAGESIZE.
+		if (!strcmp(message,"exit\n")) enviar = 0;			// Chequeo que el usuario no quiera salir
+		if (enviar){
+			send(serverSocket, message, strlen(message) + 1, 0); 	// Solo envio si el usuario no quiere salir.
+			recv(serverSocket, buffer, 100, 0);
+			printf("%s\n", buffer);
 		}
+
 	}
 
-    close(clienteKer_fd);
-    close(socketMem_fd);
-    close(clienteMem);
+	close(serverSocket);
+
 }
 
 void iniciar_tablas(){

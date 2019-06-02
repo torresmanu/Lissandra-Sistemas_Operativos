@@ -27,6 +27,7 @@ int posLibres;
 #define TAM_VALUE 20
 #define TAM_MEMORIA_PRINCIPAL 100
 #define NOMBRE_TABLA 7
+#define PACKAGESIZE 1024
 
 typedef struct
 {
@@ -72,7 +73,7 @@ typedef struct
 
 void iniciar_programa(void);
 void terminar_programa(void);
-void gestionarConexion(void);
+void gestionarConexionALFS(void);
 void destroy_nodo_pagina(void *);
 void destroy_nodo_segmento(void *);
 void iniciar_tablas();
