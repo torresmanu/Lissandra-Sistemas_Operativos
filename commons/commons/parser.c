@@ -86,7 +86,7 @@ resultadoParser parseConsole(char* mensaje){
 			if(strcmp(conector,"TO") == 0){
 				char* crit = strsep(&mensaje," ");
 
-				if(cirterioEsValido(crit))
+				if(criterioEsValido(crit))
 					cont->criterio = crit;
 				else
 					resParser.accionEjecutar=ERROR_PARSER;
@@ -112,4 +112,7 @@ resultadoParser parseConsole(char* mensaje){
 	return resParser;
 }
 
-
+bool criterioEsValido(char* consist)
+{
+	return strcmp(consist,"SC") || strcmp(consist,"SHC") || strcmp(consist,"EC");
+}

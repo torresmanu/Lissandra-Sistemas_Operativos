@@ -36,15 +36,10 @@ int nivelActual;
 // SCRIPT (Con tratamiento de procesos, por eso usaremos colas como estados)
 // Estados
 
-/*
-t_queue* NEW;
-t_queue* READY;
-t_queue* EXEC;
-t_queue* EXIT;
-*/
 
 
 typedef enum {NEW, READY, EXEC, EXIT} nombreEstado;
+typedef enum {OK, ERROR} status;
 
 typedef t_queue Estado;
 
@@ -54,6 +49,16 @@ typedef struct{
 	t_list *instrucciones;
 	int pc;
 }Script;
+
+typedef struct{
+	Criterio* criterio;
+	char* nombre;
+}Tabla;
+
+t_list* tablas;
+Tabla* buscarTabla(char*);
+Tabla* obtenerTabla(resultadoParser*);
+bool usaTabla(resultadoParser*);
 
 void iniciarEstado(Estado *est);
 void iniciarEstados();
@@ -82,5 +87,14 @@ bool terminoScript(Script *s);
 void mandarAready(Script *s);
 void mandarAexit(Script *s);
 bool deboSalir(Script *s);
+status ejecutarRequest(resultadoParser*);
+status ejecutarScript(Script*);
+status ejecutar(Criterio, resultadoParser*);
+
+Criterio toConsistencia(char*);
+Memoria* masApropiada(Criterio);
+
+//Journal
+
 
 #endif /* KERNEL_H_ */

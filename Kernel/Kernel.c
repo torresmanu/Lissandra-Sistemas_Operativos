@@ -73,6 +73,7 @@ void iniciar_programa(void)
 	nivelMultiprocesamiento = config_get_int_value(g_config,"MULTIPROCESAMIENTO");
 
 	pool = list_create();
+	tablas = list_create();
 
 	iniciarCriterios();
 
@@ -280,6 +281,7 @@ Script* crearScript(resultadoParser *r){
 }
 
 void ejecutador(){
+	status e;
 	while(1){
 		sem_wait(&sListo);
 
@@ -292,7 +294,12 @@ void ejecutador(){
 
 		for(int i=0; i <= quantum ;i++){//ver caso en que falla, ejecutarS podria retornar un estado
 			if(!terminoScript(s)){
-				ejecutarScript(s);
+				e = ejecutarScript(s);
+				if(e == ERROR)
+				{
+					mandarAexit(s);
+					return;
+				}
 			} else {
 				break;
 			}
@@ -328,37 +335,117 @@ void mandarAexit(Script *s){
 
 }
 
-void ejecutarScript(Script *s){
+status ejecutarScript(Script *s){
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
-	ejecutarRequest(r);
+	status estado = ejecutarRequest(r);
+
 	(s->pc)++;
+	return estado;
 }
 
-void ejecutarRequest(resultadoParser *r){
+status ejecutarRequest(resultadoParser *r){
 	if(usaTabla(r)){
-		char *tabla = obtenerTabla(r);
-		Criterio c = buscarConsistencia(tabla);
-		ejecutar(c,r);
+		Tabla* tabla = obtenerTabla(r);
+		if(tabla != NULL)
+			return ejecutar(tabla->criterio,r);
+		else
+			return ERROR; 											// HACER UN ENUM
 	}
-	switch (r->accionEjecutar){
-		case JOURNAL:
-			journal();
-			break;
-		case METRICS:
-			metrics();
-			break;
-		case ADD:
-			Memoria *mem = malloc(sizeof(Memoria));
-			mem->idMemoria = ((contenidoAdd *)(r->contenido))->numMem;
-
-			t_consist cons = toConsistencia(((contenidoAdd *)(r->contenido))->criterio);
-
-			add(mem,cons);
-			break;
-
+	else{
+		switch (r->accionEjecutar){
+			case JOURNAL:
+				//journal();
+				break;
+			case METRICS:
+				//metrics();
+				break;
+			case ADD:
+			{
+				Memoria* mem = malloc(sizeof(Memoria));
+				mem->idMemoria = ((contenidoAdd *)(r->contenido))->numMem;
+				Criterio cons = toConsistencia(((contenidoAdd *)(r->contenido))->criterio);
+				add(mem,cons);
+				break;
+			}
+		}
+	return OK;
 	}
-
 }
+
+status ejecutar(Criterio criterio, resultadoParser* request){
+	Memoria* mem = masApropiada(criterio);
+	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
+	return resultado;										// la memoria. enviarRequest está sin implementar, usa sockets.
+}
+
+Memoria* masApropiada(Criterio c){
+	switch(c.tipo)
+	{
+		case SC:
+			return (Memoria*)list_get(sc.memorias,0);
+		case SHC:											// Necesito aplicar Hash
+			break;
+		case EC:
+			return (Memoria*)list_get(ec.memorias,rand()%(list_size(ec.memorias)+1));
+	}
+}
+
+Criterio toConsistencia(char* cadena)
+{
+	if(strcmp(cadena, "SC") == 0)
+		return sc;
+	else if(strcmp(cadena, "SHC") == 0)
+		return shc;
+	else
+		return ec;
+}
+
+bool usaTabla(resultadoParser* r){
+	return r->accionEjecutar == SELECT || r->accionEjecutar == INSERT || r->accionEjecutar == DROP || r->accionEjecutar == DESCRIBE || r->accionEjecutar == CREATE;
+}
+Tabla* obtenerTabla(resultadoParser* r){
+	switch(r->accionEjecutar)
+	{
+		case SELECT:
+		{
+			contenidoSelect* c = (contenidoSelect*)r->contenido;
+			return buscarTabla(c->nombreTabla);
+		}
+		case INSERT:
+		{
+			contenidoInsert* c = (contenidoInsert*)r->contenido;
+			return buscarTabla(c->nombreTabla);
+		}
+		case DROP:
+		{
+			contenidoDrop* c = (contenidoDrop*)r->contenido;
+			return buscarTabla(c->nombreTabla);
+		}
+		case CREATE:
+		{
+			contenidoCreate* c = (contenidoCreate*)r->contenido;
+			return buscarTabla(c->nombreTabla);
+		}
+		case DESCRIBE:
+		{
+			contenidoDescribe* c = (contenidoDescribe*)r->contenido;
+			return buscarTabla(c->nombreTabla);
+		}
+		default:
+			return NULL;
+	}
+}
+
+Tabla* buscarTabla(char* nom)
+{
+	bool coincideNombre(void* element)
+	{
+		return strcmp(nom,((Tabla*)element)->nombre);
+	}
+
+	return (Tabla*)list_find(tablas,coincideNombre);
+}
+
 
 //////////////////////////////////////////////////////////
 // Criterios y memorias
@@ -388,8 +475,11 @@ void gossiping(Memoria *mem){
 }
 
 //Agrego la memoria en la lista de memorias del criterio
-void add(Memoria *memoria,t_consist tipo){
+void add(Memoria *memoria,Criterio cons){
 
+	list_add(cons.memorias,memoria);
+
+	/*
 	switch(tipo){
 		case SC:
 			list_add(sc.memorias,memoria);
@@ -402,7 +492,10 @@ void add(Memoria *memoria,t_consist tipo){
 		case EC:
 			list_add(shc.memorias,memoria);
 			break;
+
 	}
+	*/
+
 }
 
 

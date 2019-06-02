@@ -76,6 +76,7 @@ typedef struct
 } resultadoParser;
 
 resultadoParser parseConsole(char*);
+bool criterioEsValido(char*);
 
 
 #endif /* PARSER_H_ */
