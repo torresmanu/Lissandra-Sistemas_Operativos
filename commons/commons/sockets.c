@@ -25,11 +25,11 @@
 
 	if(connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen) == -1)
 		printf("No me pude conectar al servidor");
+
 	else
 		printf("%s\n",mensaje);
 
 	freeaddrinfo(server_info);
-
 	return socket_cliente;
 }*/
 

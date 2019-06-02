@@ -144,13 +144,22 @@ resultado select_acc(char* tabla,int key)
 {
 	resultado res;
 	//Hago un select a la memtable
-	registro* reg = memtable_select(tabla,key);
+	registro* reg = NULL;
+	/*reg = memtable_select(tabla,key);
 	if(reg == NULL){
 		res.mensaje="Registro no obtenido";
 	}else{
 		res.mensaje= string_duplicate(reg->value);
-	}
+	}*/
+	//Hago un select a la fileSystem
 
+	reg = fs_select(tabla,key,1);
+	if(reg == NULL){
+		log_info(g_logger,"No se encontro el registro");
+	}else{
+		//log_info(g_logger,reg->value);
+	}
+	res.mensaje="Prueba";
 	res.resultado=OK;
 	return res;
 }
@@ -184,9 +193,17 @@ resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 resultado describe(char* tabla)
 {
 	if(tabla != NULL){
-		obtenerMetadata(tabla);
+		if(existeMetadata(tabla)){
+			obtenerMetadata(tabla);
+		}
 	}else{
-		obtenerTodasMetadata();
+		t_list* listaMetadata = obtenerTodasMetadata();
+		if(listaMetadata != NULL){
+			for(int i=0;i<list_size(listaMetadata);i++){
+				metadataTabla* metadata = (metadataTabla*) list_get(listaMetadata,i);
+				log_info(g_logger,metadata->consistency);
+			}
+		}
 	}
 	resultado res;
 	res.mensaje="Salida prueba";

@@ -12,15 +12,15 @@
 #include<commons/config.h>
 #include<commons/sockets.h>
 #include<commons/string.h>
+#include<commons/collections/list.h>
+#include<commons/parser.h>
 #include "memtable.h"
 #include "metadata.h"
-#include "registro.h"
 #include "fileSystem.h"
-#include<commons/parser.h>
-#include<commons/collections/list.h>
 #include <pthread.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include "registro.h"
 
 #define PACKAGESIZE 100
 
