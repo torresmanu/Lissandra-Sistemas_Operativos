@@ -392,24 +392,26 @@ resultado insert(char *nombre_tabla,int key,char *value){
 	return res;
 }
 
-
+//esta esta mal creo
 resultado drop(char* nombre_tabla){
 
 	resultado res;
-	Segmento* segmento;
-	int indice; // deberia ser el indice de la tabla de segmentos del segmento que encuentra
-
-	if(encuentraSegmento(nombre_tabla,segmento)){
-		list_remove_and_destroy_element(tabla_segmentos, indice, destroy_nodo_segmento);
-		res.mensaje="Registro eliminado exitosamente";
-		res.resultado=OK;
-	}
-	else{
-
-		res.mensaje="Tabla no encontrada";
-		res.resultado=ERROR;
-
-	}
+//	Segmento* segmento;
+//	int indice; // deberia ser el indice de la tabla de segmentos del segmento que encuentra
+//
+//	if(encuentraSegmento(nombre_tabla,segmento)){
+//		Pagina* pagina = segmento->nombre_tabla;
+//		list_remove_and_destroy_element(tabla_segmentos, indice, destroy_nodo_segmento);
+//		bitmap[pagina->indice_registro]=0;
+//		res.mensaje="Registro eliminado exitosamente";
+//		res.resultado=OK;
+//	}
+//	else{
+//
+//		res.mensaje="Tabla no encontrada";
+//		res.resultado=ERROR;
+//
+//	}
 	return res;
 }
 
@@ -443,6 +445,9 @@ void terminar_programa()
 
 	//Liberar memoria
 	free(memoria);
+
+	//Liberar bitmap
+	free(bitmap);
 
 }
 
