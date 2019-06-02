@@ -17,11 +17,14 @@
 #include "memtable.h"
 #include "metadata.h"
 #include "fileSystem.h"
+#include <pthread.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #include "registro.h"
 
+#define PACKAGESIZE 100
 
-
-
+int server_fd;
 char* IP_FS;
 char* PUERTO_FS;
 
@@ -54,8 +57,9 @@ resultado dump();
 
 void iniciar_programa();
 void terminar_programa();
-void gestionarConexion(void);
+void gestionarConexion(int);
 int atender_clientes(void);
+int esperarClienteNuevo(int);
 
 
 #endif /* LFS_H_ */

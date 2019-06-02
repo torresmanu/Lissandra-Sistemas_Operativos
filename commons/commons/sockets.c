@@ -9,7 +9,7 @@
 #include "log.h"
 #include "config.h"
 
-int conectarseAlServidor(char* puerto,char* mensaje)
+/*int conectarseAlServidor(char* puerto,char* mensaje)
 {
 	struct addrinfo hints;
 	struct addrinfo *server_info;
@@ -31,9 +31,9 @@ int conectarseAlServidor(char* puerto,char* mensaje)
 
 	freeaddrinfo(server_info);
 	return socket_cliente;
-}
+}*/
 
-int enviar_mensaje(int socket_cliente)
+/*int enviar_mensaje(int socket_cliente)
 {
 	char buffer[PACKAGESIZE];
 
@@ -58,9 +58,9 @@ void limpiar (char *cadena)		//Reemplazo el '\n' con un '\0'
   if (p)
     *p = '\0';
 }
+*/
 
-
-int iniciarServidor(char* puerto)
+/*int iniciarServidor(char* puerto)
 {
 	//int socket_servidor;
 
@@ -68,14 +68,16 @@ int iniciarServidor(char* puerto)
     struct addrinfo *serverInfo;
 
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
+
+    hints.ai_family = PF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
     getaddrinfo(NULL, puerto, &hints, &serverInfo);
+    int listenningSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 
-    int listenningSocket;
-    listenningSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+    printf("puerto: %s\n", puerto);
+    printf("listenningSocket: %i\n", listenningSocket);
 
     int yes=1;
     if (setsockopt(listenningSocket,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(int)) == -1) {	//Esto es para reutilizar los puertos si fallan los procesos y no esperar
@@ -86,13 +88,14 @@ int iniciarServidor(char* puerto)
     if(bind(listenningSocket, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1)
     	perror("Error en bind");
 
-
     freeaddrinfo(serverInfo);
-    listen(listenningSocket, BACKLOG);
+
+    int listenReturn = listen(listenningSocket, BACKLOG);
 
     return listenningSocket;
 }
 
+// ----BORRAR
 int esperarCliente(int listenningSocket,char* mensaje)
 {
 	struct sockaddr_in addr;
@@ -103,5 +106,7 @@ int esperarCliente(int listenningSocket,char* mensaje)
 
 	return socketCliente;
 }
+
+*/
 
 
