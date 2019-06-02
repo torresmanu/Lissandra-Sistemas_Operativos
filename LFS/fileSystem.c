@@ -83,7 +83,9 @@ registro* fs_select_partition(char* nombreTabla, int key, int partition){
 	}
 	char linea[1024];
 	while(fgets(linea,1024,(FILE*)partitionFile)){
+		log_info(g_logger,"HOLA");
 		parseRegistro(linea,&auxReg);
+		log_info(g_logger,"HOLA");
 		//Primero pregunto si el registro tiene el mismo value que yo quiero tomar
 		if(auxReg.key == key){
 			//Si el registro todavia no se habia seteado lo seteo

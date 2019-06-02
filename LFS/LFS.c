@@ -15,10 +15,7 @@ int main(void) {
 	resultado res;
 	char* mensaje;
 	res.resultado= OK;
-	int server_fd;
 	iniciar_programa();
-
-	//gestionarConexion();
 
 	while(res.resultado != SALIR)
 	{
@@ -39,12 +36,15 @@ int main(void) {
 		//atender_clientes();
 	}
 
-	terminar_programa(&server_fd);
+	terminar_programa();
 
 }
 
 void iniciar_programa()
 {
+	pthread_attr_t attr;
+	pthread_t thread;
+
 	//Inicio el logger
 	g_logger = log_create("LFS.log", "LFS", 1, LOG_LEVEL_INFO);
 	log_info(g_logger,"Inicio Aplicacion LFS");
@@ -56,8 +56,19 @@ void iniciar_programa()
 	//Inicio la memtable
 	iniciar_memtable();
 
-	//*server_fd = iniciarServidor(config_get_string_value(g_config,"PUERTO_SERVIDOR"));
-	//int clienteMem_fd = esperarCliente(*server_fd,"Se conecto un cliente\n");
+	server_fd = iniciarServidor(config_get_string_value(g_config,"PUERTO_SERVIDOR"));
+	if(server_fd < 0) {
+		printf("[iniciar_programa] Ocurrió un error al intentar iniciar el servidor\n");
+	} else {
+		pthread_attr_init(&attr);
+		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+		int err = pthread_create(&thread, &attr, esperarClienteNuevo, server_fd);
+		if(err != 0) {
+			printf("[iniciar_programa] Hubo un problema al crear el thread esperarClienteNuevo:[%s]\n", strerror(err));
+		}
+		pthread_attr_destroy(&attr);
+	}
 }
 
 resultado parsear_mensaje(char* mensaje)
@@ -238,36 +249,87 @@ void terminar_programa()
 	//Finalizar programa
 	finalizar_memtable();
 
-	//close(*server_fd);
+	close(server_fd);
 }
 
-void gestionarConexion()
-{
-	int estado=1;
-	char buffer[PACKAGESIZE];
+void gestionarConexion(int conexion_cliente) {
+	int recibiendo = 1;
+	char buffer[100];
 
-	//int serverLiss_fd = iniciarServidor(config_get_string_value(g_config,"PUERTO_SERVIDOR"));
-	//int clienteMem_fd = esperarCliente(serverLiss_fd,"Se conecto la memoria!");
+	while(recibiendo) {
+		int valueResponse = recv(conexion_cliente, buffer, 100, 0);
 
-	while(estado){
-
-//		recibir_mensaje(clienteMem_fd,buffer,"La memoria me mando el mensaje");
-		//recv(clienteMem_fd, (void*) buffer, PACKAGESIZE, 0);	//Recibo mensaje de la memorias
-
-		if(strcmp(buffer,"exit")==0)
-			estado = 0;
-		else{
-			printf( "\n%s: %s\n","La memoria me mando el mensaje", buffer);
-			printf( "Tamaño: %d\n", strlen(buffer));
+			if(valueResponse < 0) { //Comenzamos a recibir datos del cliente
+				//Si recv() recibe 0 el cliente ha cerrado la conexion. Si es menor que 0 ha habido algún error.
+				printf("Error al recibir los datos\n");
+				recibiendo = 0;
+			} else if(valueResponse == 0) {
+				printf("El cliente se desconectó\n");
+				recibiendo = 0;
+			} else {
+				printf("%s\n", buffer);
+				bzero((char *)&buffer, sizeof(buffer));
+				send(conexion_cliente, "Recibido\n", 13, 0);
+			}
 		}
 
-	}
-	/*
-    close(clienteMem_fd);
-    close(serverLiss_fd);
-    */
+		printf("Cierro la conexion normalmente\n");
 }
 
-/*int atender_clientes() {
-	recibir_mensaje(clienteMem_fd,buffer,"La memoria me mando el mensaje");
-}*/
+int esperarClienteNuevo(int conexion_servidor) {
+
+	int conexion_cliente;
+	struct sockaddr_in cliente;
+	socklen_t longc; //Debemos declarar una variable que contendrá la longitud de la estructura
+
+	while(1) {
+		conexion_cliente = accept(conexion_servidor, (struct sockaddr *)&cliente, &longc);
+		if(conexion_cliente<0) {
+			printf("Error al aceptar trafico\n");
+			return 1;
+		} else {
+			pthread_attr_t attr;
+			pthread_t thread;
+
+			longc = sizeof(cliente);
+			printf("Conectando con %s:%d\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
+
+			pthread_attr_init(&attr);
+			pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+			int err = pthread_create(&thread, &attr, gestionarConexion, conexion_cliente);
+			if(err != 0) {
+				printf("[esperarClienteNuevo] Hubo un problema al crear el thread gestionarConexion:[%s]\n", strerror(err));
+			}
+			pthread_attr_destroy(&attr);
+		}
+	}
+
+	return 0;
+}
+
+int iniciarServidor(char* configPuerto) {
+
+	int conexion_servidor, puerto;
+	struct sockaddr_in servidor;
+
+	puerto = atoi(configPuerto);
+	conexion_servidor = socket(AF_INET, SOCK_STREAM, 0);
+
+	bzero((char *)&servidor, sizeof(servidor));
+	servidor.sin_family = AF_INET;
+	servidor.sin_port = htons(puerto);
+	servidor.sin_addr.s_addr = INADDR_ANY;
+
+	if(bind(conexion_servidor, (struct sockaddr *)&servidor, sizeof(servidor)) < 0) {
+		printf("Error al asociar el puerto a la conexion. Posiblemente el puerto se encuentre ocupado\n");
+	    close(conexion_servidor);
+	    return -1;
+	}
+
+	listen(conexion_servidor, 3);
+	printf("A la escucha en el puerto %d\n", ntohs(servidor.sin_port));
+
+	return conexion_servidor;
+}
+
