@@ -32,7 +32,7 @@ int main(void) {
 	//Lanzamos tantos hilos como nivelMultiprocesamiento haya
 	pthread_t *executer = malloc( nivelMultiprocesamiento * sizeof(pthread_t) );
 
-	for(int i=0; i<nivelMultiprocesamiento; i++ )//mepa que
+	for(int i=0; i<nivelMultiprocesamiento; i++ )
 	    pthread_create( &executer[i], NULL, ejecutador, NULL );
 
 	pthread_t plp;
@@ -44,6 +44,7 @@ int main(void) {
 	leerConsola();
 
 	pthread_join(&plp,NULL);
+
 	for(int i=0; i<nivelMultiprocesamiento; i++ )
 		pthread_join( &executer[i], NULL);
 
@@ -220,13 +221,20 @@ void leerConsola(){
 	printf("\nBienvenido! Welcome! Youkoso!\n");
 	while(1)
 	{
-		resultadoParser *res = parsearConsola();
+		resultadoParser *aux = malloc(sizeof(resultadoParser));
+
+		char* linea = readline(">");
+		resultadoParser res = parseConsole(linea);
+
+		memcpy(aux,&res,sizeof(res));
 
 		pthread_mutex_lock(&mNew);
-		queue_push(new,res);
+		queue_push(new,aux);
 		pthread_mutex_unlock(&mNew);
 
 		sem_post(&sNuevo);
+		if(res.accionEjecutar==SALIR_CONSOLA)
+			break;
 	}
 }
 
@@ -248,7 +256,7 @@ void planificadorLargoPlazo(){
 
 		sem_post(&sListo);
 
-		if(r->accionEjecutar==TERMINAR)
+		if(r->accionEjecutar==SALIR_CONSOLA)
 			break;
 
 		free(r);
@@ -279,7 +287,7 @@ void ejecutador(){
 		Script *s = queue_pop(ready);
 		pthread_mutex_unlock(&mReady);
 
-		if(list_get(s->instrucciones,0))//hay que ver cuando termina, buscar una mejor forma
+		if(deboSalir(s))//hay que ver cuando termina, buscar una mejor forma
 			return;
 
 		for(int i=0; i <= quantum ;i++){//ver caso en que falla, ejecutarS podria retornar un estado
@@ -295,6 +303,10 @@ void ejecutador(){
 		else
 			mandarAexit(s);
 	}
+}
+
+bool deboSalir(Script *s){
+	return ((resultadoParser *)list_get(s->instrucciones,0))-> accionEjecutar == SALIR_CONSOLA;
 }
 
 bool terminoScript(Script *s){
@@ -320,6 +332,32 @@ void ejecutarScript(Script *s){
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
 	ejecutarRequest(r);
 	(s->pc)++;
+}
+
+void ejecutarRequest(resultadoParser *r){
+	if(usaTabla(r)){
+		char *tabla = obtenerTabla(r);
+		Criterio c = buscarConsistencia(tabla);
+		ejecutar(c,r);
+	}
+	switch (r->accionEjecutar){
+		case JOURNAL:
+			journal();
+			break;
+		case METRICS:
+			metrics();
+			break;
+		case ADD:
+			Memoria *mem = malloc(sizeof(Memoria));
+			mem->idMemoria = ((contenidoAdd *)(r->contenido))->numMem;
+
+			t_consist cons = toConsistencia(((contenidoAdd *)(r->contenido))->criterio);
+
+			add(mem,cons);
+			break;
+
+	}
+
 }
 
 //////////////////////////////////////////////////////////

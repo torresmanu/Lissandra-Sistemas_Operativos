@@ -21,6 +21,8 @@ typedef enum
 	DROP,
 	DUMP,
 	RUN,
+	METRICS,
+	ADD,
 	ERROR_PARSER
 }accion;
 
@@ -60,6 +62,12 @@ typedef struct
 {
 	char* path;
 } contenidoRun;
+
+typedef struct
+{
+	int numMem;
+	char* criterio;
+} contenidoAdd;
 
 typedef struct
 {

@@ -81,5 +81,6 @@ void ejecutador();
 bool terminoScript(Script *s);
 void mandarAready(Script *s);
 void mandarAexit(Script *s);
+bool deboSalir(Script *s);
 
 #endif /* KERNEL_H_ */
