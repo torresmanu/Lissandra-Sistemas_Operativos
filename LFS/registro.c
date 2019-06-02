@@ -7,10 +7,10 @@
 
 #include "registro.h"
 
-void parseRegistro(char* linea,registro* reg){
+void parseRegistro(char* linea,registro* regAux){
 	char * str_timestamp = strsep(&linea,";");
 	char * str_key = strsep(&linea,";");
-	reg->value = strsep(&linea,"\n");
-	reg->key = atoi(str_key);
-	reg->timestamp = atol (str_timestamp);
+	regAux->value = strsep(&linea,"\n");
+	regAux->key = atoi(str_key);
+	regAux->timestamp = atol (str_timestamp);
 }

@@ -143,6 +143,11 @@ resultado select_acc(char* tabla,int key)
 	//Hago un select a la fileSystem
 
 	reg = fs_select(tabla,key,1);
+	if(reg == NULL){
+		log_info(g_logger,"No se encontro el registro");
+	}else{
+		//log_info(g_logger,reg->value);
+	}
 	res.mensaje="Prueba";
 	res.resultado=OK;
 	return res;

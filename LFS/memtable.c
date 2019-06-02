@@ -78,7 +78,7 @@ void memtable_insert(char* nombre_tabla, registro reg){
 	}
 	//Si no encontre el registro entonces lo creo
 	registro * reg_aux = malloc(sizeof(registro));
-	mempcpy(reg_aux,&reg,sizeof(registro));
+	memcpy(reg_aux,&reg,sizeof(registro));
 	list_add(nodo->lista_registros,reg_aux);
 	log_info(g_logger,"Valor memtable insertado tabla %s key %d value %s",nombre_tabla,reg_aux->key,reg_aux->value);
 }
