@@ -40,6 +40,8 @@ typedef struct
 Registro* memoria;
 int* bitmap;
 int cantidadFrames;
+int serverSocket;
+
 
 typedef struct
 {
@@ -83,6 +85,7 @@ int contieneRegistro(char *nombre_tabla,int key, Pagina* pagina);
 bool encuentraSegmento(char *ntabla,Segmento *segmento);
 bool encuentraPagina(Segmento segmento,int key, Pagina* pagina);
 Registro pedirAlLFS(char* nombre_tabla, int key);
+char *mandarALFS(char* accion, char* nombre_tabla, int key);
 int espacioLibre();
 void almacenarRegistro(char *nombre_tabla,Registro registro, int posLibre);
 Segmento *agregarSegmento(char *nombre_tabla);

@@ -46,7 +46,7 @@ int main(void) {
 		//atender_clientes();
 	}
 
-	gestionarConexionALFS();
+
 	terminar_programa();
 
 
@@ -59,11 +59,6 @@ void iniciar_programa(void)
 	strcpy(reg1.value,"creativOS");
 	reg1.timestamp = 500;
 
-//	Registro reg2;
-//	reg2.key	= 1000;
-//	strcpy(reg1.value,"chacovolve");
-//	reg2.timestamp = 1500;
-
 
 	//Inicio el logger
 	g_logger = log_create("PoolMemorias.log", "LFS", 1, LOG_LEVEL_INFO);
@@ -73,21 +68,25 @@ void iniciar_programa(void)
 	g_config = config_create("PoolMemorias.config");
 	log_info(g_logger,"Configuraciones inicializadas");
 
+
+	//Me conecto al LFS
+	gestionarConexionALFS();
+
+
 	//hacer handshake con LFS y obtener tamaño de mem ppl y value
 
 	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
 
 
 	cantidadFrames = TAM_MEMORIA_PRINCIPAL / sizeof(Registro);
-	//necesitariamos un bitmap global pero la cantidad de frames no es global
+
 
 	bitmap=calloc(cantidadFrames, sizeof(int));
 
 
-	//cantidad_frames = 1; //Solo por el hito 2
 	memoria[0] = reg1;
 	bitmap[0]=1;
-	//memoria[1] = reg2;
+
 	posLibres= cantidadFrames;
 
 	iniciar_tablas();
@@ -155,16 +154,28 @@ resultado select_t(char *nombre_tabla, int key){
 
 Registro pedirAlLFS(char* nombre_tabla, int key){
 
-//	strcpy(value,mandarLFS("SELECT",nombre_tabla,key));
-
 	Registro registro;
+	strcpy(registro.value, mandarALFS(SELECT,nombre_tabla,key));
 	registro.key=key;
-	registro.timestamp=10;
-	strcpy(registro.value,"Ale");
+	registro.timestamp=time(NULL);
 
 	return registro;
 
 }
+
+
+char* mandarALFS(char* accion, char* nombre_tabla, int key){
+
+	char *value;
+	char message[PACKAGESIZE];
+	//message = accion nombre tabla key
+	send(serverSocket, message, strlen(message) + 1, 0); 	// Solo envio si el usuario no quiere salir.
+	recv(serverSocket, value, 100, 0);						// LFS me manda el value en el buffer
+
+	//free(message);
+	return value;
+}
+
 
 int espacioLibre(){
 
@@ -445,6 +456,9 @@ void terminar_programa()
 	//Liberar bitmap
 	free(bitmap);
 
+	//cierro el servidor
+	close(serverSocket);
+
 }
 
 void gestionarConexionALFS()
@@ -458,30 +472,14 @@ void gestionarConexionALFS()
 
 	getaddrinfo(config_get_string_value(g_config, "IP_LFS"), config_get_string_value(g_config, "PUERTO_LFS"), &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
 
-	int serverSocket;
+
 	serverSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 
 	connect(serverSocket, serverInfo->ai_addr, serverInfo->ai_addrlen);
 	freeaddrinfo(serverInfo);	// No lo necesitamos mas
 
 	int enviar = 1;
-	char message[PACKAGESIZE];
 
-	printf("Conectado al servidor. Bienvenido al sistema, ya puede enviar mensajes. Escriba 'exit' para salir\n");
-
-	while(enviar){
-		char buffer[100];
-		fgets(message, PACKAGESIZE, stdin);			// Lee una linea en el stdin (lo que escribimos en la consola) hasta encontrar un \n (y lo incluye) o llegar a PACKAGESIZE.
-		if (!strcmp(message,"exit\n")) enviar = 0;			// Chequeo que el usuario no quiera salir
-		if (enviar){
-			send(serverSocket, message, strlen(message) + 1, 0); 	// Solo envio si el usuario no quiere salir.
-			recv(serverSocket, buffer, 100, 0);
-			printf("%s\n", buffer);
-		}
-
-	}
-
-	close(serverSocket);
 
 }
 
@@ -520,6 +518,7 @@ resultado parsear_mensaje(char* mensaje)
 			contenidoDescribe* contDes = resParser.contenido;
 
 			//send al lfs el describe para obtener la metadata de las tablas
+			mandarALFS(DESCRIBE, contDes->nombreTabla, 0);
 
 			break;
 		}
@@ -537,6 +536,10 @@ resultado parsear_mensaje(char* mensaje)
 		case CREATE:
 		{
 			contenidoCreate* contCreate = resParser.contenido;
+			res.mensaje="Se envió al LFS";
+			res.resultado=OK;
+
+			mandarALFS(CREATE, contCreate->nombreTabla, contCreate->cant_part);
 
 			//send al lfs para que haga el create
 
@@ -547,13 +550,14 @@ resultado parsear_mensaje(char* mensaje)
 			contenidoDrop* contDrop = resParser.contenido;
 			res = drop(contDrop->nombreTabla);
 
+			mandarALFS(DROP, contDrop->nombreTabla,0);
 			//send al lfs para que realice la opercacion necesaria
 
 			break;
 		}
 		case DUMP:
 		{
-			//res = dump();    acá nose que hay que hacer supongo que manderselo a lfs
+			mandarALFS(DUMP,0,0);
 			break;
 		}
 		case ERROR_PARSER:
