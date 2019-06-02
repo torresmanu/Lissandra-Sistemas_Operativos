@@ -17,6 +17,9 @@
 #include <readline/history.h>
 #include "Criterio.h"
 
+#include <semaphore.h>
+
+
 #define MAX_BUFFER 100
 
 t_log* g_logger;
@@ -24,7 +27,9 @@ t_config* g_config;
 char* IP;
 char* PUERTO;
 
-// Cantidad procesos en el estado EXEC
+
+int quantum;
+// Cantidad de Scripts en el estado EXEC
 int nivelMultiprocesamiento;
 int nivelActual;
 
@@ -41,10 +46,14 @@ t_queue* EXIT;
 
 typedef enum {NEW, READY, EXEC, EXIT} nombreEstado;
 
-typedef t_list Script;
 typedef t_queue Estado;
 
 Estado *new,*ready,*exec,*exi;
+
+typedef struct{
+	t_list *instrucciones;
+	int pc;
+}Script;
 
 void iniciarEstado(Estado *est);
 void iniciarEstados();
@@ -63,5 +72,14 @@ void leerConsola();
 void run(char*);
 resultadoParser leerScriptLQL(FILE* fd);
 resultadoParser leerLineaSQL(char*);
+
+void planificadorLargoPlazo();
+Script *crearScript(resultadoParser *r);
+void planificadorCortoPlazo();
+
+void ejecutador();
+bool terminoScript(Script *s);
+void mandarAready(Script *s);
+void mandarAexit(Script *s);
 
 #endif /* KERNEL_H_ */
