@@ -89,10 +89,10 @@ void mandarAexit(Script *s);
 bool deboSalir(Script *s);
 status ejecutarRequest(resultadoParser*);
 status ejecutarScript(Script*);
-status ejecutar(Criterio, resultadoParser*);
+status ejecutar(Criterio*, resultadoParser*);
 
 Criterio toConsistencia(char*);
-Memoria* masApropiada(Criterio);
+Memoria* masApropiada(Criterio*);
 
 //Journal
 

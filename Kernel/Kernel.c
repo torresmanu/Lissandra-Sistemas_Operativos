@@ -372,22 +372,29 @@ status ejecutarRequest(resultadoParser *r){
 	}
 }
 
-status ejecutar(Criterio criterio, resultadoParser* request){
+status ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio);
 	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
 	return resultado;										// la memoria. enviarRequest está sin implementar, usa sockets.
 }
 
-Memoria* masApropiada(Criterio c){
-	switch(c.tipo)
+Memoria* masApropiada(Criterio* c){
+	Memoria* mem;
+	switch(c->tipo)
 	{
 		case SC:
-			return (Memoria*)list_get(sc.memorias,0);
+			mem = (Memoria*)list_get(sc.memorias,0);
+			break;
 		case SHC:											// Necesito aplicar Hash
 			break;
 		case EC:
-			return (Memoria*)list_get(ec.memorias,rand()%(list_size(ec.memorias)+1));
+		{
+			int cantidadMemorias = rand()%list_size(ec.memorias)+1;
+			mem = (Memoria*)list_get(ec.memorias,cantidadMemorias);
+			break;
+		}
 	}
+	return mem;
 }
 
 Criterio toConsistencia(char* cadena)
