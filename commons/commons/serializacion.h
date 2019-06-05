@@ -9,7 +9,7 @@
 #define SERIALIZACION_H_
 
 #include <stdio.h>
-#include <commons/parser.h>
+#include "parser.h"
 
 typedef struct {
 	int operacion;
@@ -27,6 +27,6 @@ typedef struct {
 } paqueteInsert;
 
 void* serializarPaquete(resultadoParser rp);
-void* deserializarPaquete(void* pq);
+int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp);
 
 #endif /* SERIALIZACION_H_ */

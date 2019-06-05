@@ -254,10 +254,18 @@ void terminar_programa()
 
 void gestionarConexion(int conexion_cliente) {
 	int recibiendo = 1;
+	int status;
+	resultadoParser rp;
 	char buffer[100];
 
+	char* buffer2 = malloc(sizeof(int));
+
 	while(recibiendo) {
-		int valueResponse = recv(conexion_cliente, buffer, 100, 0);
+		//int valueResponse = recv(conexion_cliente, buffer, 100, 0);
+
+		accion acc;
+		int valueResponse = recv(conexion_cliente, buffer2, sizeof(int), 0);
+		memcpy(&acc, buffer2, sizeof(int));
 
 		if(valueResponse < 0) { //Comenzamos a recibir datos del cliente
 			//Si recv() recibe 0 el cliente ha cerrado la conexion. Si es menor que 0 ha habido algún error.
@@ -267,9 +275,19 @@ void gestionarConexion(int conexion_cliente) {
 			printf("El cliente se desconectó\n");
 			recibiendo = 0;
 		} else {
+			/*
 			printf("%s\n", buffer);
 			bzero((char *)&buffer, sizeof(buffer));
 			send(conexion_cliente, "Recibido\n", 13, 0);
+			*/
+
+			rp.accionEjecutar = acc;
+			status = recibirYDeserializarPaquete(conexion_cliente, &rp);
+			if(status<0) {
+				recibiendo = 0;
+			} else {
+				printf("Recibi el paquete\n");
+			}
 		}
 	}
 

@@ -28,9 +28,9 @@ typedef enum
 
 typedef struct
 {
-	char nombreTabla[255];
+	char* nombreTabla;
 	int key;
-	char value[20];
+	char* value;
 	long timestamp;
 } contenidoInsert;
 
