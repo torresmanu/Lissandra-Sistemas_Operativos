@@ -259,21 +259,21 @@ void gestionarConexion(int conexion_cliente) {
 	while(recibiendo) {
 		int valueResponse = recv(conexion_cliente, buffer, 100, 0);
 
-			if(valueResponse < 0) { //Comenzamos a recibir datos del cliente
-				//Si recv() recibe 0 el cliente ha cerrado la conexion. Si es menor que 0 ha habido algún error.
-				printf("Error al recibir los datos\n");
-				recibiendo = 0;
-			} else if(valueResponse == 0) {
-				printf("El cliente se desconectó\n");
-				recibiendo = 0;
-			} else {
-				printf("%s\n", buffer);
-				bzero((char *)&buffer, sizeof(buffer));
-				send(conexion_cliente, "Recibido\n", 13, 0);
-			}
+		if(valueResponse < 0) { //Comenzamos a recibir datos del cliente
+			//Si recv() recibe 0 el cliente ha cerrado la conexion. Si es menor que 0 ha habido algún error.
+			printf("Error al recibir los datos\n");
+			recibiendo = 0;
+		} else if(valueResponse == 0) {
+			printf("El cliente se desconectó\n");
+			recibiendo = 0;
+		} else {
+			printf("%s\n", buffer);
+			bzero((char *)&buffer, sizeof(buffer));
+			send(conexion_cliente, "Recibido\n", 13, 0);
 		}
+	}
 
-		printf("Cierro la conexion normalmente\n");
+	printf("Cierro la conexion normalmente\n");
 }
 
 int esperarClienteNuevo(int conexion_servidor) {
