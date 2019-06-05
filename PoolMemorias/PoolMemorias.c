@@ -54,6 +54,7 @@ int main(void) {
 
 void iniciar_programa(void)
 {
+	//esta en la tabla Tabla1 para probar el select
 	Registro reg1;
 	reg1.key= 10;
 	strcpy(reg1.value,"creativOS");
@@ -122,12 +123,14 @@ void iniciar_programa(void)
 //	select_t("Tabla1",10);
 
 
-	free(seg_prueba);
+
+
 }
 
 //void select_t(char *nombre_tabla,int key){  primera edicion ahora lo adapto al parcer de chaco
 resultado select_t(char *nombre_tabla, int key){
-	Pagina* pagina;
+	Pagina* pagina=malloc(sizeof(Pagina));
+
 	resultado res;
 //	Registro *registro = malloc(sizeof(Registro));	//Pensaba hacer un registro para agrupar los datos o que el select reciba un registro
 	if(contieneRegistro(nombre_tabla,key,pagina)){
@@ -154,6 +157,7 @@ resultado select_t(char *nombre_tabla, int key){
 
 	}
 
+	free (pagina);
 	return res;
 }
 
@@ -317,14 +321,16 @@ void guardarEnMemoria(Registro registro, int posLibre){
 }
 
 int contieneRegistro(char *nombre_tabla,int key, Pagina* pagina){
-	Segmento segmento;
+	Segmento* segmento=malloc(sizeof(Segmento));
 
-	if(encuentraSegmento(nombre_tabla,&segmento)){
+
+	if(encuentraSegmento(nombre_tabla,segmento)){
 
 		if(encuentraPagina(segmento,key,pagina))
+			free(segmento);
 			return true;
 	}
-
+	free(segmento);
 	return false;
 }
 
@@ -334,12 +340,16 @@ bool encuentraSegmento(char *ntabla,Segmento *segmento){ 	//Me dice si ya existe
 		return strcmp(((Segmento *)elemento)->nombre_tabla, ntabla)==0;
 	}
 
-	Segmento *s=list_find(tabla_segmentos,tieneTabla);
+	Segmento* s=malloc(sizeof(Segmento));
+	s=list_find(tabla_segmentos,tieneTabla);
 
-	if(s==NULL)
+	if(s==NULL){
+		free(s);
 		return false;
+	}
 	else{
 		memcpy(segmento,s,sizeof(Segmento));
+		free(s);							//COMPARACION VALGRIND V1.1
 		return true;
 
 		//me parece que esto no hace falta porque si llego hasta acá quiere decir que encontré el segmento
@@ -348,7 +358,7 @@ bool encuentraSegmento(char *ntabla,Segmento *segmento){ 	//Me dice si ya existe
 	}
 }
 
-bool encuentraPagina(Segmento segmento,int key, Pagina* pagina){
+bool encuentraPagina(Segmento* segmento,int key, Pagina* pagina){
 
 	bool tieneKey(void *elemento){
 
@@ -358,17 +368,21 @@ bool encuentraPagina(Segmento segmento,int key, Pagina* pagina){
 		return i==key;
 	}
 
-	Pagina* paginaAux = list_find(segmento.puntero_tpaginas,tieneKey);
+	Pagina* paginaAux = malloc(sizeof(Pagina));       //COMPARACION DE VALGRIND V1.1
+	paginaAux=list_find(segmento->puntero_tpaginas,tieneKey);
 //	memcpy(paginaAux,,sizeof(Pagina));
 
-	if(paginaAux==NULL)
+	if(paginaAux==NULL){
+		free(paginaAux);
 		return false;
+	}
+
 	//strcpy(value,paginaAux->puntero_registro->value);
 	//strcpy(value, memoria[(paginaAux->indice_registro)*sizeof(Registro)].value);
 	//strcpy(value, memoria[paginaAux->indice_registro].value);
 	memcpy(pagina,paginaAux,sizeof(Pagina));
 
-	//free(paginaAux);
+	free(paginaAux);									//COMPARACION VALGRIND V1.1
 	return true;
 }
 
@@ -386,7 +400,7 @@ resultado insert(char *nombre_tabla,int key,char *value){
 
 	if(encuentraSegmento(nombre_tabla,segmento)){
 
-		if(encuentraPagina(*segmento,key,pagina)){	//en vez de basura(char *) pasarle una pagina
+		if(encuentraPagina(segmento,key,pagina)){	//en vez de basura(char *) pasarle una pagina
 			actualizarRegistro(pagina,value);
 		}
 		else
@@ -406,8 +420,8 @@ resultado insert(char *nombre_tabla,int key,char *value){
 	res.mensaje="Registro insertado exitosamente";
 	res.resultado=OK;
 
-	//free(pagina);
-	//free(segmento);
+	free(pagina);
+	free(segmento);
 
 	return res;
 }
@@ -471,6 +485,7 @@ void terminar_programa()
 
 	//cierro el servidor
 	close(serverSocket);
+
 
 }
 

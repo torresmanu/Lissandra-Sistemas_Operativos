@@ -83,7 +83,7 @@ void iniciar_tablas();
 resultado select_t(char *nombre_tabla,int key);
 int contieneRegistro(char *nombre_tabla,int key, Pagina* pagina);
 bool encuentraSegmento(char *ntabla,Segmento *segmento);
-bool encuentraPagina(Segmento segmento,int key, Pagina* pagina);
+bool encuentraPagina(Segmento* segmento,int key, Pagina* pagina);
 Registro pedirAlLFS(char* nombre_tabla, int key);
 char *mandarALFS(char* accion, char* nombre_tabla, int key);
 int espacioLibre();
