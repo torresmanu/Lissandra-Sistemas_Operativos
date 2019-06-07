@@ -287,6 +287,10 @@ void gestionarConexion(int conexion_cliente) {
 				recibiendo = 0;
 			} else {
 				printf("Recibi el paquete\n");
+				printf("[gestionarConexion] key recibida = %i\n", ((contenidoInsert*)(rp.contenido))->key);
+				printf("[gestionarConexion] value recibido = %s\n", ((contenidoInsert*)(rp.contenido))->value);
+				printf("[gestionarConexion] nombreTabla recibido = %s\n", ((contenidoInsert*)(rp.contenido))->nombreTabla);
+				printf("[gestionarConexion] Timestamp recibido = %ld\n", ((contenidoInsert*)(rp.contenido))->timestamp);
 			}
 		}
 	}
