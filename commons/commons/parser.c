@@ -22,10 +22,10 @@ resultadoParser parseConsole(char* mensaje){
 	{
 		resParser.accionEjecutar=INSERT;
 		contenidoInsert* cont = malloc(sizeof(contenidoInsert));
-		strcpy(cont->nombreTabla, strsep(&mensaje," "));
+		cont->nombreTabla = strsep(&mensaje," ");
 		char * str_key = strsep(&mensaje," ");
 		cont->key = atoi(str_key);
-		strcpy(cont->value, strsep(&mensaje," "));
+		cont->value = strsep(&mensaje," ");
 		char * timestamp = strsep(&mensaje," ");
 		cont->timestamp = atol(timestamp);
 		resParser.contenido=cont;

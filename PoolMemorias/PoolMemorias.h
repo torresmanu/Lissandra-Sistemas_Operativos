@@ -14,6 +14,17 @@
 #include<commons/config.h>
 #include<commons/collections/list.h>
 #include<commons/parser.h>
+#include<commons/serializacion.h>
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <arpa/inet.h>
 
 t_log* g_logger;
 t_config* g_config;

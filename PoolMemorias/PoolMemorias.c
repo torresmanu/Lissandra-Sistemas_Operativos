@@ -551,9 +551,18 @@ resultado parsear_mensaje(char* mensaje)
 		}
 		case INSERT:
 		{
-			contenidoInsert* contenido = resParser.contenido;
-			res = insert(contenido->nombreTabla,contenido->key,contenido->value);
+			/*contenidoInsert* contenido = resParser.contenido;
+			res = insert(contenido->nombreTabla,contenido->key,contenido->value);*/
+
+			contenidoInsert* ci = (contenidoInsert*) (resParser.contenido);
+			int size_to_send = sizeof(ci->key) + (strlen(ci->nombreTabla) + 1) * sizeof(char)
+						+ sizeof(ci->timestamp) + (strlen(ci->value) + 1) * sizeof(char)
+						+ sizeof(resParser.accionEjecutar) + sizeof(size_to_send) + sizeof(int) + sizeof(int);
+			char* pi = serializarPaquete(&resParser);
+			send(serverSocket, pi, size_to_send, 0);
+
 			break;
+
 		}
 		case JOURNAL:
 		{

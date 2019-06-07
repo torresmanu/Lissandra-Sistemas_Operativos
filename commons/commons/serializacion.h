@@ -26,7 +26,7 @@ typedef struct {
 	long timestamp;
 } paqueteInsert;
 
-void* serializarPaquete(resultadoParser rp);
+char* serializarPaquete(resultadoParser* rp);
 int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp);
 
 #endif /* SERIALIZACION_H_ */
