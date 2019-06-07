@@ -294,19 +294,17 @@ char* serializarPaquete(resultadoParser* rp, int* total_size) {
 
 int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 	int status;
-	contenidoInsert* ci = malloc(sizeof(contenidoInsert));
 	int total_size;
 
 	int buffer_size = sizeof(int);
 	char* buffer = malloc(buffer_size);
-	char* bufferTimestamp = malloc(sizeof(long));
-
-	int valueSize;
-	int nombreTablaSize;
 
 	switch(rp->accionEjecutar) {
 	case(INSERT): {
-		printf("[recibirYDeserializarPaquete] Entro en el case INSERT\n");
+		contenidoInsert* ci = malloc(sizeof(contenidoInsert));
+		char* bufferTimestamp = malloc(sizeof(long));
+		int valueSize;
+		int nombreTablaSize;
 
 		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&total_size, buffer, buffer_size);
@@ -337,6 +335,131 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		if (!status) return -2;
 
 		rp->contenido = ci;
+
+		break;
+	}
+	case(SELECT): {
+		contenidoSelect* cs = malloc(sizeof(contenidoSelect));
+		int nombreTablaSize;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&total_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&nombreTablaSize, buffer, buffer_size);
+		if (!status) return -2;
+
+		cs->nombreTabla = malloc(nombreTablaSize);
+		status = recv(socketCliente, cs->nombreTabla, nombreTablaSize, 0);
+		if (!status) return -2;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&(cs->key), buffer, sizeof(int));
+		if (!status) return -2;
+
+		rp->contenido = cs;
+
+		break;
+	}
+	case(CREATE): {
+		contenidoCreate* cc = malloc(sizeof(contenidoCreate));
+		int nombreTablaSize;
+		int consistencia_size;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&total_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&nombreTablaSize, buffer, buffer_size);
+		if (!status) return -2;
+
+		cc->nombreTabla = malloc(nombreTablaSize);
+		status = recv(socketCliente, cc->nombreTabla, nombreTablaSize, 0);
+		if (!status) return -2;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&consistencia_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		cc->consistencia = malloc(consistencia_size);
+		status = recv(socketCliente, cc->consistencia, consistencia_size, 0);
+		if (!status) return -2;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&(cc->cant_part), buffer, sizeof(int));
+		if (!status) return -2;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&(cc->tiempo_compresion), buffer, sizeof(int));
+		if (!status) return -2;
+
+		rp->contenido = cc;
+
+		break;
+	}
+	case(DESCRIBE): {
+		contenidoDescribe* cd = malloc(sizeof(contenidoDescribe));
+		int nombreTablaSize;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&total_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&nombreTablaSize, buffer, buffer_size);
+		if (!status) return -2;
+
+		cd->nombreTabla = malloc(nombreTablaSize);
+		status = recv(socketCliente, cd->nombreTabla, nombreTablaSize, 0);
+		if (!status) return -2;
+
+		rp->contenido = cd;
+
+		break;
+	}
+	case(DROP): {
+		contenidoDrop* cd = malloc(sizeof(contenidoDrop));
+		int nombreTablaSize;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&total_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&nombreTablaSize, buffer, buffer_size);
+		if (!status) return -2;
+
+		cd->nombreTabla = malloc(nombreTablaSize);
+		status = recv(socketCliente, cd->nombreTabla, nombreTablaSize, 0);
+		if (!status) return -2;
+
+		rp->contenido = cd;
+
+		break;
+	}
+	case(ADD): {
+		contenidoAdd* ca = malloc(sizeof(contenidoAdd));
+		int criterio_size;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&total_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&(ca->numMem), buffer, sizeof(int));
+		if (!status) return -2;
+
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&criterio_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		ca->criterio = malloc(criterio_size);
+		status = recv(socketCliente, ca->criterio, criterio_size, 0);
+		if (!status) return -2;
+
+		rp->contenido = ca;
 
 		break;
 	}
