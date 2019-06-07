@@ -17,8 +17,6 @@ pthread_mutex_t mNew;
 pthread_mutex_t mReady;
 pthread_mutex_t mExit;
 
-
-
 int main(void) {
 
 	sem_init(&sNuevo,0,0);
@@ -28,25 +26,27 @@ int main(void) {
 	pthread_mutex_init(&mReady,NULL);
 	pthread_mutex_init(&mExit,NULL);
 
-
+	iniciar_programa();
 	//Lanzamos tantos hilos como nivelMultiprocesamiento haya
 	pthread_t *executer = malloc( nivelMultiprocesamiento * sizeof(pthread_t) );
 
+
 	for(int i=0; i<nivelMultiprocesamiento; i++ )
-	    pthread_create( &executer[i], NULL, ejecutador, NULL );
+	{
+	    pthread_create( &executer[i], NULL, (void*)ejecutador, NULL);
+	}
 
 	pthread_t plp;
 	pthread_create(&plp,NULL,(void*) planificadorLargoPlazo,NULL);
 
-	iniciar_programa();
 	//obtenerMemorias();
 	//gestionarConexion();
-	leerConsola();
+	leerConsola();										/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
-	pthread_join(&plp,NULL);
+	pthread_join(plp,NULL);
 
 	for(int i=0; i<nivelMultiprocesamiento; i++ )
-		pthread_join( &executer[i], NULL);
+		pthread_join(executer[i], NULL);
 
 	terminar_programa();
 
@@ -77,7 +77,6 @@ void iniciar_programa(void)
 
 	iniciarCriterios();
 
-
 }
 
 void terminar_programa()
@@ -98,6 +97,7 @@ void terminar_programa()
 	liberarCriterios();
 }
 
+/*
 void gestionarConexion()
 {
 	int i=1;
@@ -107,6 +107,7 @@ void gestionarConexion()
 		i=enviar_mensaje(socketServer);	//Con "exit" i=0 y salgo
 	}
 }
+*/
 
 // Propias de Kernel
 // Estados -> Colas
@@ -143,7 +144,7 @@ void agregarScriptAEstado(Script *script, nombreEstado estado)  // Aca hace las 
 {
 	switch(estado){
 		case NEW:
-			queue_push(new,script);
+			queue_push(new, script);
 			break;
 		case READY:
 			queue_push(ready,script);
@@ -156,6 +157,7 @@ void agregarScriptAEstado(Script *script, nombreEstado estado)  // Aca hace las 
 			}
 			else{
 				// Que hacer si ya esta ejecutando 3 procesos a la vez?
+				//pthread_join?
 			}
 			break;
 		case EXIT:
@@ -168,48 +170,50 @@ void agregarScriptAEstado(Script *script, nombreEstado estado)  // Aca hace las 
 void moverScriptDeEstado(){}
 void finalizarScript(){} // Debe hacer un free y sacarlo de la cola
 
-//////////////////////////////////////////////////////////
-// Leer LQL
-// Por archivo
+///////////////////////////////////////////////
+///////////////// Leer LQL ////////////////////
+///////////////// Por archivo /////////////////
+
+Script* run(char* path){
+	printf("Entro en run\n");
+
+	FILE* arch = fopen(path, "r+b");
+	printf("Abro el archivo\n");
+
+	Script* script = parsearScript(arch);
+	printf("parsearScript anda?\n");
+
+	//queue_push(new,script);
+	fclose(arch);
+	return script;
+}
+
+Script* parsearScript(FILE* fd){
+	Script* script = malloc(sizeof(Script));
+	//script->instrucciones = (resultadoParser*) list_create();
+	script->instrucciones = list_create(); // No se castea el resultadoParser?
+	script->pc=0; //Se modifica en ejecución
+
+	while(!feof(fd)){												 // ACA ROMPEEE
+		resultadoParser *req = malloc(sizeof(resultadoParser));
+		resultadoParser aux = leerRequest(fd);
+		memcpy(req,&aux,sizeof(aux));
+		list_add(script->instrucciones,req);
+
+	}
+	printf("Script prepara3\n");
+	return script;
+}
 
 resultadoParser leerRequest(FILE* fd){
 	char linea[MAX_BUFFER];
 	resultadoParser r;
-	fgets(linea,sizeof(linea),fd);
+	fgets(linea,sizeof(linea),fd); // fgets lee hasta el salto de linea
 	r = parseConsole(linea);
-
 	return r;
 }
 
-Script *parsearScript(FILE* arch){
-	Script *script = (Script*) malloc(sizeof(Script));
-	script->instrucciones = list_create();
-	script->pc=0;
-
-	while(!feof(arch)){
-		resultadoParser *req = malloc(sizeof(resultadoParser));
-		resultadoParser aux = leerRequest(arch);
-		memcpy(req,&aux,sizeof(aux));
-
-		list_add(script->instrucciones,req);
-	}
-	return script;
-}
-
-void run(char* path){
-	FILE* arch = fopen(path, "r");
-
-	Script *script = parsearScript(arch);
-
-	queue_push(new,script);
-	//agregarScriptAEstado(script,NEW); //no va a hacer falta mepa xq los cambios entre colas lo hacen solo los hilos
-
-	fclose(arch);
-}
-
-// Linea por consola
-
-
+///////////////// Linea por consola /////////////////
 resultadoParser leerLineaSQL(char* mensaje)
 {
 	resultadoParser r;
@@ -223,14 +227,17 @@ void leerConsola(){
 	while(1)
 	{
 		resultadoParser *aux = malloc(sizeof(resultadoParser));
+		Script* s = malloc(sizeof(Script));
 
-		char* linea = readline(">");
+		char* linea = readline(">");					// Leo stdin
+		add_history(linea);								// Para recordar el comando
+
 		resultadoParser res = parseConsole(linea);
-
 		memcpy(aux,&res,sizeof(res));
 
 		pthread_mutex_lock(&mNew);
-		queue_push(new,aux);
+		s = crearScript(aux);
+		agregarScriptAEstado(s, NEW);
 		pthread_mutex_unlock(&mNew);
 
 		sem_post(&sNuevo);
@@ -265,16 +272,18 @@ void planificadorLargoPlazo(){
 	free(r);
 }
 
-Script* crearScript(resultadoParser *r){
-	Script *s;
+Script* crearScript(resultadoParser* r){
+	Script* s = malloc(sizeof(Script));
+	printf("Entro a crearScript\n");
 
 	if(r->accionEjecutar==RUN){
-		s = parsearScript(r->contenido);
+		char* path;
+		path = ((contenidoRun*) r->contenido)->path;
+		printf("Aqui la ruta: %s\n", path);
+		s = run(path);
 	}else{
-		s = (Script*) malloc(sizeof(Script));
 		s->instrucciones = list_create();
 		s->pc = 0;
-
 		list_add(s->instrucciones,r);
 	}
 	return s;
@@ -367,6 +376,8 @@ status ejecutarRequest(resultadoParser *r){
 				add(mem,cons);
 				break;
 			}
+			default:
+				break;
 		}
 	return OK;
 	}
@@ -376,6 +387,13 @@ status ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio);
 	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
 	return resultado;										// la memoria. enviarRequest está sin implementar, usa sockets.
+}
+
+status enviarRequest(Memoria* mem, resultadoParser* request)
+{
+	status resultado;
+	//Aca se realiza toda la logica de enviar paquete por sockets (serializando?)
+	return resultado;
 }
 
 Memoria* masApropiada(Criterio* c){
@@ -485,24 +503,6 @@ void gossiping(Memoria *mem){
 void add(Memoria *memoria,Criterio cons){
 
 	list_add(cons.memorias,memoria);
-
-	/*
-	switch(tipo){
-		case SC:
-			list_add(sc.memorias,memoria);
-			break;
-
-		case SHC:
-			list_add(shc.memorias,memoria);
-			break;
-
-		case EC:
-			list_add(shc.memorias,memoria);
-			break;
-
-	}
-	*/
-
 }
 
 

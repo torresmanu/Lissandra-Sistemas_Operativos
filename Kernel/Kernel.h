@@ -11,13 +11,12 @@
 #include <commons/collections/queue.h>
 #include <commons/parser.h>
 #include <commons/log.h>
-#include <commons/config.h>
 #include <commons/sockets.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "Criterio.h"
-
 #include <semaphore.h>
+#include <pthread.h>
 
 
 #define MAX_BUFFER 100
@@ -64,7 +63,7 @@ void iniciarEstado(Estado *est);
 void iniciarEstados();
 void finalizarEstados();
 
-// Sockets
+//////////// SOCKETS ////////////
 void iniciar_programa(void);
 void terminar_programa(void);
 int enviar_mensaje(int socket_cliente);
@@ -72,15 +71,17 @@ int iniciarCliente();
 void gestionarConexion();
 
 
-// Parsear archivo LQL
+//////////// ARCHIVOS LQL ////////////
+
 void leerConsola();
-void run(char*);
-resultadoParser leerScriptLQL(FILE* fd);
+Script* run(char*);
 resultadoParser leerLineaSQL(char*);
+resultadoParser leerRequest(FILE*);
+Script* parsearScript(FILE*);
+
 
 void planificadorLargoPlazo();
-Script *crearScript(resultadoParser *r);
-void planificadorCortoPlazo();
+Script* crearScript(resultadoParser*);
 
 void ejecutador();
 bool terminoScript(Script *s);
@@ -90,6 +91,7 @@ bool deboSalir(Script *s);
 status ejecutarRequest(resultadoParser*);
 status ejecutarScript(Script*);
 status ejecutar(Criterio*, resultadoParser*);
+status enviarRequest(Memoria*,resultadoParser*);
 
 Criterio toConsistencia(char*);
 Memoria* masApropiada(Criterio*);
