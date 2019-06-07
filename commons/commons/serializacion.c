@@ -10,12 +10,12 @@
 char* serializarPaquete(resultadoParser* rp, int* total_size) {
 	int offset = 0;
 	int size_to_send;
-	int value_size;
-	int nombreTabla_size;
-	contenidoInsert* ci;
 
 	switch(rp->accionEjecutar) {
 	case(INSERT): {
+		int nombreTabla_size;
+		int value_size;
+		contenidoInsert* ci;
 		offset = 0;
 		ci = (contenidoInsert *) (rp->contenido);
 
@@ -63,6 +63,223 @@ char* serializarPaquete(resultadoParser* rp, int* total_size) {
 
 		size_to_send = sizeof(ci->timestamp);
 		memcpy(paqueteSerializado + offset, &(ci->timestamp), size_to_send);
+
+		return paqueteSerializado;
+
+		break;
+	}
+	case(SELECT): {
+		int nombreTabla_size;
+		contenidoSelect* cs;
+		offset = 0;
+		cs = (contenidoSelect *) (rp->contenido);
+
+		*total_size = sizeof(rp->accionEjecutar) + sizeof(int)
+				+ (strlen(cs->nombreTabla) + 1) * sizeof(char) + sizeof(nombreTabla_size)
+				+ sizeof(cs->key);
+
+		char* paqueteSerializado = (char*) malloc(*total_size);
+
+		size_to_send = sizeof(rp->accionEjecutar);
+		memcpy(paqueteSerializado + offset, &(rp->accionEjecutar), size_to_send);
+		offset += size_to_send;
+
+
+		size_to_send = sizeof(*total_size);
+		memcpy(paqueteSerializado + offset, total_size, size_to_send);
+		offset += size_to_send;
+
+
+		nombreTabla_size = strlen(cs->nombreTabla) + 1;
+		size_to_send = sizeof(nombreTabla_size);
+		memcpy(paqueteSerializado + offset, &nombreTabla_size, size_to_send);
+		offset += size_to_send;
+
+
+		size_to_send = nombreTabla_size;
+		memcpy(paqueteSerializado + offset, cs->nombreTabla, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = sizeof(cs->key);
+		memcpy(paqueteSerializado + offset, &(cs->key), size_to_send);
+		offset += size_to_send;
+
+
+		return paqueteSerializado;
+
+		break;
+	}
+	case(CREATE): {
+		int nombreTabla_size;
+		int consistencia_size;
+		contenidoCreate* cc;
+		offset = 0;
+		cc = (contenidoSelect *) (rp->contenido);
+
+		*total_size = sizeof(rp->accionEjecutar) + sizeof(int)
+				+ (strlen(cc->nombreTabla) + 1) * sizeof(char) + sizeof(nombreTabla_size)
+				+ (strlen(cc->consistencia) + 1) * sizeof(char) + sizeof(consistencia_size)
+				+ sizeof(cc->cant_part)
+				+ sizeof(cc->tiempo_compresion);
+
+		char* paqueteSerializado = (char*) malloc(*total_size);
+
+		size_to_send = sizeof(rp->accionEjecutar);
+		memcpy(paqueteSerializado + offset, &(rp->accionEjecutar), size_to_send);
+		offset += size_to_send;
+
+
+		size_to_send = sizeof(*total_size);
+		memcpy(paqueteSerializado + offset, total_size, size_to_send);
+		offset += size_to_send;
+
+
+		nombreTabla_size = strlen(cc->nombreTabla) + 1;
+		size_to_send = sizeof(nombreTabla_size);
+		memcpy(paqueteSerializado + offset, &nombreTabla_size, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = nombreTabla_size;
+		memcpy(paqueteSerializado + offset, cc->nombreTabla, size_to_send);
+		offset += size_to_send;
+
+		consistencia_size = strlen(cc->consistencia) + 1;
+		size_to_send = sizeof(consistencia_size);
+		memcpy(paqueteSerializado + offset, &consistencia_size, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = consistencia_size;
+		memcpy(paqueteSerializado + offset, cc->consistencia, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = sizeof(cc->cant_part);
+		memcpy(paqueteSerializado + offset, &(cc->cant_part), size_to_send);
+		offset += size_to_send;
+
+		size_to_send = sizeof(cc->tiempo_compresion);
+		memcpy(paqueteSerializado + offset, &(cc->tiempo_compresion), size_to_send);
+		offset += size_to_send;
+
+		return paqueteSerializado;
+
+		break;
+	}
+	case(DESCRIBE): {
+		int nombreTabla_size;
+		contenidoDescribe* cd;
+		offset = 0;
+		cd = (contenidoDescribe *) (rp->contenido);
+
+		*total_size = sizeof(rp->accionEjecutar) + sizeof(int)
+				+ (strlen(cd->nombreTabla) + 1) * sizeof(char) + sizeof(nombreTabla_size);
+
+		char* paqueteSerializado = (char*) malloc(*total_size);
+
+		size_to_send = sizeof(rp->accionEjecutar);
+		memcpy(paqueteSerializado + offset, &(rp->accionEjecutar), size_to_send);
+		offset += size_to_send;
+
+
+		size_to_send = sizeof(*total_size);
+		memcpy(paqueteSerializado + offset, total_size, size_to_send);
+		offset += size_to_send;
+
+
+		nombreTabla_size = strlen(cd->nombreTabla) + 1;
+		size_to_send = sizeof(nombreTabla_size);
+		memcpy(paqueteSerializado + offset, &nombreTabla_size, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = nombreTabla_size;
+		memcpy(paqueteSerializado + offset, cd->nombreTabla, size_to_send);
+		offset += size_to_send;
+
+		return paqueteSerializado;
+
+		break;
+	}
+	case(DROP): {
+		int nombreTabla_size;
+		contenidoDrop* cd;
+		offset = 0;
+		cd = (contenidoDrop *) (rp->contenido);
+
+		*total_size = sizeof(rp->accionEjecutar) + sizeof(int)
+				+ (strlen(cd->nombreTabla) + 1) * sizeof(char) + sizeof(nombreTabla_size);
+
+		char* paqueteSerializado = (char*) malloc(*total_size);
+
+		size_to_send = sizeof(rp->accionEjecutar);
+		memcpy(paqueteSerializado + offset, &(rp->accionEjecutar), size_to_send);
+		offset += size_to_send;
+
+
+		size_to_send = sizeof(*total_size);
+		memcpy(paqueteSerializado + offset, total_size, size_to_send);
+		offset += size_to_send;
+
+
+		nombreTabla_size = strlen(cd->nombreTabla) + 1;
+		size_to_send = sizeof(nombreTabla_size);
+		memcpy(paqueteSerializado + offset, &nombreTabla_size, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = nombreTabla_size;
+		memcpy(paqueteSerializado + offset, cd->nombreTabla, size_to_send);
+		offset += size_to_send;
+
+		return paqueteSerializado;
+
+		break;
+	}
+	case(ADD): {
+		int criterio_size;
+		contenidoAdd* ca;
+		offset = 0;
+		ca = (contenidoAdd *) (rp->contenido);
+
+		*total_size = sizeof(rp->accionEjecutar) + sizeof(int)
+				+ sizeof(ca->numMem)
+				+ (strlen(ca->criterio) + 1) * sizeof(char) + sizeof(criterio_size);
+
+		char* paqueteSerializado = (char*) malloc(*total_size);
+
+		size_to_send = sizeof(rp->accionEjecutar);
+		memcpy(paqueteSerializado + offset, &(rp->accionEjecutar), size_to_send);
+		offset += size_to_send;
+
+		size_to_send = sizeof(*total_size);
+		memcpy(paqueteSerializado + offset, total_size, size_to_send);
+		offset += size_to_send;
+
+
+		size_to_send = sizeof(ca->numMem);
+		memcpy(paqueteSerializado + offset, &(ca->numMem), size_to_send);
+		offset += size_to_send;
+
+		criterio_size = strlen(ca->criterio) + 1;
+		size_to_send = sizeof(criterio_size);
+		memcpy(paqueteSerializado + offset, &criterio_size, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = criterio_size;
+		memcpy(paqueteSerializado + offset, ca->criterio, size_to_send);
+		offset += size_to_send;
+
+		return paqueteSerializado;
+
+		break;
+	}
+	case(JOURNAL): {
+		offset = 0;
+
+		*total_size = sizeof(rp->accionEjecutar);
+
+		char* paqueteSerializado = (char*) malloc(*total_size);
+
+		size_to_send = sizeof(rp->accionEjecutar);
+		memcpy(paqueteSerializado + offset, &(rp->accionEjecutar), size_to_send);
+		offset += size_to_send;
 
 		return paqueteSerializado;
 

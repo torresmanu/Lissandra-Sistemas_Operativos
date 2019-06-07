@@ -26,6 +26,56 @@ typedef struct {
 	long timestamp;
 } paqueteInsert;
 
+typedef struct {
+	int operacion;
+	int total_size;
+
+	int nombreTabla_size;
+	char* nombreTabla;
+
+	int key;
+} paqueteSelect;
+
+typedef struct {
+	int operacion;
+	int total_size;
+
+	int nombreTabla_size;
+	char * nombreTabla;
+
+	int consistencia_size;
+	char * consistencia;
+
+	int cant_part;
+	int tiempo_compresion;
+} paqueteCreate;
+
+typedef struct {
+	int operacion;
+	int total_size;
+
+	int nombreTabla_size;
+	char* nombreTabla;
+} paqueteDescribe;
+
+typedef struct {
+	int operacion;
+	int total_size;
+
+	int nombreTabla_size;
+	char* nombreTabla;
+} paqueteDrop;
+
+typedef struct {
+	int operacion;
+	int total_size;
+
+	int numMem;
+
+	int criterio_size;
+	char* criterio;
+} paqueteAdd;
+
 char* serializarPaquete(resultadoParser* rp, int* size_to_send);
 int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp);
 
