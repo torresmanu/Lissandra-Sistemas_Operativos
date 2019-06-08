@@ -532,6 +532,7 @@ resultado parsear_mensaje(char* mensaje)
 {
 	resultado res;
 	resultadoParser resParser = parseConsole(mensaje);
+	int size_to_send;
 	switch(resParser.accionEjecutar){
 		case SELECT:
 		{
@@ -551,9 +552,15 @@ resultado parsear_mensaje(char* mensaje)
 		}
 		case INSERT:
 		{
-			contenidoInsert* contenido = resParser.contenido;
-			res = insert(contenido->nombreTabla,contenido->key,contenido->value);
+			/*contenidoInsert* contenido = resParser.contenido;
+			res = insert(contenido->nombreTabla,contenido->key,contenido->value);*/
+
+			contenidoInsert* ci = (contenidoInsert*) (resParser.contenido);
+			char* pi = serializarPaquete(&resParser, &size_to_send);
+			send(serverSocket, pi, size_to_send, 0);
+
 			break;
+
 		}
 		case JOURNAL:
 		{
