@@ -11,6 +11,8 @@
 void iniciarCriterios(){
 	sc.tipo = SC;
 	sc.memorias = list_create();
+	//list_add(sc.memorias,criterioSC());  Directamente la inicializo con la unica memoria que puede tener y asignada por archivo
+	//									   de configuración?
 
 	shc.tipo = SHC;
 	shc.memorias = list_create();
@@ -30,6 +32,8 @@ void destroy_nodo_memoria(void * elem){
 	free(nodo_tabla_elem);
 }
 
-Memoria criterioSC(){}
+Memoria criterioSC(){
+	/* LOGICA DE CRITERIO STRONG CONSISTENCY*/
+}
 
 t_consist obtenerConsistencia();

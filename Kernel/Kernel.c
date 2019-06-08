@@ -157,7 +157,7 @@ void agregarScriptAEstado(Script *script, nombreEstado estado)  // Aca hace las 
 			}
 			else{
 				// Que hacer si ya esta ejecutando 3 procesos a la vez?
-				//pthread_join?
+				// pthread_join?
 			}
 			break;
 		case EXIT:
@@ -181,9 +181,7 @@ Script* run(char* path){
 	printf("Abro el archivo\n");
 
 	Script* script = parsearScript(arch);
-	printf("parsearScript anda?\n");
 
-	//queue_push(new,script);
 	fclose(arch);
 	return script;
 }
@@ -194,7 +192,7 @@ Script* parsearScript(FILE* fd){
 	script->instrucciones = list_create(); // No se castea el resultadoParser?
 	script->pc=0; //Se modifica en ejecución
 
-	while(!feof(fd)){												 // ACA ROMPEEE
+	while(!feof(fd)){
 		resultadoParser *req = malloc(sizeof(resultadoParser));
 		resultadoParser aux = leerRequest(fd);
 		memcpy(req,&aux,sizeof(aux));
@@ -407,10 +405,12 @@ Memoria* masApropiada(Criterio* c){
 			break;
 		case EC:
 		{
-			int cantidadMemorias = rand()%list_size(ec.memorias)+1;
+			int cantidadMemorias = rand()%list_size(ec.memorias)+1;	// Que sea aleatoria
 			mem = (Memoria*)list_get(ec.memorias,cantidadMemorias);
 			break;
 		}
+		default:
+			break;
 	}
 	return mem;
 }
@@ -463,7 +463,7 @@ Tabla* obtenerTabla(resultadoParser* r){
 
 Tabla* buscarTabla(char* nom)
 {
-	bool coincideNombre(void* element)
+	bool coincideNombre(void* element)					//Subfunción de busqueda
 	{
 		return strcmp(nom,((Tabla*)element)->nombre);
 	}
@@ -479,11 +479,11 @@ void obtenerMemorias(){
 	Memoria *mem;
 	int id = config_get_int_value(g_config,"MEMORIA");
 	mem->idMemoria = id;
-
 	gossiping(mem);//meto en pool la lista de memorias encontradas
 
 }
 
+// HARDCODEADO SOLO COMO PARA EJEMPLO.	////////////////////
 void gossiping(Memoria *mem){
 	Memoria *m1 = malloc(sizeof(Memoria));
 	m1->idMemoria = 1;
@@ -496,8 +496,8 @@ void gossiping(Memoria *mem){
 	Memoria *m3 = malloc(sizeof(Memoria));
 	m3->idMemoria = 3;
 	list_add(pool,m3);
-
 }
+////////////////////////////////////////////////////
 
 //Agrego la memoria en la lista de memorias del criterio
 void add(Memoria *memoria,Criterio cons){

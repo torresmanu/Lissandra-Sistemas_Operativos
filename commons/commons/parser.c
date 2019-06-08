@@ -114,5 +114,5 @@ resultadoParser parseConsole(char* mensaje){
 
 bool criterioEsValido(char* consist)
 {
-	return strcmp(consist,"SC") || strcmp(consist,"SHC") || strcmp(consist,"EC");
+	return strcmp(consist,"SC") == 0 || strcmp(consist,"SHC") == 0 || strcmp(consist,"EC") == 0;
 }
