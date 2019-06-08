@@ -40,9 +40,8 @@ int nivelActual;
 typedef enum {NEW, READY, EXEC, EXIT} nombreEstado;
 typedef enum {OK, ERROR} status;
 
-typedef t_queue Estado;
-
-Estado *new,*ready,*exec,*exi;
+typedef t_queue* Estado;
+Estado new,ready,exec,exi;
 
 typedef struct{
 	t_list *instrucciones;
@@ -59,7 +58,7 @@ Tabla* buscarTabla(char*);
 Tabla* obtenerTabla(resultadoParser*);
 bool usaTabla(resultadoParser*);
 
-void iniciarEstado(Estado *est);
+void iniciarEstado(Estado est);
 void iniciarEstados();
 void finalizarEstados();
 

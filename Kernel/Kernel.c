@@ -33,7 +33,7 @@ int main(void) {
 
 	for(int i=0; i<nivelMultiprocesamiento; i++ )
 	{
-	    pthread_create( &executer[i], NULL, (void*)ejecutador, NULL);
+	    pthread_create(&executer[i], NULL, (void*)ejecutador, NULL);
 	}
 
 	pthread_t plp;
@@ -45,12 +45,12 @@ int main(void) {
 
 	pthread_join(plp,NULL);
 
-	for(int i=0; i<nivelMultiprocesamiento; i++ )
+	for(int i=0; i<nivelMultiprocesamiento; i++)
+	{
 		pthread_join(executer[i], NULL);
+	}
 
 	terminar_programa();
-
-
 	return 0;
 }
 
@@ -67,6 +67,7 @@ void iniciar_programa(void)
 	//Inicializo los estados
 	iniciarEstados();
 
+	//Obtengo el quantum
 	quantum = config_get_int_value(g_config,"QUANTUM");
 
 	// Nivel de multiprocesamiento
@@ -112,15 +113,11 @@ void gestionarConexion()
 // Propias de Kernel
 // Estados -> Colas
 
-void iniciarEstado(Estado *est){
-	est = queue_create();
-}
-
 void iniciarEstados(){ 			// Son 4 colas.
-	iniciarEstado(new);
-	iniciarEstado(ready);
-	iniciarEstado(exec);
-	iniciarEstado(exi);
+	new = queue_create();
+	ready = queue_create();
+	exec = queue_create();
+	exi = queue_create();
 }
 
 void liberarRequest(void* elem){
@@ -140,19 +137,20 @@ void finalizarEstados(){
 	queue_clean_and_destroy_elements(exi,liberarScript);
 }
 
-void agregarScriptAEstado(Script *script, nombreEstado estado)  // Aca hace las comprobaciones si pueden
+void agregarScriptAEstado(Script* script, nombreEstado estado)  // Aca hace las comprobaciones si pueden
 {
 	switch(estado){
-		case NEW:
+		case NEW: {
 			queue_push(new, script);
 			break;
-		case READY:
+		}
+		case READY: {
 			queue_push(ready,script);
 			break;
-
-		case EXEC:
+		}
+		case EXEC: {
 			if(nivelActual < nivelMultiprocesamiento){
-				//queue_push(estado,res);
+				//queue_push(exec,script);
 				nivelActual++;
 			}
 			else{
@@ -160,9 +158,15 @@ void agregarScriptAEstado(Script *script, nombreEstado estado)  // Aca hace las 
 				// pthread_join?
 			}
 			break;
-		case EXIT:
-			queue_push(exi,script);
 		}
+		case EXIT: {
+			queue_push(exi,script);
+			break;
+		}
+		default:
+			break;
+	}
+	printf("\nFunciona\n");
 
 }
 
@@ -175,10 +179,12 @@ void finalizarScript(){} // Debe hacer un free y sacarlo de la cola
 ///////////////// Por archivo /////////////////
 
 Script* run(char* path){
-	printf("Entro en run\n");
-
+	printf("Ruta: %s\n", path);
 	FILE* arch = fopen(path, "r+b");
-	printf("Abro el archivo\n");
+	if(arch == NULL)
+		perror("\nError:");
+	else
+		printf("Abro el archivo\n");
 
 	Script* script = parsearScript(arch);
 
@@ -189,15 +195,14 @@ Script* run(char* path){
 Script* parsearScript(FILE* fd){
 	Script* script = malloc(sizeof(Script));
 	//script->instrucciones = (resultadoParser*) list_create();
-	script->instrucciones = list_create(); // No se castea el resultadoParser?
-	script->pc=0; //Se modifica en ejecución
+	script->instrucciones = list_create(); 		//No se castea el resultadoParser?
+	script->pc=0; 								//Se modifica en ejecución
 
 	while(!feof(fd)){
 		resultadoParser *req = malloc(sizeof(resultadoParser));
 		resultadoParser aux = leerRequest(fd);
 		memcpy(req,&aux,sizeof(aux));
 		list_add(script->instrucciones,req);
-
 	}
 	printf("Script prepara3\n");
 	return script;
@@ -272,12 +277,9 @@ void planificadorLargoPlazo(){
 
 Script* crearScript(resultadoParser* r){
 	Script* s = malloc(sizeof(Script));
-	printf("Entro a crearScript\n");
-
 	if(r->accionEjecutar==RUN){
 		char* path;
 		path = ((contenidoRun*) r->contenido)->path;
-		printf("Aqui la ruta: %s\n", path);
 		s = run(path);
 	}else{
 		s->instrucciones = list_create();
@@ -345,7 +347,6 @@ void mandarAexit(Script *s){
 status ejecutarScript(Script *s){
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
 	status estado = ejecutarRequest(r);
-
 	(s->pc)++;
 	return estado;
 }
