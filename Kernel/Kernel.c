@@ -17,8 +17,6 @@ pthread_mutex_t mNew;
 pthread_mutex_t mReady;
 pthread_mutex_t mExit;
 
-
-
 int main(void) {
 
 	sem_init(&sNuevo,0,0);
@@ -28,24 +26,27 @@ int main(void) {
 	pthread_mutex_init(&mReady,NULL);
 	pthread_mutex_init(&mExit,NULL);
 
-
+	iniciar_programa();
 	//Lanzamos tantos hilos como nivelMultiprocesamiento haya
 	pthread_t *executer = malloc( nivelMultiprocesamiento * sizeof(pthread_t) );
 
-	for(int i=0; i<nivelMultiprocesamiento; i++ )//mepa que
-	    pthread_create( &executer[i], NULL, ejecutador, NULL );
+
+	for(int i=0; i<nivelMultiprocesamiento; i++ )
+	{
+	    pthread_create( &executer[i], NULL, (void*)ejecutador, NULL);
+	}
 
 	pthread_t plp;
 	pthread_create(&plp,NULL,(void*) planificadorLargoPlazo,NULL);
 
-	iniciar_programa();
 	//obtenerMemorias();
 	//gestionarConexion();
-	leerConsola();
+	leerConsola();										/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
-	pthread_join(&plp,NULL);
+	pthread_join(plp,NULL);
+
 	for(int i=0; i<nivelMultiprocesamiento; i++ )
-		pthread_join( &executer[i], NULL);
+		pthread_join(executer[i], NULL);
 
 	terminar_programa();
 
@@ -72,9 +73,9 @@ void iniciar_programa(void)
 	nivelMultiprocesamiento = config_get_int_value(g_config,"MULTIPROCESAMIENTO");
 
 	pool = list_create();
+	tablas = list_create();
 
 	iniciarCriterios();
-
 
 }
 
@@ -96,6 +97,7 @@ void terminar_programa()
 	liberarCriterios();
 }
 
+/*
 void gestionarConexion()
 {
 	int i=1;
@@ -105,6 +107,7 @@ void gestionarConexion()
 		i=enviar_mensaje(socketServer);	//Con "exit" i=0 y salgo
 	}
 }
+*/
 
 // Propias de Kernel
 // Estados -> Colas
@@ -141,7 +144,7 @@ void agregarScriptAEstado(Script *script, nombreEstado estado)  // Aca hace las 
 {
 	switch(estado){
 		case NEW:
-			queue_push(new,script);
+			queue_push(new, script);
 			break;
 		case READY:
 			queue_push(ready,script);
@@ -154,6 +157,7 @@ void agregarScriptAEstado(Script *script, nombreEstado estado)  // Aca hace las 
 			}
 			else{
 				// Que hacer si ya esta ejecutando 3 procesos a la vez?
+				// pthread_join?
 			}
 			break;
 		case EXIT:
@@ -166,48 +170,48 @@ void agregarScriptAEstado(Script *script, nombreEstado estado)  // Aca hace las 
 void moverScriptDeEstado(){}
 void finalizarScript(){} // Debe hacer un free y sacarlo de la cola
 
-//////////////////////////////////////////////////////////
-// Leer LQL
-// Por archivo
+///////////////////////////////////////////////
+///////////////// Leer LQL ////////////////////
+///////////////// Por archivo /////////////////
+
+Script* run(char* path){
+	printf("Entro en run\n");
+
+	FILE* arch = fopen(path, "r+b");
+	printf("Abro el archivo\n");
+
+	Script* script = parsearScript(arch);
+
+	fclose(arch);
+	return script;
+}
+
+Script* parsearScript(FILE* fd){
+	Script* script = malloc(sizeof(Script));
+	//script->instrucciones = (resultadoParser*) list_create();
+	script->instrucciones = list_create(); // No se castea el resultadoParser?
+	script->pc=0; //Se modifica en ejecución
+
+	while(!feof(fd)){
+		resultadoParser *req = malloc(sizeof(resultadoParser));
+		resultadoParser aux = leerRequest(fd);
+		memcpy(req,&aux,sizeof(aux));
+		list_add(script->instrucciones,req);
+
+	}
+	printf("Script prepara3\n");
+	return script;
+}
 
 resultadoParser leerRequest(FILE* fd){
 	char linea[MAX_BUFFER];
 	resultadoParser r;
-	fgets(linea,sizeof(linea),fd);
+	fgets(linea,sizeof(linea),fd); // fgets lee hasta el salto de linea
 	r = parseConsole(linea);
-
 	return r;
 }
 
-Script *parsearScript(FILE* arch){
-	Script *script = (Script*) malloc(sizeof(Script));
-	script->instrucciones = list_create();
-	script->pc=0;
-
-	while(!feof(arch)){
-		resultadoParser *req = malloc(sizeof(resultadoParser));
-		resultadoParser aux = leerRequest(arch);
-		memcpy(req,&aux,sizeof(aux));
-
-		list_add(script->instrucciones,req);
-	}
-	return script;
-}
-
-void run(char* path){
-	FILE* arch = fopen(path, "r");
-
-	Script *script = parsearScript(arch);
-
-	queue_push(new,script);
-	//agregarScriptAEstado(script,NEW); //no va a hacer falta mepa xq los cambios entre colas lo hacen solo los hilos
-
-	fclose(arch);
-}
-
-// Linea por consola
-
-
+///////////////// Linea por consola /////////////////
 resultadoParser leerLineaSQL(char* mensaje)
 {
 	resultadoParser r;
@@ -220,13 +224,23 @@ void leerConsola(){
 	printf("\nBienvenido! Welcome! Youkoso!\n");
 	while(1)
 	{
-		resultadoParser *res = parsearConsola();
+		resultadoParser *aux = malloc(sizeof(resultadoParser));
+		Script* s = malloc(sizeof(Script));
+
+		char* linea = readline(">");					// Leo stdin
+		add_history(linea);								// Para recordar el comando
+
+		resultadoParser res = parseConsole(linea);
+		memcpy(aux,&res,sizeof(res));
 
 		pthread_mutex_lock(&mNew);
-		queue_push(new,res);
+		s = crearScript(aux);
+		agregarScriptAEstado(s, NEW);
 		pthread_mutex_unlock(&mNew);
 
 		sem_post(&sNuevo);
+		if(res.accionEjecutar==SALIR_CONSOLA)
+			break;
 	}
 }
 
@@ -248,7 +262,7 @@ void planificadorLargoPlazo(){
 
 		sem_post(&sListo);
 
-		if(r->accionEjecutar==TERMINAR)
+		if(r->accionEjecutar==SALIR_CONSOLA)
 			break;
 
 		free(r);
@@ -256,22 +270,25 @@ void planificadorLargoPlazo(){
 	free(r);
 }
 
-Script* crearScript(resultadoParser *r){
-	Script *s;
+Script* crearScript(resultadoParser* r){
+	Script* s = malloc(sizeof(Script));
+	printf("Entro a crearScript\n");
 
 	if(r->accionEjecutar==RUN){
-		s = parsearScript(r->contenido);
+		char* path;
+		path = ((contenidoRun*) r->contenido)->path;
+		printf("Aqui la ruta: %s\n", path);
+		s = run(path);
 	}else{
-		s = (Script*) malloc(sizeof(Script));
 		s->instrucciones = list_create();
 		s->pc = 0;
-
 		list_add(s->instrucciones,r);
 	}
 	return s;
 }
 
 void ejecutador(){
+	status e;
 	while(1){
 		sem_wait(&sListo);
 
@@ -279,12 +296,17 @@ void ejecutador(){
 		Script *s = queue_pop(ready);
 		pthread_mutex_unlock(&mReady);
 
-		if(list_get(s->instrucciones,0))//hay que ver cuando termina, buscar una mejor forma
+		if(deboSalir(s))//hay que ver cuando termina, buscar una mejor forma
 			return;
 
 		for(int i=0; i <= quantum ;i++){//ver caso en que falla, ejecutarS podria retornar un estado
 			if(!terminoScript(s)){
-				ejecutarScript(s);
+				e = ejecutarScript(s);
+				if(e == ERROR)
+				{
+					mandarAexit(s);
+					return;
+				}
 			} else {
 				break;
 			}
@@ -295,6 +317,10 @@ void ejecutador(){
 		else
 			mandarAexit(s);
 	}
+}
+
+bool deboSalir(Script *s){
+	return ((resultadoParser *)list_get(s->instrucciones,0))-> accionEjecutar == SALIR_CONSOLA;
 }
 
 bool terminoScript(Script *s){
@@ -316,11 +342,135 @@ void mandarAexit(Script *s){
 
 }
 
-void ejecutarScript(Script *s){
+status ejecutarScript(Script *s){
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
-	ejecutarRequest(r);
+	status estado = ejecutarRequest(r);
+
 	(s->pc)++;
+	return estado;
 }
+
+status ejecutarRequest(resultadoParser *r){
+	if(usaTabla(r)){
+		Tabla* tabla = obtenerTabla(r);
+		if(tabla != NULL)
+			return ejecutar(tabla->criterio,r);
+		else
+			return ERROR; 											// HACER UN ENUM
+	}
+	else{
+		switch (r->accionEjecutar){
+			case JOURNAL:
+				//journal();
+				break;
+			case METRICS:
+				//metrics();
+				break;
+			case ADD:
+			{
+				Memoria* mem = malloc(sizeof(Memoria));
+				mem->idMemoria = ((contenidoAdd *)(r->contenido))->numMem;
+				Criterio cons = toConsistencia(((contenidoAdd *)(r->contenido))->criterio);
+				add(mem,cons);
+				break;
+			}
+			default:
+				break;
+		}
+	return OK;
+	}
+}
+
+status ejecutar(Criterio* criterio, resultadoParser* request){
+	Memoria* mem = masApropiada(criterio);
+	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
+	return resultado;										// la memoria. enviarRequest está sin implementar, usa sockets.
+}
+
+status enviarRequest(Memoria* mem, resultadoParser* request)
+{
+	status resultado;
+	//Aca se realiza toda la logica de enviar paquete por sockets (serializando?)
+	return resultado;
+}
+
+Memoria* masApropiada(Criterio* c){
+	Memoria* mem;
+	switch(c->tipo)
+	{
+		case SC:
+			mem = (Memoria*)list_get(sc.memorias,0);
+			break;
+		case SHC:											// Necesito aplicar Hash
+			break;
+		case EC:
+		{
+			int cantidadMemorias = rand()%list_size(ec.memorias)+1;	// Que sea aleatoria
+			mem = (Memoria*)list_get(ec.memorias,cantidadMemorias);
+			break;
+		}
+		default:
+			break;
+	}
+	return mem;
+}
+
+Criterio toConsistencia(char* cadena)
+{
+	if(strcmp(cadena, "SC") == 0)
+		return sc;
+	else if(strcmp(cadena, "SHC") == 0)
+		return shc;
+	else
+		return ec;
+}
+
+bool usaTabla(resultadoParser* r){
+	return r->accionEjecutar == SELECT || r->accionEjecutar == INSERT || r->accionEjecutar == DROP || r->accionEjecutar == DESCRIBE || r->accionEjecutar == CREATE;
+}
+Tabla* obtenerTabla(resultadoParser* r){
+	switch(r->accionEjecutar)
+	{
+		case SELECT:
+		{
+			contenidoSelect* c = (contenidoSelect*)r->contenido;
+			return buscarTabla(c->nombreTabla);
+		}
+		case INSERT:
+		{
+			contenidoInsert* c = (contenidoInsert*)r->contenido;
+			return buscarTabla(c->nombreTabla);
+		}
+		case DROP:
+		{
+			contenidoDrop* c = (contenidoDrop*)r->contenido;
+			return buscarTabla(c->nombreTabla);
+		}
+		case CREATE:
+		{
+			contenidoCreate* c = (contenidoCreate*)r->contenido;
+			return buscarTabla(c->nombreTabla);
+		}
+		case DESCRIBE:
+		{
+			contenidoDescribe* c = (contenidoDescribe*)r->contenido;
+			return buscarTabla(c->nombreTabla);
+		}
+		default:
+			return NULL;
+	}
+}
+
+Tabla* buscarTabla(char* nom)
+{
+	bool coincideNombre(void* element)					//Subfunción de busqueda
+	{
+		return strcmp(nom,((Tabla*)element)->nombre);
+	}
+
+	return (Tabla*)list_find(tablas,coincideNombre);
+}
+
 
 //////////////////////////////////////////////////////////
 // Criterios y memorias
@@ -329,11 +479,11 @@ void obtenerMemorias(){
 	Memoria *mem;
 	int id = config_get_int_value(g_config,"MEMORIA");
 	mem->idMemoria = id;
-
 	gossiping(mem);//meto en pool la lista de memorias encontradas
 
 }
 
+// HARDCODEADO SOLO COMO PARA EJEMPLO.	////////////////////
 void gossiping(Memoria *mem){
 	Memoria *m1 = malloc(sizeof(Memoria));
 	m1->idMemoria = 1;
@@ -346,25 +496,13 @@ void gossiping(Memoria *mem){
 	Memoria *m3 = malloc(sizeof(Memoria));
 	m3->idMemoria = 3;
 	list_add(pool,m3);
-
 }
+////////////////////////////////////////////////////
 
 //Agrego la memoria en la lista de memorias del criterio
-void add(Memoria *memoria,t_consist tipo){
+void add(Memoria *memoria,Criterio cons){
 
-	switch(tipo){
-		case SC:
-			list_add(sc.memorias,memoria);
-			break;
-
-		case SHC:
-			list_add(shc.memorias,memoria);
-			break;
-
-		case EC:
-			list_add(shc.memorias,memoria);
-			break;
-	}
+	list_add(cons.memorias,memoria);
 }
 
 

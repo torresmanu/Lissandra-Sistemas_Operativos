@@ -8,10 +8,7 @@
 #ifndef CRITERIO_H_
 #define CRITERIO_H_
 
-#include <commons/config.h>
-#include <commons/collections/list.h>
 #include "PoolMem.h"
-
 
 typedef enum{SC, SHC, EC} t_consist;
 

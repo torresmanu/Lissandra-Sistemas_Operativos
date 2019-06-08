@@ -67,6 +67,40 @@ resultadoParser parseConsole(char* mensaje){
 		cont->path = strsep(&mensaje,"\n");
 		resParser.contenido = cont;
 	}
+	else if(strcmp(accion,"METRICS") == 0)
+	{
+		resParser.accionEjecutar=METRICS;
+	}
+	else if(strcmp(accion,"ADD") == 0)
+	{
+		resParser.accionEjecutar=ADD;
+		char * aux = strsep(&mensaje," ");
+
+		if(strcmp(aux,"MEMORY") == 0){
+			contenidoAdd* cont = malloc(sizeof(contenidoAdd));
+			char * str_num = strsep(&mensaje," ");
+			cont->numMem = atoi(str_num);
+
+			char *conector = strsep(&mensaje," ");
+
+			if(strcmp(conector,"TO") == 0){
+				char* crit = strsep(&mensaje," ");
+
+				if(criterioEsValido(crit))
+					cont->criterio = crit;
+				else
+					resParser.accionEjecutar=ERROR_PARSER;
+			}
+
+			else
+				resParser.accionEjecutar=ERROR_PARSER;
+
+
+			resParser.contenido = cont;
+		}else
+			resParser.accionEjecutar=ERROR_PARSER;
+
+	}
 	else if(strcmp(accion,"SALIR") == 0)
 	{
 		resParser.accionEjecutar=SALIR_CONSOLA;
@@ -78,4 +112,7 @@ resultadoParser parseConsole(char* mensaje){
 	return resParser;
 }
 
-
+bool criterioEsValido(char* consist)
+{
+	return strcmp(consist,"SC") == 0 || strcmp(consist,"SHC") == 0 || strcmp(consist,"EC") == 0;
+}

@@ -21,6 +21,8 @@ typedef enum
 	DROP,
 	DUMP,
 	RUN,
+	METRICS,
+	ADD,
 	ERROR_PARSER
 }accion;
 
@@ -63,11 +65,18 @@ typedef struct
 
 typedef struct
 {
+	int numMem;
+	char* criterio;
+} contenidoAdd;
+
+typedef struct
+{
 	accion accionEjecutar;
 	void* contenido;
 } resultadoParser;
 
 resultadoParser parseConsole(char*);
+bool criterioEsValido(char*);
 
 
 #endif /* PARSER_H_ */

@@ -10,6 +10,7 @@
 
 #include <commons/collections/list.h>
 #include <commons/config.h>
+#include <stdlib.h>
 
 
 typedef struct{
