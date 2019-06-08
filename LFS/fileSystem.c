@@ -65,12 +65,20 @@ t_list* obtenerTodasMetadata(){
 }
 
 registro* fs_select(char* nombreTabla, int key, int partition){
-	return fs_select_partition(nombreTabla,key,partition);
+	registro* regAux = NULL;
+	registro* reg =fs_select_partition(nombreTabla,key,partition);
+	regAux = fs_select_temporal(nombreTabla,key);
+	if(reg == NULL && regAux != NULL){
+		return regAux;
+	}else if(regAux != NULL && reg != NULL){
+		if(regAux->timestamp > reg->timestamp){
+			return regAux;
+		}
+	}
+	return reg;
 }
 
 registro* fs_select_partition(char* nombreTabla, int key, int partition){
-	registro* reg = NULL;
-	registro auxReg;
 	char* partitionPath= obtenerTablePath();
 	string_append(&partitionPath, nombreTabla);
 	string_append(&partitionPath, "/");
@@ -79,28 +87,64 @@ registro* fs_select_partition(char* nombreTabla, int key, int partition){
 	FILE* partitionFile = fopen(partitionPath,"r");
 	//Si el file es null significa que no encuentro la particion
 	if(partitionFile == NULL){
-		return reg;
+		return NULL;
 	}
+	registro* reg = obtenerRegistroDeArchivo(partitionFile,key);
+	fclose(partitionFile);
+	return reg;
+}
+
+registro* fs_select_temporal(char* nombreTabla, int key){
+	registro* reg = NULL;
+	registro* regAux = NULL;
+	char* tablesPath= obtenerTablePath();
+	string_append(&tablesPath, nombreTabla);
+	DIR* tabledir = opendir(tablesPath);
+	struct dirent* tablesde;
+	if(tabledir == NULL){
+		return NULL;
+	}
+	while((tablesde=readdir(tabledir))!= NULL){
+		if(!string_contains(tablesde->d_name,".bin") && !string_contains(tablesde->d_name,"metadata")){
+			char* temporalPath = string_duplicate(tablesPath);
+			string_append(&temporalPath, "/");
+			string_append(&temporalPath, tablesde->d_name);
+			FILE* temporalFile = fopen(temporalPath,"r");
+			//Si el file es null significa que no encuentro el archivo
+			if(temporalFile != NULL){
+				regAux = obtenerRegistroDeArchivo(temporalFile,key);
+			}
+			fclose(temporalFile);
+			if(reg == NULL && regAux != NULL){
+				reg = malloc(sizeof(registro));
+				memcpy(reg,regAux,sizeof(registro));
+			}
+			else if(regAux != NULL && regAux->timestamp > reg->timestamp){
+				memcpy(reg,regAux,sizeof(registro));
+			}
+		}
+	}
+	return reg;
+}
+
+registro* obtenerRegistroDeArchivo(FILE* file, int key){
 	char linea[1024];
-	while(fgets(linea,1024,(FILE*)partitionFile)){
-		log_info(g_logger,"HOLA");
-		parseRegistro(linea,&auxReg);
-		log_info(g_logger,"HOLA");
+	registro* reg = NULL;
+	while(fgets(linea,1024,(FILE*)file)){
+		registro* auxReg = malloc (sizeof(registro));
+		parseRegistro(linea,auxReg,config_get_int_value(g_config,"TAMAÑO_VALUE"));
 		//Primero pregunto si el registro tiene el mismo value que yo quiero tomar
-		if(auxReg.key == key){
+		if(auxReg->key == key){
 			//Si el registro todavia no se habia seteado lo seteo
 			if(reg == NULL){
 				reg = malloc(sizeof(registro));
-				memcpy(reg,&auxReg,sizeof(registro));
+				memcpy(reg,auxReg,sizeof(registro));
 			}
 			//Si ya tengo un registro comparo los timestamp
-			else if(auxReg.timestamp > reg->timestamp){
-				memcpy(reg,&auxReg,sizeof(registro));
+			else if(auxReg->timestamp > reg->timestamp){
+				memcpy(reg,auxReg,sizeof(registro));
 			}
-			log_info(g_logger,reg->value);
 		}
 	}
-	fclose(partitionFile);
-	log_info(g_logger,reg->value);
 	return reg;
 }

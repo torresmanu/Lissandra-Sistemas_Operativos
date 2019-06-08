@@ -17,6 +17,6 @@ typedef struct
 } registro;
 
 
-void parseRegistro(char*,registro*);
+void parseRegistro(char*,registro*,int);
 
 #endif /* REGISTRO_H_ */

@@ -21,6 +21,7 @@ char* obtenerTablePath();
 registro* fs_select(char* nombreTabla, int key, int partition);
 registro* fs_select_partition(char* nombreTabla, int key, int partition);
 registro* fs_select_temporal(char* nombreTabla, int key);
+registro* obtenerRegistroDeArchivo(FILE* file, int key);
 t_list* obtenerTodasMetadata();
 
 #endif /* FILESYSTEM_H_ */

@@ -143,21 +143,43 @@ resultado parsear_mensaje(char* mensaje)
 resultado select_acc(char* tabla,int key)
 {
 	resultado res;
-	//Hago un select a la memtable
-	registro* reg = NULL;
-	/*reg = memtable_select(tabla,key);
-	if(reg == NULL){
-		res.mensaje="Registro no obtenido";
-	}else{
-		res.mensaje= string_duplicate(reg->value);
-	}*/
-	//Hago un select a la fileSystem
 
-	reg = fs_select(tabla,key,1);
-	if(reg == NULL){
-		log_info(g_logger,"No se encontro el registro");
+	//Paso 1: Verificar que la tabla exista en el file system y obtengo la metadata
+	metadataTabla metadata;
+	if(existeMetadata(tabla) == 0){
+		metadata = obtenerMetadata(tabla);
 	}else{
-		//log_info(g_logger,reg->value);
+		res.mensaje="Prueba";
+		res.resultado=ERROR;
+		return res;
+	}
+
+	//Paso 2: Calcular cual es la partición que contiene dicho KEY.
+	int particion = key % metadata.partitions;
+	if(particion == 0){
+		particion = metadata.partitions;
+	}
+
+	//Paso 3: Escanear la partición objetivo, todos los archivos temporales
+	//y la memoria temporal de dicha tabla (si existe) buscando la key deseada.
+	registro* regMemTable = memtable_select(tabla,key);
+
+	registro* regFs = fs_select(tabla,key,particion);
+
+	//Paso 4: Comparo la de mayor timestamp
+
+	if(regMemTable == NULL && regFs == NULL){
+		log_info(g_logger,"No se encontro el registro");
+	}else if(regMemTable == NULL && regFs != NULL){
+		log_info(g_logger,regFs->value);
+	}else if(regMemTable != NULL && regFs == NULL){
+		log_info(g_logger,regMemTable->value);
+	}else{
+		if(regMemTable->timestamp > regFs->timestamp){
+			log_info(g_logger,regMemTable->value);
+		}else{
+			log_info(g_logger,regFs->value);
+		}
 	}
 	res.mensaje="Prueba";
 	res.resultado=OK;
