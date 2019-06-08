@@ -26,5 +26,6 @@ t_list* obtenerTodasMetadata();
 int crear_tabla(char* tabla,char* t_cons,int cant_part,int tiempo_comp);
 int crearArchivoMetadata(char* tablePath,metadataTabla metadata);
 int crearArchivosBinarios(char* tablesPath,metadataTabla metadata);
+int dropTableFS(char * tabla);
 
 #endif /* FILESYSTEM_H_ */

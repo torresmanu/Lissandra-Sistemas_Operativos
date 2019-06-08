@@ -204,3 +204,30 @@ int crearArchivosBinarios(char* tablesPath,metadataTabla metadata){
 		fclose(binaryFile);
 	}
 }
+
+int dropTableFS(char * tabla){
+	//Obtengo el path de la tabla a dripear
+	char* tablesPath= obtenerTablePath();
+	string_append(&tablesPath,tabla);
+	//Borro los archivos que estan adento
+	DIR* tablesdir = opendir(tablesPath);
+	struct dirent* tablesde;
+	while((tablesde=readdir(tablesdir))!= NULL){
+		if(strcmp(tablesde->d_name,".")!= 0 && strcmp(tablesde->d_name,"..")!= 0){
+			char* filePath = string_duplicate(tablesPath);
+			string_append(&filePath,"/");
+			string_append(&filePath,tablesde->d_name);
+			int status = remove(filePath);
+			if(status != 0){
+				perror("Error: ");
+				return status;
+			}
+		}
+	}
+	//Borro el directorio
+	int status = remove(tablesPath);
+	if(status != 0){
+		perror("Error: ");
+	}
+	return status;
+}

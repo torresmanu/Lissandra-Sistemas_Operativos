@@ -252,7 +252,17 @@ resultado describe(char* tabla)
 resultado drop(char* tabla)
 {
 	resultado res;
-	res.mensaje="Salida prueba";
+	if(existeMetadata(tabla) == 0){
+		int status = dropTableFS(tabla);
+		if(status == 0){
+			log_info(g_logger,"Tabla dropeada exitosamente");
+		}else{
+			log_info(g_logger,"Error al dropear la tabla");
+		}
+	}else{
+		log_info(g_logger,"No existe la tabla a dropear");
+	}
+	res.mensaje="Mensaje de prueba";
 	res.resultado=OK;
 	return res;
 }
