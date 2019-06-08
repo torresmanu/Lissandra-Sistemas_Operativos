@@ -148,3 +148,59 @@ registro* obtenerRegistroDeArchivo(FILE* file, int key){
 	}
 	return reg;
 }
+
+int crear_tabla(char* tabla,char* t_cons,int cant_part,int tiempo_comp){
+	//Obtengo el path de la tabla a crear
+	char* tablesPath= obtenerTablePath();
+	string_append(&tablesPath,tabla);
+
+	//Creo el directorio
+	int status = mkdir(tablesPath,0777);
+	if(status != 0){
+		return status;
+	}
+
+	//Creo la metadata
+	metadataTabla metadata;
+	metadata.compaction_time=tiempo_comp;
+	metadata.consistency= string_duplicate(t_cons);
+	metadata.partitions=cant_part;
+	status = crearArchivoMetadata(tablesPath,metadata);
+	if(status != 0){
+		return status;
+	}
+
+	//Creo los archivos binarios necesarios
+	status = crearArchivosBinarios(tablesPath,metadata);
+
+	return 0;
+}
+
+int crearArchivoMetadata(char* tablesPath,metadataTabla metadata){
+	FILE* metadataFile;
+	char* metadataPath= string_duplicate(tablesPath);
+	string_append(&metadataPath,"/metadata");
+	metadataFile = fopen(metadataPath,"w");
+	if(metadataFile == NULL){
+		return -1;
+	}
+	fprintf(metadataFile,"CONSISTENCY=%s\n",metadata.consistency);
+	fprintf(metadataFile,"PARTITIONS=%d\n",metadata.partitions);
+	fprintf(metadataFile,"COMPACTION_TIME=%d\n",metadata.compaction_time);
+	fclose(metadataFile);
+	return 0;
+}
+
+int crearArchivosBinarios(char* tablesPath,metadataTabla metadata){
+	for(int i=0;i<metadata.partitions;i++){
+		FILE* binaryFile;
+		char* binaryPath= string_duplicate(tablesPath);
+		string_append_with_format(&binaryPath,"/%d.bin",i+1);
+		binaryFile = fopen(binaryPath,"w");
+		if(binaryFile == NULL){
+			perror("Error: ");
+			return -1;
+		}
+		fclose(binaryFile);
+	}
+}

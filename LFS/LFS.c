@@ -207,16 +207,32 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 {
 	resultado res;
-	res.mensaje="Salida prueba";
-	res.resultado=OK;
+	//Valido que exista la tabla
+	if(existeMetadata(tabla)){
+		//Creo la tabla con su directorio, metadata y archivos binarios
+		int status = crear_tabla(tabla,t_cons,cant_part,tiempo_comp);
+		if(status != 0){
+			res.mensaje="Error al crear la tabla";
+			res.resultado=ERROR;
+		}
+		res.mensaje="Tabla creada exitosamente";
+		res.resultado=OK;
+	}else{
+		res.mensaje="Ya existe la tabla";
+		res.resultado=OK;
+	}
+
 	return res;
 }
 
 resultado describe(char* tabla)
 {
 	if(tabla != NULL){
-		if(existeMetadata(tabla)){
-			obtenerMetadata(tabla);
+		if(existeMetadata(tabla) == 0){
+			metadataTabla metadata = obtenerMetadata(tabla);
+			log_info(g_logger,metadata.consistency);
+		}else{
+			log_info(g_logger,"NO LA ENCONTRE");
 		}
 	}else{
 		t_list* listaMetadata = obtenerTodasMetadata();
@@ -228,7 +244,7 @@ resultado describe(char* tabla)
 		}
 	}
 	resultado res;
-	res.mensaje="Salida prueba";
+	res.mensaje="Resultado prueba";
 	res.resultado=OK;
 	return res;
 }
@@ -376,4 +392,3 @@ int iniciarServidor(char* configPuerto) {
 
 	return conexion_servidor;
 }
-

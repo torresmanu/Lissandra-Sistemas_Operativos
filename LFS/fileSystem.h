@@ -23,5 +23,8 @@ registro* fs_select_partition(char* nombreTabla, int key, int partition);
 registro* fs_select_temporal(char* nombreTabla, int key);
 registro* obtenerRegistroDeArchivo(FILE* file, int key);
 t_list* obtenerTodasMetadata();
+int crear_tabla(char* tabla,char* t_cons,int cant_part,int tiempo_comp);
+int crearArchivoMetadata(char* tablePath,metadataTabla metadata);
+int crearArchivosBinarios(char* tablesPath,metadataTabla metadata);
 
 #endif /* FILESYSTEM_H_ */
