@@ -918,7 +918,6 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		memcpy(&(rh->tamanioValue), buffer, sizeof(int));
 		if (!status) return -2;
 
-		printf("Tamaño Value = %i\n", rh->tamanioValue);
 		res->contenido = rh;
 
 		break;

@@ -608,10 +608,8 @@ resultado parsear_mensaje(char* mensaje)
 		}
 		case HANDSHAKE:
 		{
-			printf("Entro en el case HANDSHAKE\n");
 			char* pi = serializarPaquete(&resParser, &size_to_send);
 			send(serverSocket, pi, size_to_send, 0);
-			printf("Ya envié el comando HANDSHAKE\n");
 
 			accion acc;
 			char* buffer = malloc(sizeof(int));
@@ -619,10 +617,8 @@ resultado parsear_mensaje(char* mensaje)
 			memcpy(&acc, buffer, sizeof(int));
 			if(valueResponse < 0) {
 				printf("Error al recibir los datos\n");
-			} else if(valueResponse == 0) {
-				printf("El cliente se desconectó\n");
 			} else {
-				resultadoParser rp;
+				resultado rp;
 				rp.accionEjecutar = acc;
 				int status = recibirYDeserializarRespuesta(serverSocket, &rp);
 				if(status<0) {

@@ -292,11 +292,9 @@ resultado dump(){
 }
 
 resultado handshake() {
-	printf("Entro en el método handshake\n");
 	resultado res;
 	resultadoHandshake* rh = malloc(sizeof(resultadoHandshake));
 	rh->tamanioValue = config_get_int_value(g_config, "TAMANIO_VALUE");
-	printf("Tamaño Value = %i\n", rh->tamanioValue);
 
 	res.accionEjecutar = HANDSHAKE;
 	res.resultado = OK;
@@ -340,9 +338,7 @@ void gestionarConexion(int conexion_cliente) {
 			printf("El cliente se desconectó\n");
 			recibiendo = 0;
 		} else {
-			printf("Recibi datos\n");
 			rp.accionEjecutar = acc;
-			printf("Recibí la accion: %i\n", rp.accionEjecutar);
 			status = recibirYDeserializarPaquete(conexion_cliente, &rp);
 			if(status<0) {
 				recibiendo = 0;
@@ -353,8 +349,6 @@ void gestionarConexion(int conexion_cliente) {
 				printf("[gestionarConexion] nombreTabla recibido = %s\n", ((contenidoInsert*)(rp.contenido))->nombreTabla);
 				printf("[gestionarConexion] Timestamp recibido = %ld\n", ((contenidoInsert*)(rp.contenido))->timestamp);*/
 				resultado res = parsear_mensaje(&rp);
-				printf("Accion: %i\n", res.accionEjecutar);
-				printf("Resultado: %i\n", res.resultado);
 				char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
 				send(conexion_cliente, paqueteRespuesta, size_to_send, 0);
 			}
