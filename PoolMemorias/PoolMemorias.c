@@ -558,6 +558,25 @@ resultado parsear_mensaje(char* mensaje)
 			char* pi = serializarPaquete(&resParser, &size_to_send);
 			send(serverSocket, pi, size_to_send, 0);
 
+			accion acc;
+			char* buffer = malloc(sizeof(int));
+			int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
+			memcpy(&acc, buffer, sizeof(int));
+			if(valueResponse < 0) {
+				printf("Error al recibir los datos\n");
+			} else {
+				resultado res;
+				res.accionEjecutar = acc;
+				int status = recibirYDeserializarRespuesta(serverSocket, &res);
+				if(status<0) {
+					printf("Error\n");
+				} else if(res.resultado == OK) {
+					printf("El INSERT se ejecutó correctamente\n");
+				} else {
+					printf("Hubo un error al ejecutar el INSERT\n");
+				}
+			}
+
 			break;
 
 		}
@@ -618,14 +637,14 @@ resultado parsear_mensaje(char* mensaje)
 			if(valueResponse < 0) {
 				printf("Error al recibir los datos\n");
 			} else {
-				resultado rp;
-				rp.accionEjecutar = acc;
-				int status = recibirYDeserializarRespuesta(serverSocket, &rp);
+				resultado res;
+				res.accionEjecutar = acc;
+				int status = recibirYDeserializarRespuesta(serverSocket, &res);
 				if(status<0) {
 					printf("Error\n");
 				} else {
 					printf("Recibi la respuesta del HANDSHAKE\n");
-					printf("El tamaño del value es: %i\n", ((resultadoHandshake*)(rp.contenido))->tamanioValue);
+					printf("El tamaño del value es: %i\n", ((resultadoHandshake*)(res.contenido))->tamanioValue);
 				}
 			}
 			break;
