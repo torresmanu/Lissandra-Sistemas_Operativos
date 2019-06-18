@@ -12,8 +12,8 @@
 #include<commons/config.h>
 #include<commons/sockets.h>
 #include<commons/string.h>
-#include<commons/collections/list.h>
 #include<commons/parser.h>
+#include<commons/collections/list.h>
 #include "memtable.h"
 #include "metadata.h"
 #include "fileSystem.h"
@@ -21,6 +21,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "registro.h"
+#include "fileSystemPropio.h"
 
 #define PACKAGESIZE 100
 
@@ -43,7 +44,6 @@ typedef struct
 } resultado;
 
 t_log* g_logger;
-t_config* g_config;
 
 
 resultado parsear_mensaje(char *);
@@ -60,6 +60,8 @@ void terminar_programa();
 void gestionarConexion(int);
 int atender_clientes(void);
 int esperarClienteNuevo(int);
+char* getStringConfig(char*);
+int getIntConfig(char*);
 
 
 #endif /* LFS_H_ */

@@ -26,7 +26,7 @@ char* obtenerMetadataPath(char* nombreTabla){
 }
 
 char* obtenerTablePath(){
-	char* puntoMontura = config_get_string_value(g_config,"PUNTO_MONTAJE");
+	char* puntoMontura = getStringConfig("PUNTO_MONTAJE");
 	char* metadataPath= string_new();
 	string_append(&metadataPath, puntoMontura);
 	string_append(&metadataPath, "/tables/");
@@ -132,7 +132,7 @@ registro* obtenerRegistroDeArchivo(FILE* file, int key){
 	registro* reg = NULL;
 	while(fgets(linea,1024,(FILE*)file)){
 		registro* auxReg = malloc (sizeof(registro));
-		parseRegistro(linea,auxReg,config_get_int_value(g_config,"TAMAÑO_VALUE"));
+		parseRegistro(linea,auxReg,getIntConfig("TAMAÑO_VALUE"));
 		//Primero pregunto si el registro tiene el mismo value que yo quiero tomar
 		if(auxReg->key == key){
 			//Si el registro todavia no se habia seteado lo seteo

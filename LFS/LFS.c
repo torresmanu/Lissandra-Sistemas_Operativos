@@ -49,14 +49,14 @@ void iniciar_programa()
 	g_logger = log_create("LFS.log", "LFS", 1, LOG_LEVEL_INFO);
 	log_info(g_logger,"Inicio Aplicacion LFS");
 
-	//Inicio las configs
-	g_config = config_create("LFS.config");
-	log_info(g_logger,"Configuraciones inicializadas");
+	//Creo el bitmap del fs propio en caso de no existir
+	//crearBitmap();
+	log_info(g_logger,"Bitmap inicializado");
 
 	//Inicio la memtable
 	iniciar_memtable();
 
-	server_fd = iniciarServidor(config_get_string_value(g_config,"PUERTO_SERVIDOR"));
+	server_fd = iniciarServidor(getStringConfig("PUERTO_SERVIDOR"));
 	if(server_fd < 0) {
 		printf("[iniciar_programa] Ocurrió un error al intentar iniciar el servidor\n");
 	} else {
@@ -269,10 +269,7 @@ resultado drop(char* tabla)
 
 resultado journal()
 {
-	if(existeMetadata("colores") == 0){
-		metadataTabla masd = obtenerMetadata("colores");
-		log_info(g_logger,masd.consistency);
-	}
+	fs_fopen("/home/utnso/workspace/prueba/tables/colores/1.bin");
 	resultado res;
 	res.mensaje="Salida prueba";
 	res.resultado=OK;
@@ -290,9 +287,6 @@ void terminar_programa()
 {
 	//Destruyo el logger
 	log_destroy(g_logger);
-
-	//Destruyo las configs
-	config_destroy(g_config);
 
 	//Finalizar programa
 	finalizar_memtable();
@@ -401,4 +395,17 @@ int iniciarServidor(char* configPuerto) {
 	printf("A la escucha en el puerto %d\n", ntohs(servidor.sin_port));
 
 	return conexion_servidor;
+}
+
+char* getStringConfig(char* key){
+	t_config* config = config_create("LFS.config");
+	char* value = string_duplicate(config_get_string_value(config,key));
+	config_destroy(config);
+	return value;
+}
+int getIntConfig(char* key){
+	t_config* config = config_create("LFS.config");
+	int value = config_get_int_value(config,key);
+	config_destroy(config);
+	return value;
 }
