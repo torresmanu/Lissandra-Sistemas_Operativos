@@ -9,7 +9,7 @@
 #define POOLMEMORIAS_H_
 
 
-#include <commons/sockets.h>
+#include<commons/sockets.h>
 #include<commons/log.h>
 #include<commons/config.h>
 #include<commons/collections/list.h>
@@ -69,20 +69,6 @@ typedef struct
 	t_list* puntero_tpaginas;
 
 } Segmento;
-
-typedef enum
-{
-	OK,
-	SALIR,
-	MENSAJE_MAL_FORMATEADO,
-	ERROR
-}estado;
-
-typedef struct
-{
-	estado resultado;
-	char* mensaje;
-} resultado;
 
 void iniciar_programa(void);
 void terminar_programa(void);

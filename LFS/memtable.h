@@ -9,10 +9,10 @@
 #define MEMTABLE_H_
 
 #include<stdlib.h>
-#include "metadata.h"
-#include "registro.h"
 #include "LFS.h"
 #include<commons/collections/list.h>
+#include <commons/metadata.h>
+#include <commons/registro.h>
 
 t_list* memtable_list;
 

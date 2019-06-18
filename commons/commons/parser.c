@@ -105,6 +105,10 @@ resultadoParser parseConsole(char* mensaje){
 	{
 		resParser.accionEjecutar=SALIR_CONSOLA;
 	}
+	else if(strcmp(accion,"HANDSHAKE") == 0)
+	{
+		resParser.accionEjecutar=HANDSHAKE;
+	}
 	else
 	{
 		resParser.accionEjecutar=ERROR_PARSER;

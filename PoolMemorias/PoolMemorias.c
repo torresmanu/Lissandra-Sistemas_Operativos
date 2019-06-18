@@ -555,7 +555,6 @@ resultado parsear_mensaje(char* mensaje)
 			/*contenidoInsert* contenido = resParser.contenido;
 			res = insert(contenido->nombreTabla,contenido->key,contenido->value);*/
 
-			contenidoInsert* ci = (contenidoInsert*) (resParser.contenido);
 			char* pi = serializarPaquete(&resParser, &size_to_send);
 			send(serverSocket, pi, size_to_send, 0);
 
@@ -605,6 +604,34 @@ resultado parsear_mensaje(char* mensaje)
 			res.resultado = SALIR;
 			res.mensaje = "";
 			terminar_programa();
+			break;
+		}
+		case HANDSHAKE:
+		{
+			printf("Entro en el case HANDSHAKE\n");
+			char* pi = serializarPaquete(&resParser, &size_to_send);
+			send(serverSocket, pi, size_to_send, 0);
+			printf("Ya envié el comando HANDSHAKE\n");
+
+			accion acc;
+			char* buffer = malloc(sizeof(int));
+			int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
+			memcpy(&acc, buffer, sizeof(int));
+			if(valueResponse < 0) {
+				printf("Error al recibir los datos\n");
+			} else if(valueResponse == 0) {
+				printf("El cliente se desconectó\n");
+			} else {
+				resultadoParser rp;
+				rp.accionEjecutar = acc;
+				int status = recibirYDeserializarRespuesta(serverSocket, &rp);
+				if(status<0) {
+					printf("Error\n");
+				} else {
+					printf("Recibi la respuesta del HANDSHAKE\n");
+					printf("El tamaño del value es: %i\n", ((resultadoHandshake*)(rp.contenido))->tamanioValue);
+				}
+			}
 			break;
 		}
 		default:

@@ -14,13 +14,14 @@
 int main(void) {
 	resultado res;
 	char* mensaje;
-	res.resultado= OK;
+	res.resultado = OK;
 	iniciar_programa();
 
 	while(res.resultado != SALIR)
 	{
 		mensaje = readline(">");
-		res = parsear_mensaje(mensaje);
+		resultadoParser resParser = parseConsole(mensaje);
+		res = parsear_mensaje(&resParser);
 		if(res.resultado == OK)
 		{
 			log_info(g_logger,res.mensaje);
@@ -71,27 +72,26 @@ void iniciar_programa()
 	}
 }
 
-resultado parsear_mensaje(char* mensaje)
+resultado parsear_mensaje(resultadoParser* resParser)
 {
 	resultado res;
-	resultadoParser resParser = parseConsole(mensaje);
-	switch(resParser.accionEjecutar){
+	switch(resParser->accionEjecutar){
 		case SELECT:
 		{
 			contenidoSelect* contSel;
-			contSel = (contenidoSelect*)resParser.contenido;
+			contSel = (contenidoSelect*)resParser->contenido;
 			res = select_acc(contSel->nombreTabla,contSel->key);
 			break;
 		}
 		case DESCRIBE:
 		{
-			contenidoDescribe* contDes = resParser.contenido;
+			contenidoDescribe* contDes = resParser->contenido;
 			res = describe(contDes->nombreTabla);
 			break;
 		}
 		case INSERT:
 		{
-			contenidoInsert* contIns = resParser.contenido;
+			contenidoInsert* contIns = resParser->contenido;
 			res = insert(contIns->nombreTabla,contIns->key,contIns->value,contIns->timestamp);
 			break;
 		}
@@ -102,13 +102,13 @@ resultado parsear_mensaje(char* mensaje)
 		}
 		case CREATE:
 		{
-			contenidoCreate* contCreate = resParser.contenido;
+			contenidoCreate* contCreate = resParser->contenido;
 			res = create(contCreate->nombreTabla,contCreate->consistencia,contCreate->cant_part,contCreate->tiempo_compresion);
 			break;
 		}
 		case DROP:
 		{
-			contenidoDrop* contDrop = resParser.contenido;
+			contenidoDrop* contDrop = resParser->contenido;
 			res = drop(contDrop->nombreTabla);
 			break;
 		}
@@ -127,6 +127,11 @@ resultado parsear_mensaje(char* mensaje)
 		{
 			res.resultado = SALIR;
 			res.mensaje = "";
+			break;
+		}
+		case HANDSHAKE:
+		{
+			res = handshake();
 			break;
 		}
 		default:
@@ -286,6 +291,19 @@ resultado dump(){
 	return res;
 }
 
+resultado handshake() {
+	printf("Entro en el método handshake\n");
+	resultado res;
+	resultadoHandshake* rh = malloc(sizeof(resultadoHandshake));
+	rh->tamanioValue = config_get_int_value(g_config, "TAMANIO_VALUE");
+	printf("Tamaño Value = %i\n", rh->tamanioValue);
+
+	res.accionEjecutar = HANDSHAKE;
+	res.resultado = OK;
+	res.contenido = rh;
+	return res;
+}
+
 void terminar_programa()
 {
 	//Destruyo el logger
@@ -305,12 +323,11 @@ void gestionarConexion(int conexion_cliente) {
 	int status;
 	resultadoParser rp;
 	char buffer[100];
+	int size_to_send;
 
 	char* buffer2 = malloc(sizeof(int));
 
 	while(recibiendo) {
-		//int valueResponse = recv(conexion_cliente, buffer, 100, 0);
-
 		accion acc;
 		int valueResponse = recv(conexion_cliente, buffer2, sizeof(int), 0);
 		memcpy(&acc, buffer2, sizeof(int));
@@ -323,22 +340,23 @@ void gestionarConexion(int conexion_cliente) {
 			printf("El cliente se desconectó\n");
 			recibiendo = 0;
 		} else {
-			/*
-			printf("%s\n", buffer);
-			bzero((char *)&buffer, sizeof(buffer));
-			send(conexion_cliente, "Recibido\n", 13, 0);
-			*/
-
+			printf("Recibi datos\n");
 			rp.accionEjecutar = acc;
+			printf("Recibí la accion: %i\n", rp.accionEjecutar);
 			status = recibirYDeserializarPaquete(conexion_cliente, &rp);
 			if(status<0) {
 				recibiendo = 0;
 			} else {
-				printf("Recibi el paquete\n");
+				/*printf("Recibi el paquete\n");
 				printf("[gestionarConexion] key recibida = %i\n", ((contenidoInsert*)(rp.contenido))->key);
 				printf("[gestionarConexion] value recibido = %s\n", ((contenidoInsert*)(rp.contenido))->value);
 				printf("[gestionarConexion] nombreTabla recibido = %s\n", ((contenidoInsert*)(rp.contenido))->nombreTabla);
-				printf("[gestionarConexion] Timestamp recibido = %ld\n", ((contenidoInsert*)(rp.contenido))->timestamp);
+				printf("[gestionarConexion] Timestamp recibido = %ld\n", ((contenidoInsert*)(rp.contenido))->timestamp);*/
+				resultado res = parsear_mensaje(&rp);
+				printf("Accion: %i\n", res.accionEjecutar);
+				printf("Resultado: %i\n", res.resultado);
+				char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
+				send(conexion_cliente, paqueteRespuesta, size_to_send, 0);
 			}
 		}
 	}

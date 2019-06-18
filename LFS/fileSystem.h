@@ -8,7 +8,6 @@
 #ifndef FILESYSTEM_H_
 #define FILESYSTEM_H_
 
-#include "registro.h"
 #include "LFS.h"
 #include <dirent.h>
 #include <sys/types.h>

@@ -23,8 +23,35 @@ typedef enum
 	RUN,
 	METRICS,
 	ADD,
-	ERROR_PARSER
+	ERROR_PARSER,
+	HANDSHAKE
 }accion;
+
+typedef enum
+{
+	OK,
+	SALIR,
+	MENSAJE_MAL_FORMATEADO,
+	ERROR
+}estado;
+
+typedef struct
+{
+	accion accionEjecutar;
+	estado resultado;
+	void* contenido; // esto apunta a registro en el caso de select y a metadataTable en el caso de describe
+	//Este puntero a char hay que borrarlo
+	char* mensaje;
+} resultado;
+
+typedef struct {
+	int tamanioValue;
+} resultadoHandshake;
+
+/*
+ * estado resultado;
+ * char* mensaje;
+ */
 
 typedef struct
 {
