@@ -148,13 +148,14 @@ resultado parsear_mensaje(resultadoParser* resParser)
 resultado select_acc(char* tabla,int key)
 {
 	resultado res;
+	res.accionEjecutar = SELECT;
 
 	//Paso 1: Verificar que la tabla exista en el file system y obtengo la metadata
 	metadataTabla metadata;
 	if(existeMetadata(tabla) == 0){
 		metadata = obtenerMetadata(tabla);
 	}else{
-		res.mensaje="Prueba";
+		res.mensaje="La tabla no existe.";
 		res.resultado=ERROR;
 		return res;
 	}
@@ -174,19 +175,24 @@ resultado select_acc(char* tabla,int key)
 	//Paso 4: Comparo la de mayor timestamp
 
 	if(regMemTable == NULL && regFs == NULL){
+		res.contenido = NULL;
 		log_info(g_logger,"No se encontro el registro");
 	}else if(regMemTable == NULL && regFs != NULL){
+		res.contenido = regFs;
 		log_info(g_logger,regFs->value);
 	}else if(regMemTable != NULL && regFs == NULL){
+		res.contenido = regMemTable;
 		log_info(g_logger,regMemTable->value);
 	}else{
 		if(regMemTable->timestamp > regFs->timestamp){
+			res.contenido = regMemTable;
 			log_info(g_logger,regMemTable->value);
 		}else{
+			res.contenido = regFs;
 			log_info(g_logger,regFs->value);
 		}
 	}
-	res.mensaje="Prueba";
+	res.mensaje="Ok.";
 	res.resultado=OK;
 	return res;
 }
@@ -214,6 +220,9 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 {
 	resultado res;
+	res.accionEjecutar = CREATE;
+	res.contenido = NULL;
+
 	//Valido que exista la tabla
 	if(existeMetadata(tabla)){
 		//Creo la tabla con su directorio, metadata y archivos binarios
@@ -234,11 +243,20 @@ resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 
 resultado describe(char* tabla)
 {
+	resultado res;
+	res.accionEjecutar = DESCRIBE;
+
 	if(tabla != NULL){
 		if(existeMetadata(tabla) == 0){
 			metadataTabla metadata = obtenerMetadata(tabla);
+			res.contenido = &metadata;
+			res.mensaje = "Ok.";
+			res.resultado = OK;
 			log_info(g_logger,metadata.consistency);
 		}else{
+			res.contenido = NULL;
+			res.mensaje = "No se encontró la tabla o la metadata.";
+			res.resultado = ERROR;
 			log_info(g_logger,"NO LA ENCONTRE");
 		}
 	}else{
@@ -248,29 +266,38 @@ resultado describe(char* tabla)
 				metadataTabla* metadata = (metadataTabla*) list_get(listaMetadata,i);
 				log_info(g_logger,metadata->consistency);
 			}
+			res.contenido = listaMetadata;
+			res.mensaje = "Ok.";
+			res.resultado = OK;
 		}
 	}
-	resultado res;
-	res.mensaje="Resultado prueba";
-	res.resultado=OK;
+
 	return res;
 }
 
 resultado drop(char* tabla)
 {
 	resultado res;
+	res.accionEjecutar = DROP;
+	res.contenido = NULL;
+
 	if(existeMetadata(tabla) == 0){
 		int status = dropTableFS(tabla);
 		if(status == 0){
+			res.mensaje = "Tabla dropeada exitosamente.";
+			res.resultado = OK;
 			log_info(g_logger,"Tabla dropeada exitosamente");
 		}else{
+			res.mensaje = "Error al dropear la tabla.";
+			res.resultado = ERROR;
 			log_info(g_logger,"Error al dropear la tabla");
 		}
 	}else{
+		res.mensaje = "No existe la tabla a dropear.";
+		res.resultado = ERROR;
 		log_info(g_logger,"No existe la tabla a dropear");
 	}
-	res.mensaje="Mensaje de prueba";
-	res.resultado=OK;
+
 	return res;
 }
 
@@ -281,7 +308,9 @@ resultado journal()
 		log_info(g_logger,masd.consistency);
 	}
 	resultado res;
-	res.mensaje="Salida prueba";
+	res.accionEjecutar = JOURNAL;
+	res.contenido = NULL;
+	res.mensaje="Ok.";
 	res.resultado=OK;
 	return res;
 }
@@ -299,6 +328,7 @@ resultado handshake() {
 	rh->tamanioValue = config_get_int_value(g_config, "TAMANIO_VALUE");
 
 	res.accionEjecutar = HANDSHAKE;
+	res.mensaje = "Ok.";
 	res.resultado = OK;
 	res.contenido = rh;
 	return res;
