@@ -40,7 +40,6 @@ typedef struct
 	accion accionEjecutar;
 	estado resultado;
 	void* contenido; // esto apunta a registro en el caso de select y a metadataTable en el caso de describe
-	//Este puntero a char hay que borrarlo
 	char* mensaje;
 } resultado;
 

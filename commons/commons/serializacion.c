@@ -493,12 +493,15 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 char* serializarRespuesta(resultado* res, int* total_size) {
 	int offset = 0;
 	int size_to_send;
+	int message_size;
 
 	switch(res->accionEjecutar) {
 	case(INSERT): {
 		offset = 0;
+		message_size = 0;
 
-		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size);
+		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
+				+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size);
 		char* paqueteSerializado = (char*) malloc(*total_size);
 
 		//Copio la accion INSERT
@@ -514,6 +517,16 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		//Copio el resultado
 		size_to_send = sizeof(res->resultado);
 		memcpy(paqueteSerializado + offset, &(res->resultado), size_to_send);
+		offset += size_to_send;
+
+		//Copio el mensaje
+		message_size = strlen(res->mensaje) + 1;
+		size_to_send = sizeof(message_size);
+		memcpy(paqueteSerializado + offset, &message_size, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = message_size;
+		memcpy(paqueteSerializado + offset, res->mensaje, size_to_send);
 
 		return paqueteSerializado;
 
@@ -523,8 +536,10 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		int value_size;
 		registro* reg = (registro*) (res->contenido);
 		offset = 0;
+		message_size = 0;
 
 		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
+				+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size)
 				+ (strlen(reg->value) + 1) * sizeof(char) + sizeof(value_size)
 				+ sizeof(reg->key)
 				+ sizeof(reg->timestamp);
@@ -543,7 +558,17 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		//Copio el resultado
 		size_to_send = sizeof(res->resultado);
 		memcpy(paqueteSerializado + offset, &(res->resultado), size_to_send);
+		offset += size_to_send;
 
+		//Copio el mensaje
+		message_size = strlen(res->mensaje) + 1;
+		size_to_send = sizeof(message_size);
+		memcpy(paqueteSerializado + offset, &message_size, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = message_size;
+		memcpy(paqueteSerializado + offset, res->mensaje, size_to_send);
+		offset += size_to_send;
 
 		value_size = strlen(reg->value) + 1;
 		size_to_send = sizeof(value_size);
@@ -569,8 +594,10 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 	}
 	case(CREATE): {
 		offset = 0;
+		message_size = 0;
 
-		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size);
+		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
+				+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size);
 		char* paqueteSerializado = (char*) malloc(*total_size);
 
 		//Copio la accion CREATE
@@ -586,6 +613,16 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		//Copio el resultado
 		size_to_send = sizeof(res->resultado);
 		memcpy(paqueteSerializado + offset, &(res->resultado), size_to_send);
+		offset += size_to_send;
+
+		//Copio el mensaje
+		message_size = strlen(res->mensaje) + 1;
+		size_to_send = sizeof(message_size);
+		memcpy(paqueteSerializado + offset, &message_size, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = message_size;
+		memcpy(paqueteSerializado + offset, res->mensaje, size_to_send);
 
 		return paqueteSerializado;
 
@@ -594,9 +631,11 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 	case(DESCRIBE): {
 		int consistency_size;
 		metadataTabla* metadata = (metadataTabla*) (res->contenido);
+		message_size = 0;
 		offset = 0;
 
 		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
+				+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size)
 				+ (strlen(metadata->consistency) + 1) * sizeof(char) + sizeof(consistency_size)
 				+ sizeof(metadata->compaction_time)
 				+ sizeof(metadata->partitions);
@@ -615,13 +654,22 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		//Copio el resultado
 		size_to_send = sizeof(res->resultado);
 		memcpy(paqueteSerializado + offset, &(res->resultado), size_to_send);
+		offset += size_to_send;
 
+		//Copio el mensaje
+		message_size = strlen(res->mensaje) + 1;
+		size_to_send = sizeof(message_size);
+		memcpy(paqueteSerializado + offset, &message_size, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = message_size;
+		memcpy(paqueteSerializado + offset, res->mensaje, size_to_send);
+		offset += size_to_send;
 
 		consistency_size = strlen(metadata->consistency) + 1;
 		size_to_send = sizeof(consistency_size);
 		memcpy(paqueteSerializado + offset, &consistency_size, size_to_send);
 		offset += size_to_send;
-
 
 		size_to_send = consistency_size;
 		memcpy(paqueteSerializado + offset, metadata->consistency, size_to_send);
@@ -641,8 +689,10 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 	}
 	case(DROP): {
 		offset = 0;
+		message_size = 0;
 
-		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size);
+		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
+				+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size);
 		char* paqueteSerializado = (char*) malloc(*total_size);
 
 		//Copio la accion DROP
@@ -658,6 +708,16 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		//Copio el resultado
 		size_to_send = sizeof(res->resultado);
 		memcpy(paqueteSerializado + offset, &(res->resultado), size_to_send);
+		offset += size_to_send;
+
+		//Copio el mensaje
+		message_size = strlen(res->mensaje) + 1;
+		size_to_send = sizeof(message_size);
+		memcpy(paqueteSerializado + offset, &message_size, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = message_size;
+		memcpy(paqueteSerializado + offset, res->mensaje, size_to_send);
 
 		return paqueteSerializado;
 
@@ -665,8 +725,10 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 	}
 	case(ADD): {
 		offset = 0;
+		message_size = 0;
 
-		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size);
+		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
+				+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size);
 		char* paqueteSerializado = (char*) malloc(*total_size);
 
 		//Copio la accion ADD
@@ -682,6 +744,16 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		//Copio el resultado
 		size_to_send = sizeof(res->resultado);
 		memcpy(paqueteSerializado + offset, &(res->resultado), size_to_send);
+		offset += size_to_send;
+
+		//Copio el mensaje
+		message_size = strlen(res->mensaje) + 1;
+		size_to_send = sizeof(message_size);
+		memcpy(paqueteSerializado + offset, &message_size, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = message_size;
+		memcpy(paqueteSerializado + offset, res->mensaje, size_to_send);
 
 		return paqueteSerializado;
 
@@ -689,8 +761,10 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 	}
 	case(JOURNAL): {
 		offset = 0;
+		message_size = 0;
 
-		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size);
+		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
+				+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size);
 		char* paqueteSerializado = (char*) malloc(*total_size);
 
 		//Copio la accion JOURNAL
@@ -706,6 +780,16 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		//Copio el resultado
 		size_to_send = sizeof(res->resultado);
 		memcpy(paqueteSerializado + offset, &(res->resultado), size_to_send);
+		offset += size_to_send;
+
+		//Copio el mensaje
+		message_size = strlen(res->mensaje) + 1;
+		size_to_send = sizeof(message_size);
+		memcpy(paqueteSerializado + offset, &message_size, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = message_size;
+		memcpy(paqueteSerializado + offset, res->mensaje, size_to_send);
 
 		return paqueteSerializado;
 
@@ -713,9 +797,11 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 	}
 	case(HANDSHAKE): {
 		offset = 0;
+		message_size = 0;
 		resultadoHandshake* rh = (resultadoHandshake*) (res->contenido);
 
 		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
+				+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size)
 				+ sizeof(rh->tamanioValue);
 		char* paqueteSerializado = (char*) malloc(*total_size);
 
@@ -734,6 +820,16 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		memcpy(paqueteSerializado + offset, &(res->resultado), size_to_send);
 		offset += size_to_send;
 
+		//Copio el mensaje
+		message_size = strlen(res->mensaje) + 1;
+		size_to_send = sizeof(message_size);
+		memcpy(paqueteSerializado + offset, &message_size, size_to_send);
+		offset += size_to_send;
+
+		size_to_send = message_size;
+		memcpy(paqueteSerializado + offset, res->mensaje, size_to_send);
+		offset += size_to_send;
+
 		size_to_send = sizeof(rh->tamanioValue);
 		memcpy(paqueteSerializado + offset, &(rh->tamanioValue), size_to_send);
 
@@ -750,6 +846,7 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 	int status;
 	int total_size;
+	int message_size;
 
 	int buffer_size = sizeof(int);
 	char* buffer = malloc(buffer_size);
@@ -757,7 +854,6 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 	switch(res->accionEjecutar) {
 	case(INSERT): {
 		char* bufferTimestamp = malloc(sizeof(long));
-		int valueSize;
 		int nombreTablaSize;
 
 		//Recibo el tamanio total
@@ -768,6 +864,15 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		//Recibo el resultado
 		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&(res->resultado), buffer, buffer_size);
+		if (!status) return -2;
+
+		//Recibo el mensaje
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&message_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		res->mensaje = malloc(message_size);
+		status = recv(socketCliente, res->mensaje, message_size, 0);
 		if (!status) return -2;
 
 		res->contenido = NULL;
@@ -787,6 +892,15 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		//Recibo el resultado
 		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&(res->resultado), buffer, buffer_size);
+		if (!status) return -2;
+
+		//Recibo el mensaje
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&message_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		res->mensaje = malloc(message_size);
+		status = recv(socketCliente, res->mensaje, message_size, 0);
 		if (!status) return -2;
 
 		status = recv(socketCliente, buffer, sizeof(int), 0);
@@ -824,6 +938,15 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		memcpy(&(res->resultado), buffer, buffer_size);
 		if (!status) return -2;
 
+		//Recibo el mensaje
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&message_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		res->mensaje = malloc(message_size);
+		status = recv(socketCliente, res->mensaje, message_size, 0);
+		if (!status) return -2;
+
 		res->contenido = NULL;
 
 		break;
@@ -840,6 +963,15 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		//Recibo el resultado
 		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&(res->resultado), buffer, buffer_size);
+		if (!status) return -2;
+
+		//Recibo el mensaje
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&message_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		res->mensaje = malloc(message_size);
+		status = recv(socketCliente, res->mensaje, message_size, 0);
 		if (!status) return -2;
 
 		status = recv(socketCliente, buffer, sizeof(int), 0);
@@ -877,6 +1009,15 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		memcpy(&(res->resultado), buffer, buffer_size);
 		if (!status) return -2;
 
+		//Recibo el mensaje
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&message_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		res->mensaje = malloc(message_size);
+		status = recv(socketCliente, res->mensaje, message_size, 0);
+		if (!status) return -2;
+
 		res->contenido = NULL;
 
 		break;
@@ -896,6 +1037,15 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		memcpy(&(res->resultado), buffer, buffer_size);
 		if (!status) return -2;
 
+		//Recibo el mensaje
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&message_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		res->mensaje = malloc(message_size);
+		status = recv(socketCliente, res->mensaje, message_size, 0);
+		if (!status) return -2;
+
 		res->contenido = NULL;
 
 		break;
@@ -912,6 +1062,15 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		//Recibo el resultado
 		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&(res->resultado), buffer, buffer_size);
+		if (!status) return -2;
+
+		//Recibo el mensaje
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&message_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		res->mensaje = malloc(message_size);
+		status = recv(socketCliente, res->mensaje, message_size, 0);
 		if (!status) return -2;
 
 		status = recv(socketCliente, buffer, sizeof(int), 0);

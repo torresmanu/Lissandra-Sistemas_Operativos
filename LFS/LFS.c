@@ -207,6 +207,7 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 	res.resultado=OK;
 	res.accionEjecutar=INSERT;
 	res.contenido=NULL;
+	res.mensaje = "Se insertó correctamente el registro.";
 	return res;
 }
 
