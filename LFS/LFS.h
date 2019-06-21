@@ -55,7 +55,7 @@ resultado drop(char*);
 resultado journal();
 resultado dump();
 
-void iniciar_programa();
+int iniciar_programa();
 void terminar_programa();
 void gestionarConexion(int);
 int atender_clientes(void);

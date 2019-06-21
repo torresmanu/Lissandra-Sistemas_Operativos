@@ -15,7 +15,10 @@ int main(void) {
 	resultado res;
 	char* mensaje;
 	res.resultado= OK;
-	iniciar_programa();
+	int status= iniciar_programa();
+	if(status != 0){
+		return status;
+	}
 
 	while(res.resultado != SALIR)
 	{
@@ -40,7 +43,7 @@ int main(void) {
 
 }
 
-void iniciar_programa()
+int iniciar_programa()
 {
 	pthread_attr_t attr;
 	pthread_t thread;
@@ -49,9 +52,13 @@ void iniciar_programa()
 	g_logger = log_create("LFS.log", "LFS", 1, LOG_LEVEL_INFO);
 	log_info(g_logger,"Inicio Aplicacion LFS");
 
-	//Creo el bitmap del fs propio en caso de no existir
-	//crearBitmap();
-	log_info(g_logger,"Bitmap inicializado");
+	//Inicializo el FS Propio
+	int status = inicializarFSPropio();
+	if(status != 0){
+		log_info(g_logger,"ERROR al iniciar FS Propio inicializado");
+		return status;
+	}
+	log_info(g_logger,"FS Propio inicializado");
 
 	//Inicio la memtable
 	iniciar_memtable();
@@ -69,6 +76,7 @@ void iniciar_programa()
 		}
 		pthread_attr_destroy(&attr);
 	}
+	return 0;
 }
 
 resultado parsear_mensaje(char* mensaje)
@@ -269,10 +277,55 @@ resultado drop(char* tabla)
 
 resultado journal()
 {
-	fs_fopen("/home/utnso/workspace/prueba/tables/colores/1.bin");
 	resultado res;
-	res.mensaje="Salida prueba";
-	res.resultado=OK;
+	/*int status = fs_fcreate("/home/utnso/workspace/prueba/tables/colores/1.bin");
+	if(status != 0){
+		res.mensaje="Salida prueba";
+		res.resultado=ERROR;
+		return res;
+	}
+	log_info(g_logger,"ARCHIVO 1 CREADO");
+	status = fs_fcreate("/home/utnso/workspace/prueba/tables/colores/2.bin");
+	if(status != 0){
+		res.mensaje="Salida prueba";
+		res.resultado=ERROR;
+		return res;
+	}
+	log_info(g_logger,"ARCHIVO 2 CREADO");
+	fs_file* f1 = fs_fopen("/home/utnso/workspace/prueba/tables/colores/1.bin");
+	log_info(g_logger,"ARCHIVO 1 LEIDO");
+	log_info(g_logger,f1->name);
+	fs_file* f2 = fs_fopen("/home/utnso/workspace/prueba/tables/colores/2.bin");
+	log_info(g_logger,"ARCHIVO 2 LEIDO");
+	log_info(g_logger,f2->name);
+	fs_fclose(f1);
+	log_info(g_logger,"ARCHIVO 1 CERRADO");
+	fs_fdelete(f2);
+	log_info(g_logger,"ARCHIVO 2 BORRADO");
+	fs_fclose(f2);
+	log_info(g_logger,"ARCHIVO 2 CERRADO");
+	status = fs_fcreate("/home/utnso/workspace/prueba/tables/colores/2.bin");
+	if(status != 0){
+		res.mensaje="Salida prueba";
+		res.resultado=ERROR;
+		return res;
+	}
+	fs_file* f3 = fs_fopen("/home/utnso/workspace/prueba/tables/colores/2.bin");
+	log_info(g_logger,"ARCHIVO 3 LEIDO");
+	log_info(g_logger,f3->name);
+	fs_fclose(f3);
+	log_info(g_logger,"ARCHIVO 3 CERRADO");*/
+
+	printf("ENTRO\n");
+	fs_file* f3 = fs_fopen("/home/utnso/workspace/prueba/tables/colores/2.bin");
+	for(int i = 0; i < 20; i++){
+		long l;
+		fs_fread(f3,&l,sizeof(l),i);
+		printf("%ld\n",l);
+	}
+	fs_fclose(f3);
+	res.mensaje = "Salida prueba";
+	res.resultado = OK;
 	return res;
 }
 
