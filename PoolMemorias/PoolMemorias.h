@@ -120,6 +120,7 @@ void journal();
 void journalConRetardo();
 void gossipingConRetardo();
 void consola();
+void enviarInsert(void *element);
 resultado insert(char *nombre_tabla,int key,char *value);
 void actualizarRegistro(Pagina *pagina,char *value);
 resultado parsear_mensaje(char *);

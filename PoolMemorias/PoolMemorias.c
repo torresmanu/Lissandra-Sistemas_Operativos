@@ -333,9 +333,9 @@ bool noEstaModificada(void *element){
 	return (((NodoTablaPaginas *)element)->pagina->flag_modificado)==0;
 }
 
-//bool estaModificada(void *element){
-//	return (((NodoTablaPaginas *)element)->pagina->flag_modificado)==1;
-//}
+bool estaModificada(void *element){
+	return (((NodoTablaPaginas *)element)->pagina->flag_modificado)==1;
+}
 
 bool memoriaFull(){
 	return list_any_satisfy(tabla_paginas_global,noEstaModificada);
@@ -344,12 +344,7 @@ bool memoriaFull(){
 void journal(){
 	log_info(g_logger,"Journaling");
 
-	int size_to_send;
-	resultadoParser resParser;
-	resParser.accionEjecutar=INSERT;
-
-	char* pi = serializarPaquete(&resParser, &size_to_send);
-	send(serverSocket, pi, size_to_send, 0);
+	list_iterate(tabla_paginas_global,enviarInsert);
 
 
 //	accion acc;
@@ -370,6 +365,33 @@ void journal(){
 //			printf("Hubo un error al ejecutar el INSERT\n");
 //		}
 //	}
+}
+
+void enviarInsert(void *element){
+
+
+	if(estaModificada(element)){
+		int indice=((NodoTablaPaginas*)element)->pagina->indice_registro;
+		int size_to_send;
+
+		resultadoParser resParser;
+		resParser.accionEjecutar=INSERT;
+
+		contenidoInsert* cont = malloc(sizeof(contenidoInsert));
+		strcpy(cont->nombreTabla,((NodoTablaPaginas*)element)->segmento->nombre_tabla);
+		memcpy(&cont->key,&(memoria[indice+tamValue]),sizeof(int));
+		cont->value = strdup(&memoria[indice*offset]);
+		memcpy(&cont->timestamp,&(memoria[(indice*offset)+tamValue+sizeof(int)]),sizeof(long));
+		resParser.contenido=cont;
+
+		char* pi = serializarPaquete(&resParser, &size_to_send);
+		send(serverSocket, pi, size_to_send, 0);
+		free(cont->value);
+		free(cont);
+	}
+	else{
+		return;
+	}
 }
 
 void cambiarNumerosPaginas(t_list* listaPaginas){
