@@ -126,7 +126,11 @@ resultado parsear_mensaje(char *);
 
 void actualizarTablaGlobal(int nPagina);
 
-
+void liberarSegmento(void* elemento);
+void liberarPagina(void* elemento);
+void corregirIndicesTablaSegmentos();
+void corregirIndicesPaginasGlobal();
+resultado drop(char* nombre_tabla);
 
 char* PUERTO_M;
 char* PUERTO;

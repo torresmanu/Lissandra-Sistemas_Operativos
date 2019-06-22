@@ -3,13 +3,13 @@
 int main(int argc, char* argv[]) {
 
 	iniciar_programa(argv[1]);
-
+	/*
 	pthread_t journalAutomatico;
 	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
 
 	pthread_t gossipingAutomatico;
 	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
-
+	*/
 	consola();
 
 	//ver si esta bien que este aca
@@ -125,7 +125,11 @@ void iniciar_programa(char* path)
 }
 
 void actualizarTablaGlobal(int nPagina){
-	NodoTablaPaginas* nodo = list_remove(tabla_paginas_global,nPagina);
+	bool mismoNumero(void* elem){
+		return ((NodoTablaPaginas* )elem)->pagina->numero_pagina == nPagina;
+	}
+
+	NodoTablaPaginas* nodo = list_remove_by_condition(tabla_paginas_global,mismoNumero);
 	list_add(tabla_paginas_global,nodo);
 }
 
@@ -288,6 +292,10 @@ void consola(){
 	while(res.resultado != SALIR)
 	{
 		mensaje = readline(">");
+
+		if(mensaje)
+			add_history(mensaje);
+
 		res = parsear_mensaje(mensaje);
 		if(res.resultado == OK)
 		{
@@ -491,26 +499,73 @@ resultado insert(char *nombre_tabla,int key,char *value){
 	return res;
 }
 
-//esta esta mal creo
+void liberarSegmento(void* elemento){
+
+	Segmento* segmento = (Segmento*) elemento;
+
+	list_destroy_and_destroy_elements(segmento->puntero_tpaginas,liberarPagina);
+
+	free(segmento);
+}
+
+void liberarPagina(void* elemento){
+	Pagina* pagina = (Pagina*) elemento;
+
+	bool mismaPagina(void* elem){
+		return ((NodoTablaPaginas* )elem)->pagina == pagina;
+	}
+
+	list_remove_and_destroy_by_condition(tabla_paginas_global,mismaPagina,destroy_nodo_pagina_global); //remuevo de la global
+
+	bitmap[pagina->indice_registro]=0;
+
+	free(pagina);
+}
+
+void corregirIndicesTablaSegmentos(){
+	for(int i=0;i<tabla_segmentos->elements_count;i++){
+
+		Segmento *aux = list_get(tabla_segmentos,i);
+		aux->numero_segmento = i;
+
+	}
+}
+
+void corregirIndicesPaginasGlobal(){
+	for(int i=0;i<tabla_paginas_global->elements_count;i++){
+
+		NodoTablaPaginas *aux = list_get(tabla_paginas_global,i);
+		aux->pagina->numero_pagina = i;
+
+	}
+}
+
 resultado drop(char* nombre_tabla){
 
 	resultado res;
-//	Segmento* segmento;
-//	int indice; // deberia ser el indice de la tabla de segmentos del segmento que encuentra
-//
-//	if(encuentraSegmento(nombre_tabla,segmento)){
-//		Pagina* pagina = segmento->nombre_tabla;
-//		list_remove_and_destroy_element(tabla_segmentos, indice, destroy_nodo_segmento);
-//		bitmap[pagina->indice_registro]=0;
-//		res.mensaje="Registro eliminado exitosamente";
-//		res.resultado=OK;
-//	}
-//	else{
-//
-//		res.mensaje="Tabla no encontrada";
-//		res.resultado=ERROR;
-//
-//	}
+
+	Segmento* segmento;
+
+	if(encuentraSegmento(nombre_tabla,&segmento)){
+
+		list_remove_and_destroy_element(tabla_segmentos,segmento->numero_segmento,liberarSegmento);
+		corregirIndicesTablaSegmentos();
+		corregirIndicesPaginasGlobal();
+
+
+		char *aux = "Registro eliminado exitosamente";
+		res.mensaje=strdup(aux);
+		res.resultado=OK;
+
+		//informar al LFS
+	}
+	else{
+
+		char *aux = "Tabla no encontrada";
+		res.mensaje=strdup(aux);
+		res.resultado=ERROR;
+
+	}
 	return res;
 }
 
@@ -658,9 +713,8 @@ resultado parsear_mensaje(char* mensaje)
 			contenidoDrop* contDrop = resParser.contenido;
 			res = drop(contDrop->nombreTabla);
 
-			mandarALFS(DROP, contDrop->nombreTabla,0);
+			//mandarALFS(DROP, contDrop->nombreTabla,0);
 			//send al lfs para que realice la opercacion necesaria
-			res.mensaje = NULL;
 
 			break;
 		}
