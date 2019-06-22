@@ -83,19 +83,6 @@ typedef struct
 } Segmento;
 
 
-typedef enum
-{
-	OK,
-	SALIR,
-	MENSAJE_MAL_FORMATEADO,
-	ERROR
-}estado;
-
-typedef struct
-{
-	estado resultado;
-	char* mensaje;
-} resultado;
 
 typedef struct
 {
