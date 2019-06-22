@@ -36,35 +36,6 @@ void gossipingConRetardo(){
 	}
 }
 
-void consola(){
-	char* mensaje;
-	resultado res;
-	res.resultado= OK;
-
-	while(res.resultado != SALIR)
-	{
-		mensaje = readline(">");
-		res = parsear_mensaje(mensaje);
-		if(res.resultado == OK)
-		{
-			log_info(g_logger,res.mensaje);
-		}
-		else if(res.resultado == ERROR)
-		{
-			log_info(g_logger,"Ocurrio un error al ejecutar la acción");
-		}
-		else if(res.resultado == MENSAJE_MAL_FORMATEADO)
-		{
-			log_info(g_logger,"Mensaje incorrecto");
-		}
-		//atender_clientes();
-		if(res.mensaje!=NULL)
-			free(res.mensaje);
-		free(mensaje);
-	}
-
-}
-
 void iniciar_programa(char* path)
 {
 	//esta en la tabla Tabla1 para probar el select
@@ -158,44 +129,6 @@ void actualizarTablaGlobal(int nPagina){
 	list_add(tabla_paginas_global,nodo);
 }
 
-resultado select_t(char *nombre_tabla, int key){
-	Pagina* pagina;
-
-	resultado res;
-//	Registro *registro = malloc(sizeof(Registro));	//Pensaba hacer un registro para agrupar los datos o que el select reciba un registro
-	if(contieneRegistro(nombre_tabla,key,&pagina)){
-
-		int posicion=(pagina->indice_registro)*offset;
-//		char* value;
-//		memcpy(value,&memoria[posicion],tamValue);
-//		res.mensaje= strdup(value);
-		sleep(retardoMemoria/1000);
-		res.mensaje= strdup(&memoria[posicion]);
-		res.resultado=OK;
-
-		actualizarTablaGlobal(pagina->numero_pagina);
-	}
-	else{
-		printf("Algo salio mal, voy a hablar con el LFS \n");	//Tengo que pedirselo al LFS y agregarlo en la pagina
-		fflush(stdout);
-		Registro registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
-
-		int posLibre= espacioLibre();
-		if(posLibre>=0){
-			almacenarRegistro(nombre_tabla,registro,posLibre);
-		}
-		else
-			iniciarReemplazo(nombre_tabla,registro); //se cambia el value del registro cuando existe el segmento
-
-		printf("Resultado select: %s\n",registro.value);
-		res.mensaje= string_duplicate((&registro)->value);
-		res.resultado=OK;
-
-	}
-
-	return res;
-}
-
 Registro pedirAlLFS(char* nombre_tabla, int key){
 
 	Registro registro;
@@ -229,6 +162,44 @@ char* mandarALFS(char* accion, char* nombre_tabla, int key){
 }
 
 
+resultado select_t(char *nombre_tabla, int key){
+	Pagina* pagina;
+
+	resultado res;
+//	Registro *registro = malloc(sizeof(Registro));	//Pensaba hacer un registro para agrupar los datos o que el select reciba un registro
+	if(contieneRegistro(nombre_tabla,key,&pagina)){
+
+		int posicion=(pagina->indice_registro)*offset;
+//		char* value;
+//		memcpy(value,&memoria[posicion],tamValue);
+//		res.mensaje= strdup(value);
+		sleep(retardoMemoria/1000);
+		res.mensaje= strdup(&memoria[posicion]);
+		res.resultado=OK;
+
+		actualizarTablaGlobal(pagina->numero_pagina);
+	}
+	else{
+		printf("Algo salio mal, voy a hablar con el LFS \n");	//Tengo que pedirselo al LFS y agregarlo en la pagina
+		fflush(stdout);
+		Registro registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
+
+		int posLibre= espacioLibre();
+		if(posLibre>=0){
+			almacenarRegistro(nombre_tabla,registro,posLibre);
+		}
+		else
+			iniciarReemplazo(nombre_tabla,registro,0);
+
+		printf("Resultado select: %s\n",registro.value);
+		res.mensaje= string_duplicate((&registro)->value);
+		res.resultado=OK;
+
+	}
+
+	return res;
+}
+
 int espacioLibre(){
 
 	for(int posicion=0;posicion<cantidadFrames;posicion++){
@@ -245,7 +216,7 @@ void almacenarRegistro(char *nombre_tabla,Registro registro, int posLibre){
 	Segmento *segmento;
 	if(!encuentraSegmento(nombre_tabla,segmento))
 		segmento = agregarSegmento(nombre_tabla);
-	agregarPagina(registro, segmento, posLibre);
+	agregarPagina(registro, segmento, posLibre, 0); //le paso cero como valorFlag porque solo la usamos en el select esta funcion
 }
 
 Segmento *agregarSegmento(char *nombre_tabla){
@@ -268,13 +239,13 @@ Segmento *agregarSegmento(char *nombre_tabla){
 }
 
 //void agregarPagina(Registro registro, Segmento *segmento, int posLibre){
-void agregarPagina(Registro registro, Segmento *segmento, int posLibre){
+void agregarPagina(Registro registro, Segmento *segmento, int posLibre, int valorFlag){
 	Pagina* pagina=malloc(sizeof(Pagina));
 	guardarEnMemoria(registro, posLibre);
 
 	pagina->indice_registro=posLibre;
 	pagina->numero_pagina=tabla_paginas_global->elements_count;
-	pagina->flag_modificado=0;
+	pagina->flag_modificado=valorFlag;
 
 	list_add(segmento->puntero_tpaginas, pagina);
 
@@ -284,7 +255,7 @@ void agregarPagina(Registro registro, Segmento *segmento, int posLibre){
 	list_add(tabla_paginas_global,nodo);
 }
 
-void iniciarReemplazo(char *nombre_tabla,Registro registro){
+void iniciarReemplazo(char *nombre_tabla,Registro registro, int flagModificado){
 	NodoTablaPaginas* nodoPagina = paginaMenosUsada();
 	log_info(g_logger,"Inicio reemplazo");
 
@@ -303,9 +274,39 @@ void iniciarReemplazo(char *nombre_tabla,Registro registro){
 		nodoPagina->segmento=segmento;
 		list_add(tabla_paginas_global,nodoPagina);
 
+		nodoPagina->pagina->flag_modificado=flagModificado;
 		int indice = nodoPagina->pagina->indice_registro;
 		guardarEnMemoria(registro,indice);
 	}
+}
+
+void consola(){
+	char* mensaje;
+	resultado res;
+	res.resultado= OK;
+
+	while(res.resultado != SALIR)
+	{
+		mensaje = readline(">");
+		res = parsear_mensaje(mensaje);
+		if(res.resultado == OK)
+		{
+			log_info(g_logger,res.mensaje);
+		}
+		else if(res.resultado == ERROR)
+		{
+			log_info(g_logger,"Ocurrio un error al ejecutar la acción");
+		}
+		else if(res.resultado == MENSAJE_MAL_FORMATEADO)
+		{
+			log_info(g_logger,"Mensaje incorrecto");
+		}
+		//atender_clientes();
+		if(res.mensaje!=NULL)
+			free(res.mensaje);
+		free(mensaje);
+	}
+
 }
 
 void removerPagina(NodoTablaPaginas *nodo){
@@ -335,29 +336,32 @@ bool memoriaFull(){
 void journal(){
 	log_info(g_logger,"Journaling");
 
+	int size_to_send;
+	resultadoParser resParser;
+	resParser.accionEjecutar=INSERT;
 
-	//			char* pi = serializarPaquete(&resParser, &size_to_send);
-	//			send(serverSocket, pi, size_to_send, 0);
-	//
-	//
-	//			accion acc;
-	//			char* buffer = malloc(sizeof(int));
-	//			int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
-	//			memcpy(&acc, buffer, sizeof(int));
-	//			if(valueResponse < 0) {
-	//				printf("Error al recibir los datos\n");
-	//			} else {
-	//				resultado res;
-	//				res.accionEjecutar = acc;
-	//				int status = recibirYDeserializarRespuesta(serverSocket, &res);
-	//				if(status<0) {
-	//					printf("Error\n");
-	//				} else if(res.resultado == OK) {
-	//					printf("El INSERT se ejecutó correctamente\n");
-	//				} else {
-	//					printf("Hubo un error al ejecutar el INSERT\n");
-	//				}
-	//			}
+	char* pi = serializarPaquete(&resParser, &size_to_send);
+	send(serverSocket, pi, size_to_send, 0);
+
+
+//	accion acc;
+//	char* buffer = malloc(sizeof(int));
+//	int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
+//	memcpy(&acc, buffer, sizeof(int));
+//	if(valueResponse < 0) {
+//		printf("Error al recibir los datos\n");
+//	} else {
+//		resultado res;
+//		res.accionEjecutar = acc;
+//		int status = recibirYDeserializarRespuesta(serverSocket, &res);
+//		if(status<0) {
+//			printf("Error\n");
+//		} else if(res.resultado == OK) {
+//			printf("El INSERT se ejecutó correctamente\n");
+//		} else {
+//			printf("Hubo un error al ejecutar el INSERT\n");
+//		}
+//	}
 }
 
 void cambiarNumerosPaginas(t_list* listaPaginas){
@@ -462,20 +466,20 @@ resultado insert(char *nombre_tabla,int key,char *value){
 		}
 		else{
 			if(posLibre>=0){
-				agregarPagina(registro,segmento,posLibre);
+				agregarPagina(registro,segmento,posLibre,1);
 			}
 			else
-				iniciarReemplazo(nombre_tabla, registro);
+				iniciarReemplazo(nombre_tabla, registro, 1);
 			}
 	}
 	else{
 
 		if(posLibre>=0){
 			segmento=agregarSegmento(nombre_tabla);
-			agregarPagina(registro,segmento,posLibre);
+			agregarPagina(registro,segmento,posLibre,1);
 		}
 		else
-			iniciarReemplazo(nombre_tabla, registro);
+			iniciarReemplazo(nombre_tabla, registro, 1);
 		}
 
 	resultado res;
