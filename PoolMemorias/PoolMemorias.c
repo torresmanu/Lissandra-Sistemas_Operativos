@@ -334,6 +334,30 @@ bool memoriaFull(){
 
 void journal(){
 	log_info(g_logger,"Journaling");
+
+
+	//			char* pi = serializarPaquete(&resParser, &size_to_send);
+	//			send(serverSocket, pi, size_to_send, 0);
+	//
+	//
+	//			accion acc;
+	//			char* buffer = malloc(sizeof(int));
+	//			int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
+	//			memcpy(&acc, buffer, sizeof(int));
+	//			if(valueResponse < 0) {
+	//				printf("Error al recibir los datos\n");
+	//			} else {
+	//				resultado res;
+	//				res.accionEjecutar = acc;
+	//				int status = recibirYDeserializarRespuesta(serverSocket, &res);
+	//				if(status<0) {
+	//					printf("Error\n");
+	//				} else if(res.resultado == OK) {
+	//					printf("El INSERT se ejecutó correctamente\n");
+	//				} else {
+	//					printf("Hubo un error al ejecutar el INSERT\n");
+	//				}
+	//			}
 }
 
 void cambiarNumerosPaginas(t_list* listaPaginas){
@@ -601,29 +625,6 @@ resultado parsear_mensaje(char* mensaje)
 			contenidoInsert* contenido = resParser.contenido;
 			res = insert(contenido->nombreTabla,contenido->key,contenido->value);
 
-
-			char* pi = serializarPaquete(&resParser, &size_to_send);
-			send(serverSocket, pi, size_to_send, 0);
-
-
-			accion acc;
-			char* buffer = malloc(sizeof(int));
-			int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
-			memcpy(&acc, buffer, sizeof(int));
-			if(valueResponse < 0) {
-				printf("Error al recibir los datos\n");
-			} else {
-				resultado res;
-				res.accionEjecutar = acc;
-				int status = recibirYDeserializarRespuesta(serverSocket, &res);
-				if(status<0) {
-					printf("Error\n");
-				} else if(res.resultado == OK) {
-					printf("El INSERT se ejecutó correctamente\n");
-				} else {
-					printf("Hubo un error al ejecutar el INSERT\n");
-				}
-			}
 
 			break;
 
