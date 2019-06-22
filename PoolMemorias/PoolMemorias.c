@@ -1,31 +1,45 @@
-/*
- ============================================================================
- Name        : PoolMemorias.c
- Author      : 
- Version     :
- Copyright   : Your copyright notice
- Description : Hello World in C, Ansi-style
- ============================================================================
- */
-
-/*
- * parte principal
- * requests
- * tad bitmap(hay espacio() etc)
- */
-
-
-
-
-
-
 #include "PoolMemorias.h"
 
-int main(void) {
-	resultado res;
+int main(int argc, char* argv[]) {
+
+	iniciar_programa(argv[1]);
+
+	pthread_t journalAutomatico;
+	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
+
+	pthread_t gossipingAutomatico;
+	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
+
+	consola();
+
+	//ver si esta bien que este aca
+	//van a hacer falta mutex para la memoria
+	//pthread_join(journalAutomatico,NULL);
+	//pthread_join(gossipingAutomatico,NULL);
+
+	terminar_programa();
+
+
+}
+
+void journalConRetardo(){
+	while(1){
+		sleep(retardoJournaling/1000);
+		journal();
+	}
+}
+
+void gossipingConRetardo(){
+	while(1){
+		sleep(retardoGossiping/1000);
+		//gossiping();
+	}
+}
+
+void consola(){
 	char* mensaje;
+	resultado res;
 	res.resultado= OK;
-	iniciar_programa();
 
 	while(res.resultado != SALIR)
 	{
@@ -44,29 +58,28 @@ int main(void) {
 			log_info(g_logger,"Mensaje incorrecto");
 		}
 		//atender_clientes();
+		if(res.mensaje!=NULL)
+			free(res.mensaje);
+		free(mensaje);
 	}
-
-
-	terminar_programa();
-
 
 }
 
-void iniciar_programa(void)
+void iniciar_programa(char* path)
 {
 	//esta en la tabla Tabla1 para probar el select
-	Registro reg1;
-	reg1.key= 10;
-	strcpy(reg1.value,"creativOS");
-	reg1.timestamp = 500;
+//	Registro reg1;
+//	reg1.key= 10;
+//	strcpy(reg1.value,"creativOS");
+//	reg1.timestamp = 500;
 
 
 	//Inicio el logger
-	g_logger = log_create("PoolMemorias.log", "LFS", 1, LOG_LEVEL_INFO);
+	g_logger = log_create("PoolMemorias.log", "MEM", 1, LOG_LEVEL_INFO);
 	log_info(g_logger,"Inicio Aplicacion Pool Memorias");
 
 	//Inicio las configs
-	g_config = config_create("PoolMemorias.config");
+	g_config = config_create(path);
 	log_info(g_logger,"Configuraciones inicializadas");
 
 
@@ -80,67 +93,90 @@ void iniciar_programa(void)
 
 
 	//hacer handshake con LFS y obtener tamaño de mem ppl y value
+	//tamValue = handshake();
+	tamValue=20;
+
+	retardoJournaling = config_get_int_value(g_config,"RETARDO_JOURNAL");
+	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
+	retardoMemoria = config_get_int_value(g_config,"RETARDO_MEM");
+
+	TAM_MEMORIA_PRINCIPAL = config_get_int_value(g_config,"TAM_MEM");
 
 	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
+	memset(memoria,'0',TAM_MEMORIA_PRINCIPAL);
 
+	offset = sizeof(int)+sizeof(long)+tamValue;
 
-	cantidadFrames = TAM_MEMORIA_PRINCIPAL / sizeof(Registro);
+	cantidadFrames = TAM_MEMORIA_PRINCIPAL / offset;
 
 
 	bitmap=calloc(cantidadFrames, sizeof(int));
 
 
-	memoria[0] = reg1;
-	bitmap[0]=1;
+	//memoria[0] = reg1;
+//	memcpy(memoria[0],reg1.value,tamValue);
+//	memcpy(memoria[0+tamValue],reg1.key,sizeof(int));
+//	memcpy(memoria[0+tamValue+sizeof(int)],reg1.timestamp,sizeof(long));
+//	bitmap[0]=1;
 
 	posLibres= cantidadFrames;
 
 	iniciar_tablas();
 
-	Segmento* seg_prueba = malloc(sizeof(Segmento));
-	seg_prueba->numero_segmento	= 0;
-	seg_prueba->nombre_tabla="Tabla1";
-	seg_prueba->puntero_tpaginas = list_create();
+//	Segmento* seg_prueba = malloc(sizeof(Segmento));
+//	seg_prueba->numero_segmento	= 0;
+//	seg_prueba->nombre_tabla="Tabla1";
+//	seg_prueba->puntero_tpaginas = list_create();
+//
+//	list_add(tabla_segmentos,seg_prueba);
+//
+//	Pagina* nodo=malloc(sizeof(Pagina));
+//	nodo->numero_pagina=0;
+//	nodo->indice_registro=0;
+//	nodo->flag_modificado=0;
+//	list_add(seg_prueba->puntero_tpaginas,nodo);
 
-	list_add(tabla_segmentos,seg_prueba);
-
-
-	//esto esta bien?? nose porqué esta
+	//esto podria ser nuestra tabla de paginas global
+	/*
 	for(int i=0;i<cantidadFrames;i++){
 
 		Pagina* nodo=malloc(sizeof(Pagina));
 		nodo->numero_pagina=i;
 		nodo->indice_registro=i;
 		nodo->flag_modificado=0;
-		list_add(seg_prueba->puntero_tpaginas,nodo);
+		list_add(tabPagGlobal,nodo);
 
 	}
+	*/
 
-//	printf("\nINSERT TABLA1 10\n");
-//	insert("Tabla1",10,"hola");
-//
-//	printf("\nSELECT TABLA1 10\n");
-//	select_t("Tabla1",10);
-
-
-
+	//gossiping();
 
 }
 
-//void select_t(char *nombre_tabla,int key){  primera edicion ahora lo adapto al parcer de chaco
+void actualizarTablaGlobal(int nPagina){
+	NodoTablaPaginas* nodo = list_remove(tabla_paginas_global,nPagina);
+	list_add(tabla_paginas_global,nodo);
+}
+
 resultado select_t(char *nombre_tabla, int key){
-	Pagina* pagina=malloc(sizeof(Pagina));
+	Pagina* pagina;
 
 	resultado res;
 //	Registro *registro = malloc(sizeof(Registro));	//Pensaba hacer un registro para agrupar los datos o que el select reciba un registro
-	if(contieneRegistro(nombre_tabla,key,pagina)){
-		//printf("Resultado select: %s\n",value);
-		char* value=memoria[pagina->indice_registro].value;
-		res.mensaje= string_duplicate(value);
+	if(contieneRegistro(nombre_tabla,key,&pagina)){
+
+		int posicion=(pagina->indice_registro)*offset;
+//		char* value;
+//		memcpy(value,&memoria[posicion],tamValue);
+//		res.mensaje= strdup(value);
+		sleep(retardoMemoria/1000);
+		res.mensaje= strdup(&memoria[posicion]);
 		res.resultado=OK;
+
+		actualizarTablaGlobal(pagina->numero_pagina);
 	}
 	else{
-		printf("Algo salio mal, ya vengo, voy a hablar con el LFS \n");	//Tengo que pedirselo al LFS y agregarlo en la pagina
+		printf("Algo salio mal, voy a hablar con el LFS \n");	//Tengo que pedirselo al LFS y agregarlo en la pagina
 		fflush(stdout);
 		Registro registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
 
@@ -157,7 +193,6 @@ resultado select_t(char *nombre_tabla, int key){
 
 	}
 
-	free (pagina);
 	return res;
 }
 
@@ -216,15 +251,13 @@ void almacenarRegistro(char *nombre_tabla,Registro registro, int posLibre){
 Segmento *agregarSegmento(char *nombre_tabla){
 	//creo segmento con el ntabla
 	Segmento* segmento=(Segmento *)malloc(sizeof(Segmento));
-	segmento->nombre_tabla = malloc(10);
+	segmento->nombre_tabla = malloc(strlen(nombre_tabla)+1);
 
-//	strcpy(segmento->nombre_tabla, nombre_tabla);
 	segmento->numero_segmento=tabla_segmentos->elements_count;
 	segmento->puntero_tpaginas=list_create();
-	//strcpy(segmento->nombre_tabla, nombre_tabla);
 
-	segmento->nombre_tabla=nombre_tabla;
-
+//	segmento->nombre_tabla=nombre_tabla;
+	strcpy(segmento->nombre_tabla,nombre_tabla);
 	/* Aca cuando "no hay espacio"  el segmento->nombre tabla se inicia en 0x0 entonces no puedo strcpy.
 	 * Lo raro es que en el caso de que si hay memoria se inicializa bien y se hace ok
 	 * (Todo esto sin el malloc(10)
@@ -234,78 +267,78 @@ Segmento *agregarSegmento(char *nombre_tabla){
 	return segmento;
 }
 
+//void agregarPagina(Registro registro, Segmento *segmento, int posLibre){
 void agregarPagina(Registro registro, Segmento *segmento, int posLibre){
 	Pagina* pagina=malloc(sizeof(Pagina));
 	guardarEnMemoria(registro, posLibre);
 
 	pagina->indice_registro=posLibre;
-	pagina->numero_pagina=segmento->puntero_tpaginas->elements_count;
+	pagina->numero_pagina=tabla_paginas_global->elements_count;
 	pagina->flag_modificado=0;
 
 	list_add(segmento->puntero_tpaginas, pagina);
+
+	NodoTablaPaginas* nodo=malloc(sizeof(NodoTablaPaginas));
+	nodo->pagina=pagina;
+	nodo->segmento=segmento;
+	list_add(tabla_paginas_global,nodo);
 }
 
 void iniciarReemplazo(char *nombre_tabla,Registro registro){
-	//completar cuando veamos memoria en teoria
-	Segmento *segmentoAnterior;
-	double a=10;	//BOOM con un int no muestra nada y con un double anda bien magicamente (la variable no se usa en ningun lado)
-	Pagina* direccionPagina = paginaMenosUsada(&segmentoAnterior);
+	NodoTablaPaginas* nodoPagina = paginaMenosUsada();
+	log_info(g_logger,"Inicio reemplazo");
 
-	if(direccionPagina==NULL){
+	if(nodoPagina==NULL){
 		journal();
 	}
+
 	else{
 		Segmento *segmento;
-		if(!encuentraSegmento(nombre_tabla,segmento))
+		if(!encuentraSegmento(nombre_tabla,&segmento))
 			segmento = agregarSegmento(nombre_tabla);
 
-		list_remove(segmentoAnterior->puntero_tpaginas,direccionPagina->numero_pagina);
-		cambiarNumerosPaginas(segmentoAnterior->puntero_tpaginas);
+		removerPagina(nodoPagina);
 
-		list_add(segmento->puntero_tpaginas,direccionPagina);
-		cambiarNumerosPaginas(segmento->puntero_tpaginas);
-		//int indice = direccionPagina->puntero_registro - memoria;//memoria+indice
-		//int indice = (direccionPagina->indice_registro)*sizeof(Registro);
-		int indice = direccionPagina->indice_registro;
-		memoria[indice]=registro;
+		list_add(segmento->puntero_tpaginas,nodoPagina->pagina);
+		nodoPagina->segmento=segmento;
+		list_add(tabla_paginas_global,nodoPagina);
 
+		int indice = nodoPagina->pagina->indice_registro;
+		guardarEnMemoria(registro,indice);
 	}
 }
 
-Pagina* paginaMenosUsada(Segmento** segmento){
-	//por ahora porque solo tenemos un segmento y una pagina(hito2)
-	if(memoriaFull()){
-		return NULL;
+void removerPagina(NodoTablaPaginas *nodo){
+	bool numeroPagIgual(void* element){
+		return nodo->pagina->numero_pagina==((Pagina*)element)->numero_pagina;
 	}
-	else{
-		Segmento* s =list_get(tabla_segmentos, 0);
-		memcpy(segmento,&s,sizeof(Segmento *));
-		return list_get((*(segmento))->puntero_tpaginas, 0);
-	}
+	list_remove_by_condition(nodo->segmento->puntero_tpaginas,numeroPagIgual);
 }
+
+NodoTablaPaginas* paginaMenosUsada(){
+
+	return list_remove_by_condition(tabla_paginas_global,noEstaModificada);
+}
+
+bool noEstaModificada(void *element){
+	return (((NodoTablaPaginas *)element)->pagina->flag_modificado)==0;
+}
+
+//bool estaModificada(void *element){
+//	return (((NodoTablaPaginas *)element)->pagina->flag_modificado)==1;
+//}
 
 bool memoriaFull(){
-
-	bool segmentoEstaModificado(void *elemento){
-
-		bool estaModificada(void *element){
-			return (((Pagina *)element)->flag_modificado)==1;
-		}
-
-		return list_all_satisfy(((Segmento *)elemento)->puntero_tpaginas,estaModificada);
-	}
-
-	return list_all_satisfy(tabla_segmentos,segmentoEstaModificado);
+	return list_any_satisfy(tabla_paginas_global,noEstaModificada);
 }
 
 void journal(){
-	printf("Journaling\n");
+	log_info(g_logger,"Journaling");
 }
 
 void cambiarNumerosPaginas(t_list* listaPaginas){
 	for(int i=0;i<listaPaginas->elements_count;i++){
-		//queremos que los numeros de pagina sean consistentes(0,1,2,..) por ejemplo cuando sacmos una pagina y nos queda 1,2,4,5..
-		//lo ibamos a hacer con list_get pero creemos que nos da una copia de la pagina y necesitamos la pagina
+
 		Pagina *aux = list_get(listaPaginas,i);
 		aux->numero_pagina = i;
 
@@ -316,112 +349,116 @@ void cambiarNumerosPaginas(t_list* listaPaginas){
 
 
 void guardarEnMemoria(Registro registro, int posLibre){
-	memoria[posLibre]=registro;
+
+	sleep(retardoMemoria/1000);
+	memcpy(&memoria[(posLibre*offset)],registro.value,tamValue);
+	memcpy(&memoria[(posLibre*offset)+tamValue],&(registro.key),sizeof(int));
+	memcpy(&memoria[(posLibre*offset)+tamValue+sizeof(int)],&(registro.timestamp),sizeof(long));
 	bitmap[posLibre]=1;
 }
 
-int contieneRegistro(char *nombre_tabla,int key, Pagina* pagina){
-	Segmento* segmento=malloc(sizeof(Segmento));
+int contieneRegistro(char *nombre_tabla,int key, Pagina** pagina){
+	Segmento* segmento;
 
-
-	if(encuentraSegmento(nombre_tabla,segmento)){
-
+	if(encuentraSegmento(nombre_tabla,&segmento)){
 		if(encuentraPagina(segmento,key,pagina))
-			free(segmento);
 			return true;
 	}
-	free(segmento);
 	return false;
 }
 
-bool encuentraSegmento(char *ntabla,Segmento *segmento){ 	//Me dice si ya existe un segmento de esa tabla y lo mete en la variable segmento, si no NULL
-
+bool encuentraSegmento(char *ntabla,Segmento **segmento){ 	//Me dice si ya existe un segmento de esa tabla y lo mete en la variable segmento, si no NULL
 	bool tieneTabla(void *elemento){
 		return strcmp(((Segmento *)elemento)->nombre_tabla, ntabla)==0;
 	}
 
-	Segmento* s=malloc(sizeof(Segmento));
-	s=list_find(tabla_segmentos,tieneTabla);
-
-	if(s==NULL){
-		free(s);
-		return false;
+	//Segmento* s=malloc(sizeof(Segmento));
+	Segmento* s;
+	if (list_is_empty(tabla_segmentos)){
+	//free(s);
+	return false;
 	}
 	else{
-		memcpy(segmento,s,sizeof(Segmento));
-		free(s);							//COMPARACION VALGRIND V1.1
-		return true;
+		s=list_find(tabla_segmentos,tieneTabla);
 
-		//me parece que esto no hace falta porque si llego hasta acá quiere decir que encontré el segmento
-		//ademas nose porque no anda, ntabla queda con basura
-		//return strcmp(segmento->nombre_tabla,ntabla)==0;
+		if(s==NULL){
+			//free(s);
+			return false;
+		}
+		else{
+			memcpy(segmento,&s,sizeof(Segmento*));
+			//free(s);							//COMPARACION VALGRIND V1.1
+			return true;
+
+		}
 	}
+
 }
 
-bool encuentraPagina(Segmento* segmento,int key, Pagina* pagina){
+bool encuentraPagina(Segmento* segmento,int key, Pagina** pagina){
 
 	bool tieneKey(void *elemento){
 
-		//int i=(((Pagina *)elemento)->puntero_registro)->key;
-		int i=memoria[(((Pagina *)elemento)->indice_registro)].key;
-
+		int posicion=(((Pagina *)elemento)->indice_registro)*offset;
+		int i=0;
+		sleep(retardoMemoria/1000);
+		memcpy(&i,&(memoria[posicion+tamValue]),sizeof(int));
 		return i==key;
 	}
 
-	Pagina* paginaAux = malloc(sizeof(Pagina));       //COMPARACION DE VALGRIND V1.1
-	paginaAux=list_find(segmento->puntero_tpaginas,tieneKey);
+	Pagina* paginaAux = list_find(segmento->puntero_tpaginas,tieneKey);
 //	memcpy(paginaAux,,sizeof(Pagina));
 
 	if(paginaAux==NULL){
-		free(paginaAux);
 		return false;
 	}
 
-	//strcpy(value,paginaAux->puntero_registro->value);
-	//strcpy(value, memoria[(paginaAux->indice_registro)*sizeof(Registro)].value);
-	//strcpy(value, memoria[paginaAux->indice_registro].value);
-	memcpy(pagina,paginaAux,sizeof(Pagina));
+	memcpy(pagina,&paginaAux,sizeof(Pagina*));
 
-	free(paginaAux);									//COMPARACION VALGRIND V1.1
 	return true;
 }
 
-//void insert(char *nombre_tabla,int key,char *value){    primera version
 resultado insert(char *nombre_tabla,int key,char *value){
-	Segmento* segmento=malloc(sizeof(Segmento));
+	Segmento* segmento;
 
-	Pagina* pagina=malloc(sizeof(Pagina));
+	Pagina* pagina;
 
 	Registro registro;
 	registro.timestamp=time(NULL);
 	registro.key=key;
-	strcpy(registro.value,value);
+	registro.value=value;
+
 	int posLibre=espacioLibre();
 
-	if(encuentraSegmento(nombre_tabla,segmento)){
+	if(encuentraSegmento(nombre_tabla,&segmento)){
 
-		if(encuentraPagina(segmento,key,pagina)){	//en vez de basura(char *) pasarle una pagina
+		if(encuentraPagina(segmento,key,&pagina)){	//en vez de basura(char *) pasarle una pagina
 			actualizarRegistro(pagina,value);
+			actualizarTablaGlobal(pagina->numero_pagina);
 		}
-		else
-			agregarPagina(registro,segmento, posLibre);
+		else{
+			if(posLibre>=0){
+				agregarPagina(registro,segmento,posLibre);
+			}
+			else
+				iniciarReemplazo(nombre_tabla, registro);
+			}
 	}
 	else{
 
 		if(posLibre>=0){
-			almacenarRegistro(nombre_tabla,registro, posLibre);
+			segmento=agregarSegmento(nombre_tabla);
+			agregarPagina(registro,segmento,posLibre);
 		}
 		else
-			iniciarReemplazo(nombre_tabla,registro);
+			iniciarReemplazo(nombre_tabla, registro);
 		}
 
-	//Devuelvo el resultado
 	resultado res;
-	res.mensaje="Registro insertado exitosamente";
-	res.resultado=OK;
+	char *aux = "Registro insertado exitosamente";
 
-	free(pagina);
-	free(segmento);
+	res.mensaje=strdup(aux);
+	res.resultado=OK;
 
 	return res;
 }
@@ -451,14 +488,14 @@ resultado drop(char* nombre_tabla){
 
 
 void actualizarRegistro(Pagina *pagina,char *value){
-	//Registro *registro=(Registro*)pagina->indice_registro;
-	//strcpy(registro->value,value);
-	strcpy(memoria[pagina->indice_registro].value,value);
-	memoria[pagina->indice_registro].timestamp=time(NULL);
 
-//	int indice=registro-memoria;
-//
-//	memoria[indice]=*registro;
+	long timestamp=time(NULL);
+	int posicion=(pagina->indice_registro)*offset;
+	sleep(retardoMemoria/1000);
+	memcpy(&(memoria[posicion]),value,tamValue);
+	memcpy(&(memoria[posicion+tamValue+sizeof(int)]),&timestamp,sizeof(long));
+	//memoria[posicion+tamValue+sizeof(int)]=time(NULL);
+
 
 	pagina->flag_modificado=1;
 }
@@ -474,10 +511,11 @@ void terminar_programa()
 	//Destruyo la tabla de segmentos
 	list_destroy_and_destroy_elements(tabla_segmentos, destroy_nodo_segmento);
 
-	//Destruyo la tabla de paginas
-	list_destroy_and_destroy_elements(tabla_paginas, destroy_nodo_pagina);
-
 	//Liberar memoria
+	FILE *archivo = fopen ("archivoBinario.dat", "wb");
+	fwrite (memoria, 1, TAM_MEMORIA_PRINCIPAL, archivo);
+	fclose(archivo);
+
 	free(memoria);
 
 	//Liberar bitmap
@@ -485,6 +523,9 @@ void terminar_programa()
 
 	//cierro el servidor
 	close(serverSocket);
+
+	//Destruyo tabla de paginas global
+	list_destroy_and_destroy_elements(tabla_paginas_global,destroy_nodo_pagina_global);
 
 
 }
@@ -512,7 +553,7 @@ void gestionarConexionALFS()
 
 void iniciar_tablas(){
 	tabla_segmentos = list_create();
-	tabla_paginas = list_create();
+	tabla_paginas_global = list_create();
 }
 
 void destroy_nodo_pagina(void * elem){
@@ -523,10 +564,14 @@ void destroy_nodo_pagina(void * elem){
 
 void destroy_nodo_segmento(void * elem){
 	Segmento* nodo_tabla_elem = (Segmento *) elem;
+	list_destroy_and_destroy_elements(nodo_tabla_elem->puntero_tpaginas,destroy_nodo_pagina);
 	free(nodo_tabla_elem);
 }
 
-
+void destroy_nodo_pagina_global(void * elem){
+	NodoTablaPaginas* nodo = (NodoTablaPaginas *) elem;
+	free(nodo);
+}
 
 resultado parsear_mensaje(char* mensaje)
 {
@@ -547,16 +592,19 @@ resultado parsear_mensaje(char* mensaje)
 
 			//send al lfs el describe para obtener la metadata de las tablas
 			mandarALFS(DESCRIBE, contDes->nombreTabla, 0);
+			res.mensaje = NULL;
 
 			break;
 		}
 		case INSERT:
 		{
-			/*contenidoInsert* contenido = resParser.contenido;
-			res = insert(contenido->nombreTabla,contenido->key,contenido->value);*/
+			contenidoInsert* contenido = resParser.contenido;
+			res = insert(contenido->nombreTabla,contenido->key,contenido->value);
+
 
 			char* pi = serializarPaquete(&resParser, &size_to_send);
 			send(serverSocket, pi, size_to_send, 0);
+
 
 			accion acc;
 			char* buffer = malloc(sizeof(int));
@@ -583,12 +631,15 @@ resultado parsear_mensaje(char* mensaje)
 		case JOURNAL:
 		{
 			journal();
+			res.mensaje = NULL;
 			break;
 		}
 		case CREATE:
 		{
+			char *aux = "Se envió al LFS";
+
 			contenidoCreate* contCreate = resParser.contenido;
-			res.mensaje="Se envió al LFS";
+			res.mensaje=strdup(aux);
 			res.resultado=OK;
 
 			mandarALFS(CREATE, contCreate->nombreTabla, contCreate->cant_part);
@@ -604,25 +655,27 @@ resultado parsear_mensaje(char* mensaje)
 
 			mandarALFS(DROP, contDrop->nombreTabla,0);
 			//send al lfs para que realice la opercacion necesaria
+			res.mensaje = NULL;
 
 			break;
 		}
 		case DUMP:
 		{
 			mandarALFS(DUMP,0,0);
+			res.mensaje = NULL;
 			break;
 		}
 		case ERROR_PARSER:
 		{
 			res.resultado = MENSAJE_MAL_FORMATEADO;
-			res.mensaje = "";
+			res.mensaje = NULL;
 			break;
 		}
 		case SALIR_CONSOLA:
 		{
+			resParser.contenido = malloc(0);
 			res.resultado = SALIR;
-			res.mensaje = "";
-			terminar_programa();
+			res.mensaje = NULL;
 			break;
 		}
 		case HANDSHAKE:
@@ -652,12 +705,11 @@ resultado parsear_mensaje(char* mensaje)
 		default:
 		{
 			res.resultado = SALIR;
-			res.mensaje = "";
+			res.mensaje = malloc(0);
 			break;
 		}
 	}
+	free(resParser.contenido);
 	return res;
 
 }
-
-
