@@ -169,9 +169,7 @@ resultado select_acc(char* tabla,int key)
 	//Paso 3: Escanear la partición objetivo, todos los archivos temporales
 	//y la memoria temporal de dicha tabla (si existe) buscando la key deseada.
 	registro* regMemTable = memtable_select(tabla,key);
-
 	registro* regFs = fs_select(tabla,key,particion);
-
 	//Paso 4: Comparo la de mayor timestamp
 
 	if(regMemTable == NULL && regFs == NULL){
@@ -199,17 +197,23 @@ resultado select_acc(char* tabla,int key)
 
 resultado insert(char* tabla,int key,char* value,long timestamp)
 {
+	resultado res;
+	//Primero verifico que exista la tabla
+	if(existeMetadata(value) != 0){
+		res.resultado=ERROR;
+		res.mensaje="No existe la tabla";
+		return res;
+	}
 	//Creo un registro que es con el que voy a llamar a los proyectos
 	registro reg;
 	reg.key=key;
 	reg.value = string_duplicate(value);
 	reg.timestamp = timestamp;
-
 	//Llamo al insert
 	memtable_insert(tabla,reg);
 
 	//Devuelvo el resultado
-	resultado res;
+
 	res.resultado=OK;
 	res.accionEjecutar=INSERT;
 	res.contenido=NULL;
@@ -317,6 +321,11 @@ resultado journal()
 
 resultado dump(){
 	resultado res;
+	int status = memtable_dump();
+	if(status != 0){
+		res.mensaje="Salida prueba";
+		res.resultado=ERROR;
+	}
 	res.mensaje="Salida prueba";
 	res.resultado=OK;
 	return res;

@@ -28,6 +28,7 @@ void destroy_nodo_tabla(void *);
 void destroy_nodo_registro(void *);
 registro* memtable_select(char*,int);
 void memtable_insert(char*,registro);
+int memtable_dump();
 
 
 #endif /* MEMTABLE_H_ */

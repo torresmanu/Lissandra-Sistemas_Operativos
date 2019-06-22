@@ -132,7 +132,7 @@ registro* obtenerRegistroDeArchivo(FILE* file, int key){
 	registro* reg = NULL;
 	while(fgets(linea,1024,(FILE*)file)){
 		registro* auxReg = malloc (sizeof(registro));
-		parseRegistro(linea,auxReg,config_get_int_value(g_config,"TAMAÑO_VALUE"));
+		parseRegistro(linea,auxReg,config_get_int_value(g_config,"TAMANIO_VALUE"));
 		//Primero pregunto si el registro tiene el mismo value que yo quiero tomar
 		if(auxReg->key == key){
 			//Si el registro todavia no se habia seteado lo seteo
@@ -230,4 +230,44 @@ int dropTableFS(char * tabla){
 		perror("Error: ");
 	}
 	return status;
+}
+
+int fs_create_tmp(char* tabla,t_list* regList){
+	//Chequeo que exista el directorio de la tabla, si existe lo creo
+	char* tablesPath= obtenerTablePath();
+	string_append(&tablesPath,tabla);
+	mkdir(tablesPath,0777);
+
+	//Busco archivos tmp hasta que no encuentre
+	int i=1;
+	int ultimoTemp = 0;
+	char strUltimoTemp[20];
+	while(ultimoTemp == 0){
+		sprintf(strUltimoTemp, "%s/%i.tmp",tablesPath, i);
+		FILE* f = fopen(strUltimoTemp,"r");
+		if(f != NULL){
+			fclose(f);
+		}else{
+			ultimoTemp = i;
+		}
+		i++;
+	}
+
+	//Creo el archivo
+	FILE* file = fopen(strUltimoTemp,"w");
+	if(file == NULL){
+		return -1;
+	}
+
+	//Guardo todos los registros
+	for(int n = 0; n < list_size(regList); n++){
+		registro* reg = ((registro*)list_get(regList,n));
+		char strReg[200];
+		sprintf(strReg, "%ld;%i;%s\n",reg->timestamp,reg->key,reg->value);
+		fprintf(file, "%s",strReg);
+	}
+
+	//Cierro el archivo
+	fclose(file);
+	return 0;
 }
