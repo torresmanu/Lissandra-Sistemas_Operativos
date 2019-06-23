@@ -10,6 +10,7 @@
 
 #include <commons/collections/queue.h>
 #include <commons/parser.h>
+#include <commons/serializacion.h>
 #include <commons/log.h>
 #include <commons/sockets.h>
 #include <readline/readline.h>
@@ -18,6 +19,14 @@
 #include <semaphore.h>
 #include <pthread.h>
 
+//TODO para sockets
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <arpa/inet.h>
+int memoriaSocket;
 
 #define MAX_BUFFER 100
 
@@ -38,7 +47,7 @@ int nivelActual;
 
 
 typedef enum {NEW, READY, EXEC, EXIT} nombreEstado;
-typedef enum {OK, ERROR} status;
+typedef enum {REQUEST_OK, REQUEST_ERROR} status;
 
 typedef t_queue* Estado;
 Estado new,ready,exec,exi;
@@ -67,7 +76,7 @@ void iniciar_programa(void);
 void terminar_programa(void);
 int enviar_mensaje(int socket_cliente);
 int iniciarCliente();
-void gestionarConexion();
+void gestionarConexionAMemoria();
 
 
 //////////// ARCHIVOS LQL ////////////
@@ -97,5 +106,7 @@ Memoria* masApropiada(Criterio*);
 
 //Journal
 
+// Add
+void add(Memoria*, Criterio);
 
 #endif /* KERNEL_H_ */
