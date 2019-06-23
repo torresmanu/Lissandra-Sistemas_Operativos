@@ -38,11 +38,6 @@ void gossipingConRetardo(){
 
 void iniciar_programa(char* path)
 {
-	//esta en la tabla Tabla1 para probar el select
-//	Registro reg1;
-//	reg1.key= 10;
-//	strcpy(reg1.value,"creativOS");
-//	reg1.timestamp = 500;
 
 
 	//Inicio el logger
@@ -84,43 +79,11 @@ void iniciar_programa(char* path)
 	bitmap=calloc(cantidadFrames, sizeof(int));
 
 
-	//memoria[0] = reg1;
-//	memcpy(memoria[0],reg1.value,tamValue);
-//	memcpy(memoria[0+tamValue],reg1.key,sizeof(int));
-//	memcpy(memoria[0+tamValue+sizeof(int)],reg1.timestamp,sizeof(long));
-//	bitmap[0]=1;
-
 	posLibres= cantidadFrames;
 
 	iniciar_tablas();
 
-//	Segmento* seg_prueba = malloc(sizeof(Segmento));
-//	seg_prueba->numero_segmento	= 0;
-//	seg_prueba->nombre_tabla="Tabla1";
-//	seg_prueba->puntero_tpaginas = list_create();
-//
-//	list_add(tabla_segmentos,seg_prueba);
-//
-//	Pagina* nodo=malloc(sizeof(Pagina));
-//	nodo->numero_pagina=0;
-//	nodo->indice_registro=0;
-//	nodo->flag_modificado=0;
-//	list_add(seg_prueba->puntero_tpaginas,nodo);
 
-	//esto podria ser nuestra tabla de paginas global
-	/*
-	for(int i=0;i<cantidadFrames;i++){
-
-		Pagina* nodo=malloc(sizeof(Pagina));
-		nodo->numero_pagina=i;
-		nodo->indice_registro=i;
-		nodo->flag_modificado=0;
-		list_add(tabPagGlobal,nodo);
-
-	}
-	*/
-
-	//gossiping();
 
 }
 
@@ -133,50 +96,69 @@ void actualizarTablaGlobal(int nPagina){
 	list_add(tabla_paginas_global,nodo);
 }
 
-Registro pedirAlLFS(char* nombre_tabla, int key){
+Registro* pedirAlLFS(char* nombre_tabla, int key){
 
-	Registro registro;
-	char* valuenuevo=mandarALFS(SELECT,nombre_tabla,key);
-	printf("A\n");
-	//strcpy(registro.value, valuenuevo);
-	printf("valueNuevo: %s\n", valuenuevo);
-	char* valueAux = string_duplicate(valuenuevo);
-	free(valuenuevo);
-	strcpy(registro.value, valueAux);
-	printf("B\n");
-	registro.key=key;
-	registro.timestamp=time(NULL);
+	Registro* registro;
 
+	resultadoParser resParser;
+	resParser.accionEjecutar=SELECT;
+	contenidoSelect* cont = malloc(sizeof(contenidoSelect));
+	cont->nombreTabla = strdup(nombre_tabla);
+	cont->key = key;
+	resParser.contenido=cont;
+
+	resultado res = mandarALFS(resParser);
+	registro=(Registro*)res.contenido;
+
+	free(cont->nombreTabla);
+	free(cont);
 	return registro;
 
 }
 
 
-char* mandarALFS(char* accion, char* nombre_tabla, int key){
+resultado mandarALFS(resultadoParser resParser){
 
-	char* value=malloc(sizeof(char)*20);
-	char* message=nombre_tabla;
-	//message = accion nombre tabla key
-	send(serverSocket, message, strlen(message) + 1, 0); 	// Solo envio si el usuario no quiere salir.
-	recv(serverSocket, value, 20, 0);						// LFS me manda el value en el buffer
-	printf("%s\n", value);
+	int size_to_send;
 
-	//free(message);
-	return value;
+	char* pi = serializarPaquete(&resParser, &size_to_send);
+	send(serverSocket, pi, size_to_send, 0);
+
+	return recibir();
 }
 
+resultado recibir(){
+
+	resultado res;
+	accion acc;
+	char* buffer = malloc(sizeof(int));
+	int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
+	memcpy(&acc, buffer, sizeof(int));
+	if(valueResponse < 0) {
+		res.resultado=ERROR;
+		log_info(g_logger,"Error al recibir los datos");
+	} else {
+
+		res.accionEjecutar = acc;
+		int status = recibirYDeserializarRespuesta(serverSocket, &res);
+		if(status<0) {
+			log_info(g_logger,"Error");
+		} else if(res.resultado != OK) {
+			log_info(g_logger,res.mensaje);
+		}
+	}
+	free(buffer);
+	return res;
+}
 
 resultado select_t(char *nombre_tabla, int key){
 	Pagina* pagina;
 
 	resultado res;
-//	Registro *registro = malloc(sizeof(Registro));	//Pensaba hacer un registro para agrupar los datos o que el select reciba un registro
 	if(contieneRegistro(nombre_tabla,key,&pagina)){
 
 		int posicion=(pagina->indice_registro)*offset;
-//		char* value;
-//		memcpy(value,&memoria[posicion],tamValue);
-//		res.mensaje= strdup(value);
+
 		sleep(retardoMemoria/1000);
 		res.mensaje= strdup(&memoria[posicion]);
 		res.resultado=OK;
@@ -184,20 +166,20 @@ resultado select_t(char *nombre_tabla, int key){
 		actualizarTablaGlobal(pagina->numero_pagina);
 	}
 	else{
-		printf("Algo salio mal, voy a hablar con el LFS \n");	//Tengo que pedirselo al LFS y agregarlo en la pagina
-		fflush(stdout);
-		Registro registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
+		log_info(g_logger,"Algo salio mal, voy a hablar con el LFS");	//Tengo que pedirselo al LFS y agregarlo en la pagina
+
+		Registro* registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
 
 		int posLibre= espacioLibre();
 		if(posLibre>=0){
-			almacenarRegistro(nombre_tabla,registro,posLibre);
+			almacenarRegistro(nombre_tabla,*registro,posLibre);
+			res.resultado=OK;
 		}
 		else
-			iniciarReemplazo(nombre_tabla,registro,0);
+			res = iniciarReemplazo(nombre_tabla,*registro,0);
 
-		printf("Resultado select: %s\n",registro.value);
-		res.mensaje= string_duplicate((&registro)->value);
-		res.resultado=OK;
+		if(res.resultado==OK)
+			res.mensaje= string_duplicate((registro)->value);
 
 	}
 
@@ -233,10 +215,7 @@ Segmento *agregarSegmento(char *nombre_tabla){
 
 //	segmento->nombre_tabla=nombre_tabla;
 	strcpy(segmento->nombre_tabla,nombre_tabla);
-	/* Aca cuando "no hay espacio"  el segmento->nombre tabla se inicia en 0x0 entonces no puedo strcpy.
-	 * Lo raro es que en el caso de que si hay memoria se inicializa bien y se hace ok
-	 * (Todo esto sin el malloc(10)
-	 */
+
 
 	list_add(tabla_segmentos,segmento);
 	return segmento;
@@ -259,12 +238,15 @@ void agregarPagina(Registro registro, Segmento *segmento, int posLibre, int valo
 	list_add(tabla_paginas_global,nodo);
 }
 
-void iniciarReemplazo(char *nombre_tabla,Registro registro, int flagModificado){
+resultado iniciarReemplazo(char *nombre_tabla,Registro registro, int flagModificado){
 	NodoTablaPaginas* nodoPagina = paginaMenosUsada();
 	log_info(g_logger,"Inicio reemplazo");
 
+	resultado res;
 	if(nodoPagina==NULL){
-		journal();
+		res.resultado = ERROR;
+		char *aux = "Memoria full, hace JOURNAL";
+		res.mensaje=strdup(aux);
 	}
 
 	else{
@@ -281,7 +263,9 @@ void iniciarReemplazo(char *nombre_tabla,Registro registro, int flagModificado){
 		nodoPagina->pagina->flag_modificado=flagModificado;
 		int indice = nodoPagina->pagina->indice_registro;
 		guardarEnMemoria(registro,indice);
+		res.resultado=OK;
 	}
+	return res;
 }
 
 void consola(){
@@ -292,9 +276,9 @@ void consola(){
 	while(res.resultado != SALIR)
 	{
 		mensaje = readline(">");
-
-		if(mensaje)
-			add_history(mensaje);
+//
+//		if(mensaje)
+//			add_history(mensaje);
 
 		res = parsear_mensaje(mensaje);
 		if(res.resultado == OK)
@@ -304,6 +288,7 @@ void consola(){
 		else if(res.resultado == ERROR)
 		{
 			log_info(g_logger,"Ocurrio un error al ejecutar la acción");
+			log_info(g_logger,res.mensaje);
 		}
 		else if(res.resultado == MENSAJE_MAL_FORMATEADO)
 		{
@@ -346,28 +331,9 @@ void journal(){
 
 	list_iterate(tabla_paginas_global,enviarInsert);
 
-
-//	accion acc;
-//	char* buffer = malloc(sizeof(int));
-//	int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
-//	memcpy(&acc, buffer, sizeof(int));
-//	if(valueResponse < 0) {
-//		printf("Error al recibir los datos\n");
-//	} else {
-//		resultado res;
-//		res.accionEjecutar = acc;
-//		int status = recibirYDeserializarRespuesta(serverSocket, &res);
-//		if(status<0) {
-//			printf("Error\n");
-//		} else if(res.resultado == OK) {
-//			printf("El INSERT se ejecutó correctamente\n");
-//		} else {
-//			printf("Hubo un error al ejecutar el INSERT\n");
-//		}
-//	}
 }
 
-void enviarInsert(void *element){
+void enviarInsert(void *element){ //ver los casos de error
 
 
 	if(estaModificada(element)){
@@ -379,6 +345,7 @@ void enviarInsert(void *element){
 
 		contenidoInsert* cont = malloc(sizeof(contenidoInsert));
 		strcpy(cont->nombreTabla,((NodoTablaPaginas*)element)->segmento->nombre_tabla);
+		sleep(retardoMemoria/1000);
 		memcpy(&cont->key,&(memoria[indice+tamValue]),sizeof(int));
 		cont->value = strdup(&memoria[indice*offset]);
 		memcpy(&cont->timestamp,&(memoria[(indice*offset)+tamValue+sizeof(int)]),sizeof(long));
@@ -388,6 +355,9 @@ void enviarInsert(void *element){
 		send(serverSocket, pi, size_to_send, 0);
 		free(cont->value);
 		free(cont);
+
+		resultado res = recibir();
+
 	}
 	else{
 		return;
@@ -488,18 +458,22 @@ resultado insert(char *nombre_tabla,int key,char *value){
 
 	int posLibre=espacioLibre();
 
+	resultado res;
+
 	if(encuentraSegmento(nombre_tabla,&segmento)){
 
 		if(encuentraPagina(segmento,key,&pagina)){	//en vez de basura(char *) pasarle una pagina
 			actualizarRegistro(pagina,value);
 			actualizarTablaGlobal(pagina->numero_pagina);
+			res.resultado=OK;
 		}
 		else{
 			if(posLibre>=0){
 				agregarPagina(registro,segmento,posLibre,1);
+				res.resultado=OK;
 			}
 			else
-				iniciarReemplazo(nombre_tabla, registro, 1);
+				res = iniciarReemplazo(nombre_tabla, registro, 1);
 			}
 	}
 	else{
@@ -507,16 +481,17 @@ resultado insert(char *nombre_tabla,int key,char *value){
 		if(posLibre>=0){
 			segmento=agregarSegmento(nombre_tabla);
 			agregarPagina(registro,segmento,posLibre,1);
+			res.resultado=OK;
 		}
 		else
-			iniciarReemplazo(nombre_tabla, registro, 1);
+			res = iniciarReemplazo(nombre_tabla, registro, 1);
 		}
 
-	resultado res;
-	char *aux = "Registro insertado exitosamente";
+	if(res.resultado==OK){
+		char *aux = "Registro insertado exitosamente";
+		res.mensaje=strdup(aux);
+	}
 
-	res.mensaje=strdup(aux);
-	res.resultado=OK;
 
 	return res;
 }
@@ -693,11 +668,12 @@ resultado parsear_mensaje(char* mensaje)
 		}
 		case DESCRIBE:
 		{
-			contenidoDescribe* contDes = resParser.contenido;
-
 			//send al lfs el describe para obtener la metadata de las tablas
-			mandarALFS(DESCRIBE, contDes->nombreTabla, 0);
-			res.mensaje = NULL;
+			mandarALFS(resParser);
+			char *aux = "Se envió al LFS";
+
+			res.mensaje=strdup(aux);
+			res.resultado=OK;
 
 			break;
 		}
@@ -720,11 +696,10 @@ resultado parsear_mensaje(char* mensaje)
 		{
 			char *aux = "Se envió al LFS";
 
-			contenidoCreate* contCreate = resParser.contenido;
 			res.mensaje=strdup(aux);
 			res.resultado=OK;
 
-			mandarALFS(CREATE, contCreate->nombreTabla, contCreate->cant_part);
+			mandarALFS(resParser);
 
 			//send al lfs para que haga el create
 
@@ -742,8 +717,12 @@ resultado parsear_mensaje(char* mensaje)
 		}
 		case DUMP:
 		{
-			mandarALFS(DUMP,0,0);
-			res.mensaje = NULL;
+			mandarALFS(resParser);
+
+			char *aux = "Se envió al LFS";
+
+			res.mensaje=strdup(aux);
+			res.resultado=OK;
 			break;
 		}
 		case ERROR_PARSER:
