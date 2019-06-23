@@ -14,7 +14,8 @@
 
 
 typedef struct{
-	int idMemoria;
+	char* ipMemoria;
+	char* puerto;
 }Memoria;
 
 // Pool de Memorias

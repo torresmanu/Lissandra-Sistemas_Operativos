@@ -40,7 +40,7 @@ int main(void) {
 	pthread_create(&plp,NULL,(void*) planificadorLargoPlazo,NULL);
 
 	//obtenerMemorias();
-	//gestionarConexion();
+	//gestionarConexionAMemoria();
 	leerConsola();										/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
 	pthread_join(plp,NULL);
@@ -98,17 +98,33 @@ void terminar_programa()
 	liberarCriterios();
 }
 
-/*
-void gestionarConexion()
+
+void gestionarConexionAMemoria()
 {
-	int i=1;
-	PUERTO = config_get_string_value(g_config, "PUERTO_MEMORIA");
-	int socketServer = conectarseAlServidor(PUERTO,"Me conecte a la memoria");	//Conecto con las memorias
-	while(i){
-		i=enviar_mensaje(socketServer);	//Con "exit" i=0 y salgo
+	struct addrinfo hints;
+	struct addrinfo* serverInfo;
+
+	memset(&hints, 0, sizeof(hints)); // Relleno con 0 toda la estructura de hints.
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+
+	getaddrinfo(config_get_string_value(g_config, "IP_MEMORIA"), config_get_string_value(g_config, "PUERTO_MEMORIA"), &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
+
+	int memoriaSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+	if(memoriaSocket == -1)
+	{
+		perror("No se pudo conectar: \n");
 	}
+	else
+	{
+		printf("Conectado a la memoria! Listo para enviar\n");
+		log_info(g_logger, "Se conecto a la memoria, listo para enviar scripts.");
+	}
+
+	connect(memoriaSocket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
+	freeaddrinfo(serverInfo); // Libero
 }
-*/
+
 
 // Propias de Kernel
 // Estados -> Colas
@@ -304,7 +320,7 @@ void ejecutador(){
 		for(int i=0; i <= quantum ;i++){//ver caso en que falla, ejecutarS podria retornar un estado
 			if(!terminoScript(s)){
 				e = ejecutarScript(s);
-				if(e == ERROR)
+				if(e == REQUEST_ERROR)
 				{
 					mandarAexit(s);
 					return;
@@ -357,7 +373,7 @@ status ejecutarRequest(resultadoParser *r){
 		if(tabla != NULL)
 			return ejecutar(tabla->criterio,r);
 		else
-			return ERROR; 											// HACER UN ENUM
+			return REQUEST_ERROR; 											// HACER UN ENUM
 	}
 	else{
 		switch (r->accionEjecutar){
@@ -370,7 +386,7 @@ status ejecutarRequest(resultadoParser *r){
 			case ADD:
 			{
 				Memoria* mem = malloc(sizeof(Memoria));
-				mem->idMemoria = ((contenidoAdd *)(r->contenido))->numMem;
+				mem->ipMemoria = ((contenidoAdd *)(r->contenido))->numMem;
 				Criterio cons = toConsistencia(((contenidoAdd *)(r->contenido))->criterio);
 				add(mem,cons);
 				break;
@@ -378,7 +394,7 @@ status ejecutarRequest(resultadoParser *r){
 			default:
 				break;
 		}
-	return OK;
+	return REQUEST_OK;
 	}
 }
 
@@ -390,9 +406,20 @@ status ejecutar(Criterio* criterio, resultadoParser* request){
 
 status enviarRequest(Memoria* mem, resultadoParser* request)
 {
-	status resultado;
-	//Aca se realiza toda la logica de enviar paquete por sockets (serializando?)
-	return resultado;
+	status result;
+	resultado res;
+	int size;
+
+	char* msg = serializarPaquete(request,&size);
+	send(memoriaSocket, msg, size, 0);
+	int resultadoMemoria = recibirYDeserializarRespuesta(memoriaSocket,&res);
+
+	if(resultadoMemoria == -2 || resultadoMemoria == -1)
+		result = REQUEST_ERROR;
+	else
+		result = REQUEST_OK;
+
+	return result;
 }
 
 Memoria* masApropiada(Criterio* c){
@@ -478,8 +505,8 @@ Tabla* buscarTabla(char* nom)
 
 void obtenerMemorias(){
 	Memoria *mem;
-	int id = config_get_int_value(g_config,"MEMORIA");
-	mem->idMemoria = id;
+	int ip = config_get_int_value(g_config,"MEMORIA");
+	mem->ipMemoria = ip;
 	gossiping(mem);//meto en pool la lista de memorias encontradas
 
 }
@@ -487,15 +514,15 @@ void obtenerMemorias(){
 // HARDCODEADO SOLO COMO PARA EJEMPLO.	////////////////////
 void gossiping(Memoria *mem){
 	Memoria *m1 = malloc(sizeof(Memoria));
-	m1->idMemoria = 1;
+	//m1->idMemoria = 1;
 	list_add(pool,m1);
 
 	Memoria *m2 = malloc(sizeof(Memoria));
-	m2->idMemoria = 2;
+	//m2->idMemoria = 2;
 	list_add(pool,m2);
 
 	Memoria *m3 = malloc(sizeof(Memoria));
-	m3->idMemoria = 3;
+	//m3->idMemoria = 3;
 	list_add(pool,m3);
 }
 ////////////////////////////////////////////////////
