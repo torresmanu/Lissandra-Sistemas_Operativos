@@ -15,3 +15,4 @@ Memoria obtenerMemoria(t_config* config){
 	mem.puerto = puerto;
 	return mem;
 }
+
