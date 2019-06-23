@@ -60,6 +60,10 @@ resultadoParser parseConsole(char* mensaje){
 	{
 		resParser.accionEjecutar=JOURNAL;
 	}
+	else if(strcmp(accion,"DUMP") == 0)
+	{
+		resParser.accionEjecutar=DUMP;
+	}
 	else if(strcmp(accion,"RUN") == 0)
 	{
 		resParser.accionEjecutar=RUN;
