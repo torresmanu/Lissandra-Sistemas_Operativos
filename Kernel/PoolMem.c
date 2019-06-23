@@ -9,7 +9,10 @@
 
 Memoria obtenerMemoria(t_config* config){
 	Memoria mem;
-	int id = config_get_int_value(config,"MEMORIA");
-	mem.idMemoria = id;
+	int id = config_get_string_value(config,"IP_MEMORIA");
+	int puerto = config_get_string_value(config, "PUERTO_MEMORIA");
+	mem.ipMemoria = id;
+	mem.puerto = puerto;
 	return mem;
 }
+

@@ -32,6 +32,37 @@ void destroy_nodo_memoria(void * elem){
 	free(nodo_tabla_elem);
 }
 
+Criterio toConsistencia(char* cadena)
+{
+	if(strcmp(cadena, "SC") == 0)
+		return sc;
+	else if(strcmp(cadena, "SHC") == 0)
+		return shc;
+	else
+		return ec;
+}
+
+Memoria* masApropiada(Criterio* c){
+	Memoria* mem;
+	switch(c->tipo)
+	{
+		case SC:
+			mem = (Memoria*)list_get(sc.memorias,0);
+			break;
+		case SHC:											// Necesito aplicar Hash
+			break;
+		case EC:
+		{
+			int cantidadMemorias = rand()%list_size(ec.memorias)+1;	// Que sea aleatoria
+			mem = (Memoria*)list_get(ec.memorias,cantidadMemorias);
+			break;
+		}
+		default:
+			break;
+	}
+	return mem;
+}
+
 Memoria criterioSC(){
 	/* LOGICA DE CRITERIO STRONG CONSISTENCY*/
 }
