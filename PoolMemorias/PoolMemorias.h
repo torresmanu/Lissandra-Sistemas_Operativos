@@ -124,7 +124,13 @@ void consola();
 void enviarInsert(void *element);
 resultado insert(char *nombre_tabla,int key,char *value);
 void actualizarRegistro(Pagina *pagina,char *value);
-resultado parsear_mensaje(char *);
+resultado parsear_mensaje(resultadoParser*);
+
+void escucharKernel();
+resultadoParser recibirRequest(int conexion_cliente);
+int iniciarServidor();
+int conectarAlKernel(int conexion_servidor);
+void avisarResultado(resultado res, int conexion_cliente);
 
 void actualizarTablaGlobal(int nPagina);
 

@@ -10,16 +10,129 @@ int main(int argc, char* argv[]) {
 	pthread_t gossipingAutomatico;
 	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
 	*/
+
+	pthread_t conexionKernel;
+	pthread_create(&conexionKernel,NULL,(void*) escucharKernel,NULL);
+
 	consola();
 
 	//ver si esta bien que este aca
 	//van a hacer falta mutex para la memoria
 	//pthread_join(journalAutomatico,NULL);
 	//pthread_join(gossipingAutomatico,NULL);
+	pthread_join(conexionKernel,NULL);
 
 	terminar_programa();
 
 
+}
+
+void escucharKernel(){
+	int conexion_servidor = iniciarServidor();
+	int conexion_cliente = conectarAlKernel(conexion_servidor);
+	resultado res;
+	res.resultado = OK;
+
+	while(res.resultado!=SALIR){
+		resultadoParser resParser = recibirRequest(conexion_cliente);
+		res = parsear_mensaje(&resParser);
+
+		if(res.resultado == OK)
+		{
+			log_info(g_logger,res.mensaje);
+		}
+		else if(res.resultado == ERROR)
+		{
+			log_info(g_logger,"Ocurrio un error al ejecutar la acción");
+			log_info(g_logger,res.mensaje);
+		}
+		else if(res.resultado == MENSAJE_MAL_FORMATEADO)
+		{
+			log_info(g_logger,"Mensaje incorrecto");
+		}
+		//atender_clientes();
+
+		avisarResultado(res,conexion_cliente);
+
+		if(res.mensaje!=NULL)
+			free(res.mensaje);
+	}
+
+}
+
+void avisarResultado(resultado res, int conexion_cliente){
+	int size_to_send;
+	char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
+	send(conexion_cliente, paqueteRespuesta, size_to_send, 0);
+	free(paqueteRespuesta);
+}
+
+resultadoParser recibirRequest(int conexion_cliente){
+	char* buffer2 = malloc(sizeof(int));
+	accion acc;
+	resultadoParser rp;
+	int status;
+
+
+	int valueResponse = recv(conexion_cliente, buffer2, sizeof(int), 0);
+	memcpy(&acc, buffer2, sizeof(int));
+
+	if(valueResponse < 0) { //Comenzamos a recibir datos del cliente
+		//Si recv() recibe 0 el cliente ha cerrado la conexion. Si es menor que 0 ha habido algún error.
+		printf("Error al recibir los datos\n");
+		rp.accionEjecutar = SALIR_CONSOLA;
+	} else if(valueResponse == 0) {
+		printf("El cliente se desconectó\n");
+		rp.accionEjecutar = SALIR_CONSOLA;
+	} else {
+		rp.accionEjecutar = acc;
+		status = recibirYDeserializarPaquete(conexion_cliente, &rp);
+		if(status<0)
+			rp.accionEjecutar = SALIR_CONSOLA;
+	}
+	free(buffer2);
+	return rp;
+}
+
+int iniciarServidor() {
+
+	int conexion_servidor, puerto;
+	struct sockaddr_in servidor;
+
+	puerto = config_get_int_value(g_config,"PUERTO");
+	conexion_servidor = socket(AF_INET, SOCK_STREAM, 0);
+
+	bzero((char *)&servidor, sizeof(servidor));
+	servidor.sin_family = AF_INET;
+	servidor.sin_port = htons(puerto);
+	servidor.sin_addr.s_addr = INADDR_ANY;
+
+	if(bind(conexion_servidor, (struct sockaddr *)&servidor, sizeof(servidor)) < 0) {
+		printf("Error al asociar el puerto a la conexion. Posiblemente el puerto se encuentre ocupado\n");
+	    close(conexion_servidor);
+	    return -1;
+	}
+
+	listen(conexion_servidor, 3);
+	printf("A la escucha en el puerto %d\n", ntohs(servidor.sin_port));
+
+	return conexion_servidor;
+}
+
+
+int conectarAlKernel(int conexion_servidor){
+	int conexion_cliente;
+	struct sockaddr_in cliente;
+	socklen_t longc; //Debemos declarar una variable que contendrá la longitud de la estructura
+
+	conexion_cliente = accept(conexion_servidor, (struct sockaddr *)&cliente, &longc);
+	if(conexion_cliente<0)
+		printf("Error al aceptar trafico\n");
+	else{
+		longc = sizeof(cliente);
+		printf("Conectando con %s:%d\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
+	}
+	return conexion_cliente;
 }
 
 void journalConRetardo(){
@@ -276,11 +389,13 @@ void consola(){
 	while(res.resultado != SALIR)
 	{
 		mensaje = readline(">");
-//
-//		if(mensaje)
-//			add_history(mensaje);
 
-		res = parsear_mensaje(mensaje);
+		if(mensaje)
+			add_history(mensaje);
+
+		resultadoParser resParser = parseConsole(mensaje);
+		res = parsear_mensaje(&resParser);
+
 		if(res.resultado == OK)
 		{
 			log_info(g_logger,res.mensaje);
@@ -653,23 +768,22 @@ void destroy_nodo_pagina_global(void * elem){
 	free(nodo);
 }
 
-resultado parsear_mensaje(char* mensaje)
+resultado parsear_mensaje(resultadoParser* resParser)
 {
 	resultado res;
-	resultadoParser resParser = parseConsole(mensaje);
 	int size_to_send;
-	switch(resParser.accionEjecutar){
+	switch(resParser->accionEjecutar){
 		case SELECT:
 		{
 			contenidoSelect* contSel;
-			contSel = (contenidoSelect*)resParser.contenido;
+			contSel = (contenidoSelect*)resParser->contenido;
 			res = select_t(contSel->nombreTabla,contSel->key);
 			break;
 		}
 		case DESCRIBE:
 		{
 			//send al lfs el describe para obtener la metadata de las tablas
-			mandarALFS(resParser);
+			mandarALFS(*resParser);
 			char *aux = "Se envió al LFS";
 
 			res.mensaje=strdup(aux);
@@ -679,7 +793,7 @@ resultado parsear_mensaje(char* mensaje)
 		}
 		case INSERT:
 		{
-			contenidoInsert* contenido = resParser.contenido;
+			contenidoInsert* contenido = resParser->contenido;
 			res = insert(contenido->nombreTabla,contenido->key,contenido->value);
 
 
@@ -699,7 +813,7 @@ resultado parsear_mensaje(char* mensaje)
 			res.mensaje=strdup(aux);
 			res.resultado=OK;
 
-			mandarALFS(resParser);
+			mandarALFS(*resParser);
 
 			//send al lfs para que haga el create
 
@@ -707,7 +821,7 @@ resultado parsear_mensaje(char* mensaje)
 		}
 		case DROP:
 		{
-			contenidoDrop* contDrop = resParser.contenido;
+			contenidoDrop* contDrop = resParser->contenido;
 			res = drop(contDrop->nombreTabla);
 
 			//mandarALFS(DROP, contDrop->nombreTabla,0);
@@ -717,7 +831,7 @@ resultado parsear_mensaje(char* mensaje)
 		}
 		case DUMP:
 		{
-			mandarALFS(resParser);
+			mandarALFS(*resParser);
 
 			char *aux = "Se envió al LFS";
 
@@ -733,7 +847,7 @@ resultado parsear_mensaje(char* mensaje)
 		}
 		case SALIR_CONSOLA:
 		{
-			resParser.contenido = malloc(0);
+			resParser->contenido = malloc(0);
 			res.resultado = SALIR;
 			res.mensaje = NULL;
 			break;
@@ -769,7 +883,7 @@ resultado parsear_mensaje(char* mensaje)
 			break;
 		}
 	}
-	free(resParser.contenido);
+	free(resParser->contenido);
 	return res;
 
 }
