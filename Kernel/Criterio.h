@@ -19,9 +19,15 @@ typedef struct{
 
 Criterio sc,shc,ec;
 
+// CRITERIO STRONG CONSISTENCY
 Memoria criterioSC();
+
+// MANEJO DE CRITERIOS
 void iniciarCriterios();
 void liberarCriterios();
 void destroy_nodo_memoria(void * elem);
+Criterio toConsistencia(char*);
+Memoria* masApropiada(Criterio*);
+
 
 #endif /* CRITERIO_H_ */

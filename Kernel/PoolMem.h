@@ -12,7 +12,6 @@
 #include <commons/config.h>
 #include <stdlib.h>
 
-
 typedef struct{
 	char* ipMemoria;
 	char* puerto;
@@ -21,6 +20,8 @@ typedef struct{
 // Pool de Memorias
 t_list *pool;
 
+// MANEJO DE MEMORIAS
 Memoria obtenerMemoria(t_config* config);
+
 
 #endif /* POOLMEM_H_ */
