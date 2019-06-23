@@ -199,7 +199,7 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 {
 	resultado res;
 	//Primero verifico que exista la tabla
-	if(existeMetadata(value) != 0){
+	if(existeMetadata(tabla) != 0){
 		res.resultado=ERROR;
 		res.mensaje="No existe la tabla";
 		return res;
@@ -307,10 +307,7 @@ resultado drop(char* tabla)
 
 resultado journal()
 {
-	if(existeMetadata("colores") == 0){
-		metadataTabla masd = obtenerMetadata("colores");
-		log_info(g_logger,masd.consistency);
-	}
+	compactar();
 	resultado res;
 	res.accionEjecutar = JOURNAL;
 	res.contenido = NULL;

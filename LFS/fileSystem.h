@@ -27,5 +27,7 @@ int crearArchivoMetadata(char* tablePath,metadataTabla metadata);
 int crearArchivosBinarios(char* tablesPath,metadataTabla metadata);
 int dropTableFS(char * tabla);
 int fs_create_tmp(char* tabla,t_list* regList);
+void compactarTabla(char* tabla);
+void compactar();
 
 #endif /* FILESYSTEM_H_ */
