@@ -152,6 +152,10 @@ registro* obtenerRegistroDeArchivo(FILE* file, int key){
 int crear_tabla(char* tabla,char* t_cons,int cant_part,int tiempo_comp){
 	//Obtengo el path de la tabla a crear
 	char* tablesPath= obtenerTablePath();
+
+	//Chequeo si el directorio tables esta creado, en caso contrario lo creo
+	mkdir(tablesPath,0777);
+
 	string_append(&tablesPath,tabla);
 
 	//Creo el directorio

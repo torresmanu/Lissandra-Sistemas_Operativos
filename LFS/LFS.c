@@ -228,12 +228,13 @@ resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 	res.contenido = NULL;
 
 	//Valido que exista la tabla
-	if(existeMetadata(tabla)){
+	if(existeMetadata(tabla) != 0){
 		//Creo la tabla con su directorio, metadata y archivos binarios
 		int status = crear_tabla(tabla,t_cons,cant_part,tiempo_comp);
 		if(status != 0){
 			res.mensaje="Error al crear la tabla";
 			res.resultado=ERROR;
+			return res;
 		}
 		res.mensaje="Tabla creada exitosamente";
 		res.resultado=OK;
