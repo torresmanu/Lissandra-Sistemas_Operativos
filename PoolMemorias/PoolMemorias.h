@@ -90,7 +90,7 @@ typedef struct
 	Segmento* segmento;
 }NodoTablaPaginas;
 
-void iniciar_programa(char*);
+void iniciar_programa();
 
 void terminar_programa(void);
 void gestionarConexionALFS(void);
@@ -107,6 +107,7 @@ Registro* pedirAlLFS(char* nombre_tabla, int key);
 resultado mandarALFS(resultadoParser resParser);
 resultado recibir();
 int espacioLibre();
+void handshake();
 void almacenarRegistro(char *nombre_tabla,Registro registro, int posLibre);
 Segmento *agregarSegmento(char *nombre_tabla);
 void agregarPagina(Registro registro, Segmento *segmento, int posLibre, int valorFlag);
