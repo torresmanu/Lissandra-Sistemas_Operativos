@@ -199,7 +199,7 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 {
 	resultado res;
 	//Primero verifico que exista la tabla
-	if(existeMetadata(value) != 0){
+	if(existeMetadata(tabla) != 0){
 		res.resultado=ERROR;
 		res.mensaje="No existe la tabla";
 		return res;
@@ -228,12 +228,13 @@ resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 	res.contenido = NULL;
 
 	//Valido que exista la tabla
-	if(existeMetadata(tabla)){
+	if(existeMetadata(tabla) != 0){
 		//Creo la tabla con su directorio, metadata y archivos binarios
 		int status = crear_tabla(tabla,t_cons,cant_part,tiempo_comp);
 		if(status != 0){
 			res.mensaje="Error al crear la tabla";
 			res.resultado=ERROR;
+			return res;
 		}
 		res.mensaje="Tabla creada exitosamente";
 		res.resultado=OK;
@@ -307,10 +308,7 @@ resultado drop(char* tabla)
 
 resultado journal()
 {
-	if(existeMetadata("colores") == 0){
-		metadataTabla masd = obtenerMetadata("colores");
-		log_info(g_logger,masd.consistency);
-	}
+	compactar();
 	resultado res;
 	res.accionEjecutar = JOURNAL;
 	res.contenido = NULL;
