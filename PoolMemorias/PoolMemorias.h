@@ -90,7 +90,7 @@ typedef struct
 	Segmento* segmento;
 }NodoTablaPaginas;
 
-void iniciar_programa(char*);
+void iniciar_programa();
 
 void terminar_programa(void);
 void gestionarConexionALFS(void);

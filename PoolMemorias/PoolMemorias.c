@@ -2,7 +2,7 @@
 
 int main(int argc, char* argv[]) {
 
-	iniciar_programa(argv[1]);
+	iniciar_programa();
 	/*
 	pthread_t journalAutomatico;
 	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
@@ -11,8 +11,8 @@ int main(int argc, char* argv[]) {
 	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
 	*/
 
-	pthread_t conexionKernel;
-	pthread_create(&conexionKernel,NULL,(void*) escucharKernel,NULL);
+//	pthread_t conexionKernel;
+//	pthread_create(&conexionKernel,NULL,(void*) escucharKernel,NULL);
 
 	consola();
 
@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
 	//van a hacer falta mutex para la memoria
 	//pthread_join(journalAutomatico,NULL);
 	//pthread_join(gossipingAutomatico,NULL);
-	pthread_join(conexionKernel,NULL);
+	//pthread_join(conexionKernel,NULL);
 
 	terminar_programa();
 
@@ -149,7 +149,7 @@ void gossipingConRetardo(){
 	}
 }
 
-void iniciar_programa(char* path)
+void iniciar_programa()
 {
 
 
@@ -158,7 +158,7 @@ void iniciar_programa(char* path)
 	log_info(g_logger,"Inicio Aplicacion Pool Memorias");
 
 	//Inicio las configs
-	g_config = config_create(path);
+	g_config = config_create("PoolMemorias.config");
 	log_info(g_logger,"Configuraciones inicializadas");
 
 
@@ -313,7 +313,7 @@ int espacioLibre(){
 
 void almacenarRegistro(char *nombre_tabla,Registro registro, int posLibre){
 	Segmento *segmento;
-	if(!encuentraSegmento(nombre_tabla,segmento))
+	if(!encuentraSegmento(nombre_tabla,&segmento))
 		segmento = agregarSegmento(nombre_tabla);
 	agregarPagina(registro, segmento, posLibre, 0); //le paso cero como valorFlag porque solo la usamos en el select esta funcion
 }
@@ -459,6 +459,7 @@ void enviarInsert(void *element){ //ver los casos de error
 		resParser.accionEjecutar=INSERT;
 
 		contenidoInsert* cont = malloc(sizeof(contenidoInsert));
+		cont->nombreTabla = malloc(strlen(((NodoTablaPaginas*)element)->segmento->nombre_tabla)+1);
 		strcpy(cont->nombreTabla,((NodoTablaPaginas*)element)->segmento->nombre_tabla);
 		sleep(retardoMemoria/1000);
 		memcpy(&cont->key,&(memoria[indice+tamValue]),sizeof(int));
@@ -468,6 +469,7 @@ void enviarInsert(void *element){ //ver los casos de error
 
 		char* pi = serializarPaquete(&resParser, &size_to_send);
 		send(serverSocket, pi, size_to_send, 0);
+		free(cont->nombreTabla);
 		free(cont->value);
 		free(cont);
 
@@ -515,7 +517,6 @@ bool encuentraSegmento(char *ntabla,Segmento **segmento){ 	//Me dice si ya exist
 		return strcmp(((Segmento *)elemento)->nombre_tabla, ntabla)==0;
 	}
 
-	//Segmento* s=malloc(sizeof(Segmento));
 	Segmento* s;
 	if (list_is_empty(tabla_segmentos)){
 	//free(s);
@@ -530,7 +531,6 @@ bool encuentraSegmento(char *ntabla,Segmento **segmento){ 	//Me dice si ya exist
 		}
 		else{
 			memcpy(segmento,&s,sizeof(Segmento*));
-			//free(s);							//COMPARACION VALGRIND V1.1
 			return true;
 
 		}
@@ -707,9 +707,9 @@ void terminar_programa()
 	list_destroy_and_destroy_elements(tabla_segmentos, destroy_nodo_segmento);
 
 	//Liberar memoria
-	FILE *archivo = fopen ("archivoBinario.dat", "wb");
-	fwrite (memoria, 1, TAM_MEMORIA_PRINCIPAL, archivo);
-	fclose(archivo);
+	//FILE *archivo = fopen ("archivoBinario.dat", "wb");
+	//fwrite (memoria, 1, TAM_MEMORIA_PRINCIPAL, archivo);
+	//fclose(archivo);
 
 	free(memoria);
 
