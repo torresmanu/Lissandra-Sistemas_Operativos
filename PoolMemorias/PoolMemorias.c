@@ -508,6 +508,8 @@ void enviarInsert(void *element){ //ver los casos de error
 		free(cont->value);
 		free(cont);
 
+		((NodoTablaPaginas*)element)->pagina->flag_modificado = 0;
+
 		resultado res = recibir();
 
 	}
