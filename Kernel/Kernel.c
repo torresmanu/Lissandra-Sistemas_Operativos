@@ -75,6 +75,13 @@ void iniciar_programa(void)
 	pool = list_create();
 	tablas = list_create();
 
+	Tabla* colores = malloc(sizeof(Tabla));
+	colores->criterio = &sc;
+	char *auxc = "COLORES";
+	colores->nombre = strdup(auxc);
+
+	list_add(tablas,colores);
+
 	iniciarCriterios();
 
 }
@@ -109,7 +116,7 @@ void gestionarConexionAMemoria()
 
 	getaddrinfo(config_get_string_value(g_config, "IP_MEMORIA"), config_get_string_value(g_config, "PUERTO_MEMORIA"), &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
 
-	int memoriaSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+	memoriaSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 	int res = connect(memoriaSocket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
 
 	if(res == -1)
@@ -127,15 +134,15 @@ void gestionarConexionAMemoria()
 
 // Propias de Kernel
 
-void agregarScriptAEstado(Script* script, nombreEstado estado)  // Aca hace las comprobaciones si pueden
+void agregarScriptAEstado(void* elem, nombreEstado estado)  // Aca hace las comprobaciones si pueden
 {
 	switch(estado){
 		case NEW: {
-			queue_push(new, script);
+			queue_push(new, (resultadoParser*)elem);
 			break;
 		}
 		case READY: {
-			queue_push(ready,script);
+			queue_push(ready,(Script*)elem);
 			break;
 		}
 		case EXEC: {
@@ -150,7 +157,7 @@ void agregarScriptAEstado(Script* script, nombreEstado estado)  // Aca hace las 
 			break;
 		}
 		case EXIT: {
-			queue_push(exi,script);
+			queue_push(exi,(Script*)elem);
 			break;
 		}
 		default:
@@ -164,23 +171,26 @@ void leerConsola(){
 	while(1)
 	{
 		resultadoParser *aux = malloc(sizeof(resultadoParser));
-		Script* s = malloc(sizeof(Script));
+		//Script* s = malloc(sizeof(Script));
 
 		char* linea = readline(">");					// Leo stdin
-		add_history(linea);								// Para recordar el comando
+		if(linea)
+			add_history(linea);							// Para recordar el comando
 
 		resultadoParser res = parseConsole(linea);
-		memcpy(aux,&res,sizeof(res));
+		aux->accionEjecutar = res.accionEjecutar;
+		aux->contenido = res.contenido;
 
 		pthread_mutex_lock(&mNew);
-		s = crearScript(aux);
-		agregarScriptAEstado(s, NEW);
+		agregarScriptAEstado(&res, NEW);
 		pthread_mutex_unlock(&mNew);
 
 		sem_post(&sNuevo);
-		printf("\nFunciona\n");
+		printf("\nAgrego resParser con accion: %d a new\n",res.accionEjecutar);
 		if(res.accionEjecutar==SALIR_CONSOLA)
 			break;
+
+		free(linea);
 	}
 }
 
@@ -200,6 +210,7 @@ void planificadorLargoPlazo(){
 		agregarScriptAEstado(s,READY);
 		pthread_mutex_unlock(&mReady);
 
+		printf("Paso el script a ready, cant rq: %d",s->instrucciones->elements_count);
 		sem_post(&sListo);
 
 		if(r->accionEjecutar==SALIR_CONSOLA)
@@ -207,7 +218,6 @@ void planificadorLargoPlazo(){
 
 		free(r);
 	}
-	free(r);
 }
 
 void ejecutador(){
@@ -222,9 +232,13 @@ void ejecutador(){
 		if(deboSalir(s))//hay que ver cuando termina, buscar una mejor forma
 			return;
 
-		for(int i=0; i <= quantum ;i++){//ver caso en que falla, ejecutarS podria retornar un estado
+		printf("Entro a ejecutar\n");
+		for(int i=0; i <= quantum ;i++){ //ver caso en que falla, ejecutarS podria retornar un estado
+
 			if(!terminoScript(s)){
+
 				e = ejecutarScript(s);
+
 				if(e == REQUEST_ERROR)
 				{
 					mandarAexit(s);
@@ -233,6 +247,7 @@ void ejecutador(){
 			} else {
 				break;
 			}
+
 		}
 
 		if(!terminoScript(s))
@@ -288,8 +303,8 @@ void gossiping(Memoria *mem){
 ////////////////////////////////////////////////////
 
 //Agrego la memoria en la lista de memorias del criterio
-void add(Memoria *memoria,Criterio cons){
-
+void add(Memoria *memoria,Criterio cons)
+{
 	list_add(cons.memorias,memoria);
 }
 

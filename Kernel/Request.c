@@ -22,10 +22,16 @@ Script* run(char* path){
 }
 
 resultadoParser leerRequest(FILE* fd){
-	char linea[MAX_BUFFER];
+	char* linea=malloc(1); //VER BIEN ESTO IMPORTANTE
+	size_t tamanioLeido;
+
 	resultadoParser r;
-	fgets(linea,sizeof(linea),fd); // fgets lee hasta el salto de linea
+	getline(&linea,&tamanioLeido,fd);//realoca linea y pone el tamaño leido
+	printf("Tamaño linea Rq: %d\n",tamanioLeido);
+
 	r = parseConsole(linea);
+
+	free(linea);
 	return r;
 }
 
@@ -39,23 +45,26 @@ resultadoParser leerLineaSQL(char* mensaje)
 
 Script* parsearScript(FILE* fd){
 	Script* script = malloc(sizeof(Script));
-	//script->instrucciones = (resultadoParser*) list_create();
-	script->instrucciones = list_create(); 		//No se castea el resultadoParser?
-	script->pc=0; 								//Se modifica en ejecución
+	script->instrucciones = list_create();
+	script->pc=0;
 
 	while(!feof(fd)){
-		resultadoParser *req = malloc(sizeof(resultadoParser));
+		resultadoParser* req = malloc(sizeof(resultadoParser));
+
 		resultadoParser aux = leerRequest(fd);
-		memcpy(req,&aux,sizeof(aux));
+
+		req->accionEjecutar = aux.accionEjecutar;
+		req->contenido = aux.contenido;
+
 		list_add(script->instrucciones,req);
 	}
-	printf("Script prepara3\n");
+	printf("Script preparado, cantidad instrucciones: %d\n",script->instrucciones->elements_count);
 	return script;
 }
 
 
 Script* crearScript(resultadoParser* r){
-	Script* s = malloc(sizeof(Script));
+	Script* s;
 	if(r->accionEjecutar==RUN)
 	{
 		char* path;
@@ -64,9 +73,12 @@ Script* crearScript(resultadoParser* r){
 	}
 	else
 	{
+		s = malloc(sizeof(Script));
+
 		s->instrucciones = list_create();
 		s->pc = 0;
 		list_add(s->instrucciones,r);
+		printf("Arme el script de una linea\n");
 	}
 	return s;
 }
@@ -78,6 +90,7 @@ bool terminoScript(Script *s){
 
 status ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio);
+	printf("Elegi mem: \n",mem->id);
 	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
 	return resultado;										// la memoria. enviarRequest está sin implementar, usa sockets.
 }
@@ -88,6 +101,7 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	resultado res;
 	int size;
 
+	printf("Hola\n");
 	char* msg = serializarPaquete(request,&size);
 	send(memoriaSocket, msg, size, 0);
 	int resultadoMemoria = recibirYDeserializarRespuesta(memoriaSocket,&res);
@@ -101,17 +115,28 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 }
 
 status ejecutarScript(Script *s){
+	printf("Entro a ejecutarScript\n");
+
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
 	status estado = ejecutarRequest(r);
+
 	(s->pc)++;
 	return estado;
 }
 
 status ejecutarRequest(resultadoParser *r){
+	printf("Entro a ejecutarRequest\n");
+	printf("Accion:%i\n",r->accionEjecutar);
+
 	if(usaTabla(r)){
 		Tabla* tabla = obtenerTabla(r);
-		if(tabla != NULL)
+		printf("UsoTabla %s\n",tabla->nombre);
+
+		if(tabla != NULL){
+			printf("Voy a ejecutar\n");
+			printf("Criterio:%d\n",(tabla->criterio)->tipo);
 			return ejecutar(tabla->criterio,r);
+		}
 		else
 			return REQUEST_ERROR; 											// HACER UN ENUM
 	}
@@ -185,10 +210,10 @@ Tabla* obtenerTabla(resultadoParser* r){
 }
 
 Tabla* buscarTabla(char* nom)
-{
+{	printf("Entre a buscarTabla\n");
 	bool coincideNombre(void* element)					//Subfunción de busqueda
 	{
-		return strcmp(nom,((Tabla*)element)->nombre);
+		return strcmp(nom,((Tabla*)element)->nombre) == 0;
 	}
 
 	return (Tabla*)list_find(tablas,coincideNombre);
