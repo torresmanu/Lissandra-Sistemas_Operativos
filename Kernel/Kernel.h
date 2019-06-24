@@ -21,8 +21,6 @@
 #include "Estados.h"
 #include "Request.h"
 
-t_log* g_logger;
-t_config* g_config;
 char* IP;
 char* PUERTO;
 

@@ -275,37 +275,14 @@ void mandarAexit(Script *s){
 	pthread_mutex_unlock(&mExit);
 }
 
-//////////////////////////////////////////////////////////
-// Criterios y memorias
-
-void obtenerMemorias(){
-	Memoria *mem;
-	int ip = config_get_int_value(g_config,"MEMORIA");
-	mem->ipMemoria = ip;
-	gossiping(mem);//meto en pool la lista de memorias encontradas
-
-}
-
-// HARDCODEADO SOLO COMO PARA EJEMPLO.	////////////////////
-void gossiping(Memoria *mem){
-	Memoria *m1 = malloc(sizeof(Memoria));
-	//m1->idMemoria = 1;
-	list_add(pool,m1);
-
-	Memoria *m2 = malloc(sizeof(Memoria));
-	//m2->idMemoria = 2;
-	list_add(pool,m2);
-
-	Memoria *m3 = malloc(sizeof(Memoria));
-	//m3->idMemoria = 3;
-	list_add(pool,m3);
-}
 ////////////////////////////////////////////////////
 
 //Agrego la memoria en la lista de memorias del criterio
 void add(Memoria *memoria,Criterio cons)
 {
 	list_add(cons.memorias,memoria);
+	log_info(g_logger,"Agrege memoria");
+
 }
 
 

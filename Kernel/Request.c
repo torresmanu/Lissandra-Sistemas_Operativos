@@ -150,10 +150,16 @@ status ejecutarRequest(resultadoParser *r){
 				break;
 			case ADD:
 			{
-				Memoria* mem = malloc(sizeof(Memoria));
-				mem->ipMemoria = ((contenidoAdd *)(r->contenido))->numMem;
-				Criterio cons = toConsistencia(((contenidoAdd *)(r->contenido))->criterio);
+				contenidoAdd* contenido = (contenidoAdd *)(r->contenido);
+
+				Memoria *mem = buscarMemoria(contenido->numMem);
+
+				if(mem==NULL)
+					return REQUEST_ERROR;
+
+				Criterio cons = toConsistencia(contenido->criterio);
 				add(mem,cons);
+
 				break;
 			}
 			default:

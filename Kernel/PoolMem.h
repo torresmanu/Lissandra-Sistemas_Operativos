@@ -9,8 +9,13 @@
 #define POOLMEM_H_
 
 #include <commons/collections/list.h>
+#include <commons/log.h>
 #include <commons/config.h>
 #include <stdlib.h>
+
+//las puse aca para que no me rompa, buscar un lugar mejor
+t_log* g_logger;
+t_config* g_config;
 
 typedef struct{
 	char* ipMemoria;
@@ -22,7 +27,9 @@ typedef struct{
 t_list *pool;
 
 // MANEJO DE MEMORIAS
+void obtenerMemorias();
+void gossiping(Memoria *mem);
 Memoria obtenerMemoria(t_config* config);
-
+Memoria *buscarMemoria(int numero);
 
 #endif /* POOLMEM_H_ */

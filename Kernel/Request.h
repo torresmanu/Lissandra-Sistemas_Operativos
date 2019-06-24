@@ -14,6 +14,7 @@
 #include <commons/parser.h>
 #include "Estados.h"
 #include "Criterio.h"
+#include <commons/serializacion.h>
 
 //Sockets
 #include <sys/types.h>
