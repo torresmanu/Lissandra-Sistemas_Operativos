@@ -78,6 +78,7 @@ bool terminoScript(Script *s){
 
 status ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio);
+	printf("chau\n");
 	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
 	return resultado;										// la memoria. enviarRequest está sin implementar, usa sockets.
 }
@@ -88,6 +89,7 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	resultado res;
 	int size;
 
+	printf("Hola\n");
 	char* msg = serializarPaquete(request,&size);
 	send(memoriaSocket, msg, size, 0);
 	int resultadoMemoria = recibirYDeserializarRespuesta(memoriaSocket,&res);
@@ -101,6 +103,7 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 }
 
 status ejecutarScript(Script *s){
+	printf("Entro a ejecutarScript\n");
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
 	status estado = ejecutarRequest(r);
 	(s->pc)++;
@@ -108,10 +111,16 @@ status ejecutarScript(Script *s){
 }
 
 status ejecutarRequest(resultadoParser *r){
+	printf("Entro a ejecutarRequest\n");
+	printf("Accion:%i\n",r->accionEjecutar);
 	if(usaTabla(r)){
+		printf("UsoTabla\n");
 		Tabla* tabla = obtenerTabla(r);
-		if(tabla != NULL)
+		if(tabla != NULL){
+			printf("Voy a ejecutar\n");
+			printf("Criterio:%s",(char*)(tabla->criterio)->tipo);
 			return ejecutar(tabla->criterio,r);
+		}
 		else
 			return REQUEST_ERROR; 											// HACER UN ENUM
 	}
@@ -185,10 +194,10 @@ Tabla* obtenerTabla(resultadoParser* r){
 }
 
 Tabla* buscarTabla(char* nom)
-{
+{	printf("Entre a buscarTabla\n");
 	bool coincideNombre(void* element)					//Subfunción de busqueda
 	{
-		return strcmp(nom,((Tabla*)element)->nombre);
+		return strcmp(nom,((Tabla*)element)->nombre) == 0;
 	}
 
 	return (Tabla*)list_find(tablas,coincideNombre);

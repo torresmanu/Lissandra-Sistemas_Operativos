@@ -23,5 +23,7 @@ void iniciarEstados();
 void finalizarEstados();
 void liberarScript(void*);
 void liberarRequest(void*);
+void agregarScriptAEstado(void*, nombreEstado);
+
 
 #endif /* ESTADOS_H_ */

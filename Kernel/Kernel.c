@@ -39,7 +39,7 @@ int main(void) {
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
 
 	//obtenerMemorias();
-	//gestionarConexionAMemoria();
+	gestionarConexionAMemoria();
 	leerConsola();										/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
 	pthread_join(plp,NULL);
@@ -74,6 +74,13 @@ void iniciar_programa(void)
 
 	pool = list_create();
 	tablas = list_create();
+
+	Tabla* colores = malloc(sizeof(Tabla));
+	colores->criterio = &sc;
+	char *auxc = "COLORES";
+	colores->nombre = strdup(auxc);
+
+	list_add(tablas,colores);
 
 	iniciarCriterios();
 
@@ -127,15 +134,15 @@ void gestionarConexionAMemoria()
 
 // Propias de Kernel
 
-void agregarScriptAEstado(Script* script, nombreEstado estado)  // Aca hace las comprobaciones si pueden
+void agregarScriptAEstado(void* elem, nombreEstado estado)  // Aca hace las comprobaciones si pueden
 {
 	switch(estado){
 		case NEW: {
-			queue_push(new, script);
+			queue_push(new, (resultadoParser*)elem);
 			break;
 		}
 		case READY: {
-			queue_push(ready,script);
+			queue_push(ready,(Script*)elem);
 			break;
 		}
 		case EXEC: {
@@ -150,7 +157,7 @@ void agregarScriptAEstado(Script* script, nombreEstado estado)  // Aca hace las 
 			break;
 		}
 		case EXIT: {
-			queue_push(exi,script);
+			queue_push(exi,(Script*)elem);
 			break;
 		}
 		default:
@@ -164,7 +171,7 @@ void leerConsola(){
 	while(1)
 	{
 		resultadoParser *aux = malloc(sizeof(resultadoParser));
-		Script* s = malloc(sizeof(Script));
+		//Script* s = malloc(sizeof(Script));
 
 		char* linea = readline(">");					// Leo stdin
 		add_history(linea);								// Para recordar el comando
@@ -173,14 +180,16 @@ void leerConsola(){
 		memcpy(aux,&res,sizeof(res));
 
 		pthread_mutex_lock(&mNew);
-		s = crearScript(aux);
-		agregarScriptAEstado(s, NEW);
+		//s = crearScript(aux);
+		agregarScriptAEstado(&res, NEW);
 		pthread_mutex_unlock(&mNew);
 
 		sem_post(&sNuevo);
 		printf("\nFunciona\n");
 		if(res.accionEjecutar==SALIR_CONSOLA)
 			break;
+
+		free(linea);
 	}
 }
 
@@ -207,7 +216,6 @@ void planificadorLargoPlazo(){
 
 		free(r);
 	}
-	free(r);
 }
 
 void ejecutador(){
@@ -221,8 +229,8 @@ void ejecutador(){
 
 		if(deboSalir(s))//hay que ver cuando termina, buscar una mejor forma
 			return;
-
-		for(int i=0; i <= quantum ;i++){//ver caso en que falla, ejecutarS podria retornar un estado
+		printf("Entro a ejecutar\n");
+		for(int i=0; i <= quantum ;i++){ //ver caso en que falla, ejecutarS podria retornar un estado
 			if(!terminoScript(s)){
 				e = ejecutarScript(s);
 				if(e == REQUEST_ERROR)
@@ -288,8 +296,8 @@ void gossiping(Memoria *mem){
 ////////////////////////////////////////////////////
 
 //Agrego la memoria en la lista de memorias del criterio
-void add(Memoria *memoria,Criterio cons){
-
+void add(Memoria *memoria,Criterio cons)
+{
 	list_add(cons.memorias,memoria);
 }
 
