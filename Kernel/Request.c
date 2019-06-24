@@ -118,6 +118,7 @@ status ejecutarScript(Script *s){
 	printf("Entro a ejecutarScript\n");
 
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
+	printf("Accion:%d\n",(int)r->accionEjecutar);
 	status estado = ejecutarRequest(r);
 
 	(s->pc)++;
@@ -126,7 +127,7 @@ status ejecutarScript(Script *s){
 
 status ejecutarRequest(resultadoParser *r){
 	printf("Entro a ejecutarRequest\n");
-	printf("Accion:%i\n",r->accionEjecutar);
+	printf("Accion:%d\n",(int)r->accionEjecutar);
 
 	if(usaTabla(r)){
 		Tabla* tabla = obtenerTabla(r);

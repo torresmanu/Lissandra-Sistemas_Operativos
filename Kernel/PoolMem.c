@@ -8,15 +8,21 @@
 #include "PoolMem.h"
 
 void obtenerMemorias(){
-	Memoria *mem;
+	Memoria *mem = malloc(sizeof(Memoria));
+	mem->id = 0;
 	char* ip = config_get_string_value(g_config,"IP_MEMORIA");
 	mem->ipMemoria = strdup(ip);
+	char* puerto = config_get_string_value(g_config,"IP_MEMORIA");
+	mem->puerto = strdup(puerto);
+
 	gossiping(mem);//meto en pool la lista de memorias encontradas
 
 }
 
 // HARDCODEADO SOLO COMO PARA EJEMPLO.	////////////////////
 void gossiping(Memoria *mem){
+	list_add(pool,mem);
+
 	Memoria *m1 = malloc(sizeof(Memoria));
 	m1->id = 1;
 

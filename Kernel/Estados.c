@@ -25,7 +25,7 @@ void liberarScript(void* elem){
 }
 
 void finalizarEstados(){
-	queue_clean_and_destroy_elements(new,liberarScript);
+	queue_clean_and_destroy_elements(new,liberarRequest);
 	queue_clean_and_destroy_elements(ready,liberarScript);
 	queue_clean_and_destroy_elements(exec,liberarScript);
 	queue_clean_and_destroy_elements(exi,liberarScript);

@@ -29,6 +29,8 @@ void liberarCriterios(){
 
 void destroy_nodo_memoria(void * elem){
 	Memoria* nodo_tabla_elem = (Memoria *) elem;
+	free(nodo_tabla_elem->ipMemoria);
+	free(nodo_tabla_elem->puerto);
 	free(nodo_tabla_elem);
 }
 

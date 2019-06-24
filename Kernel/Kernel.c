@@ -50,6 +50,8 @@ int main(void) {
 	}
 
 	terminar_programa();
+
+	printf("termine programa\n");
 	return 0;
 }
 
@@ -83,6 +85,8 @@ void iniciar_programa(void)
 	list_add(tablas,colores);
 
 	iniciarCriterios();
+
+	obtenerMemorias();
 
 }
 
@@ -170,24 +174,25 @@ void leerConsola(){
 	printf("\nBienvenido! Welcome! Youkoso!\n");
 	while(1)
 	{
-		resultadoParser *aux = malloc(sizeof(resultadoParser));
+		resultadoParser *res = malloc(sizeof(resultadoParser));
 		//Script* s = malloc(sizeof(Script));
 
 		char* linea = readline(">");					// Leo stdin
 		if(linea)
 			add_history(linea);							// Para recordar el comando
 
-		resultadoParser res = parseConsole(linea);
-		aux->accionEjecutar = res.accionEjecutar;
-		aux->contenido = res.contenido;
+		resultadoParser aux = parseConsole(linea);
+		res->accionEjecutar = aux.accionEjecutar;
+		res->contenido = aux.contenido;
 
 		pthread_mutex_lock(&mNew);
-		agregarScriptAEstado(&res, NEW);
+		agregarScriptAEstado(res, NEW);
 		pthread_mutex_unlock(&mNew);
 
+		printf("\nAgrego resParser con accion: %d a new\n",res->accionEjecutar);
+
 		sem_post(&sNuevo);
-		printf("\nAgrego resParser con accion: %d a new\n",res.accionEjecutar);
-		if(res.accionEjecutar==SALIR_CONSOLA)
+		if(res->accionEjecutar==SALIR_CONSOLA)
 			break;
 
 		free(linea);
@@ -200,9 +205,14 @@ void planificadorLargoPlazo(){
 	while(1){
 		sem_wait(&sNuevo);
 
+		printf("entre al plp\n");
+
 		pthread_mutex_lock(&mNew);
 		r = queue_pop(new);
 		pthread_mutex_unlock(&mNew);
+
+		printf("PLP accion rq: %d\n",r->accionEjecutar);
+
 
 		Script *s = crearScript(r);
 
@@ -210,12 +220,14 @@ void planificadorLargoPlazo(){
 		agregarScriptAEstado(s,READY);
 		pthread_mutex_unlock(&mReady);
 
-		printf("Paso el script a ready, cant rq: %d",s->instrucciones->elements_count);
+		printf("Paso el script a ready, cant rq: %d\n",s->instrucciones->elements_count);
+
 		sem_post(&sListo);
 
 		if(r->accionEjecutar==SALIR_CONSOLA)
 			break;
 
+		free(r->contenido);
 		free(r);
 	}
 }
@@ -225,6 +237,8 @@ void ejecutador(){
 	while(1){
 		sem_wait(&sListo);
 
+		printf("Entro a ejecutar\n");
+
 		pthread_mutex_lock(&mReady);
 		Script *s = queue_pop(ready);
 		pthread_mutex_unlock(&mReady);
@@ -232,7 +246,7 @@ void ejecutador(){
 		if(deboSalir(s))//hay que ver cuando termina, buscar una mejor forma
 			return;
 
-		printf("Entro a ejecutar\n");
+
 		for(int i=0; i <= quantum ;i++){ //ver caso en que falla, ejecutarS podria retornar un estado
 
 			if(!terminoScript(s)){
