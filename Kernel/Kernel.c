@@ -39,7 +39,7 @@ int main(void) {
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
 
 	//obtenerMemorias();
-	gestionarConexionAMemoria();
+	//gestionarConexionAMemoria();
 	leerConsola();										/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
 	pthread_join(plp,NULL);
@@ -116,7 +116,7 @@ void gestionarConexionAMemoria()
 
 	getaddrinfo(config_get_string_value(g_config, "IP_MEMORIA"), config_get_string_value(g_config, "PUERTO_MEMORIA"), &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
 
-	int memoriaSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+	memoriaSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 	int res = connect(memoriaSocket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
 
 	if(res == -1)
@@ -174,18 +174,19 @@ void leerConsola(){
 		//Script* s = malloc(sizeof(Script));
 
 		char* linea = readline(">");					// Leo stdin
-		add_history(linea);								// Para recordar el comando
+		if(linea)
+			add_history(linea);							// Para recordar el comando
 
 		resultadoParser res = parseConsole(linea);
-		memcpy(aux,&res,sizeof(res));
+		aux->accionEjecutar = res.accionEjecutar;
+		aux->contenido = res.contenido;
 
 		pthread_mutex_lock(&mNew);
-		//s = crearScript(aux);
 		agregarScriptAEstado(&res, NEW);
 		pthread_mutex_unlock(&mNew);
 
 		sem_post(&sNuevo);
-		printf("\nFunciona\n");
+		printf("\nAgrego resParser con accion: %d a new\n",res.accionEjecutar);
 		if(res.accionEjecutar==SALIR_CONSOLA)
 			break;
 
@@ -209,6 +210,7 @@ void planificadorLargoPlazo(){
 		agregarScriptAEstado(s,READY);
 		pthread_mutex_unlock(&mReady);
 
+		printf("Paso el script a ready, cant rq: %d",s->instrucciones->elements_count);
 		sem_post(&sListo);
 
 		if(r->accionEjecutar==SALIR_CONSOLA)
@@ -229,10 +231,14 @@ void ejecutador(){
 
 		if(deboSalir(s))//hay que ver cuando termina, buscar una mejor forma
 			return;
+
 		printf("Entro a ejecutar\n");
 		for(int i=0; i <= quantum ;i++){ //ver caso en que falla, ejecutarS podria retornar un estado
+
 			if(!terminoScript(s)){
+
 				e = ejecutarScript(s);
+
 				if(e == REQUEST_ERROR)
 				{
 					mandarAexit(s);
@@ -241,6 +247,7 @@ void ejecutador(){
 			} else {
 				break;
 			}
+
 		}
 
 		if(!terminoScript(s))

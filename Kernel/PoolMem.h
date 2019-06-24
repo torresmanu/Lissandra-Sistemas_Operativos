@@ -15,6 +15,7 @@
 typedef struct{
 	char* ipMemoria;
 	char* puerto;
+	int id;
 }Memoria;
 
 // Pool de Memorias
