@@ -107,6 +107,7 @@ Registro* pedirAlLFS(char* nombre_tabla, int key);
 resultado mandarALFS(resultadoParser resParser);
 resultado recibir();
 int espacioLibre();
+void handshake();
 void almacenarRegistro(char *nombre_tabla,Registro registro, int posLibre);
 Segmento *agregarSegmento(char *nombre_tabla);
 void agregarPagina(Registro registro, Segmento *segmento, int posLibre, int valorFlag);

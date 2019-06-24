@@ -3,13 +3,13 @@
 int main(int argc, char* argv[]) {
 
 	iniciar_programa();
-	/*
-	pthread_t journalAutomatico;
-	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
 
-	pthread_t gossipingAutomatico;
-	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
-	*/
+//	pthread_t journalAutomatico;
+//	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
+
+//	pthread_t gossipingAutomatico;
+//	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
+
 
 //	pthread_t conexionKernel;
 //	pthread_create(&conexionKernel,NULL,(void*) escucharKernel,NULL);
@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
 
 	//ver si esta bien que este aca
 	//van a hacer falta mutex para la memoria
-	//pthread_join(journalAutomatico,NULL);
+//	pthread_join(journalAutomatico,NULL);
 	//pthread_join(gossipingAutomatico,NULL);
 	//pthread_join(conexionKernel,NULL);
 
@@ -172,8 +172,8 @@ void iniciar_programa()
 
 
 	//hacer handshake con LFS y obtener tamaño de mem ppl y value
-	//tamValue = handshake();
-	tamValue=20;
+	handshake();
+//	tamValue=20;
 
 	retardoJournaling = config_get_int_value(g_config,"RETARDO_JOURNAL");
 	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
@@ -199,6 +199,41 @@ void iniciar_programa()
 
 
 }
+
+void handshake(){
+
+	resultadoParser resParser;
+	resParser.accionEjecutar = HANDSHAKE;
+
+
+	int size_to_send;
+
+	char* pi = serializarPaquete(&resParser, &size_to_send);
+	send(serverSocket, pi, size_to_send, 0);
+
+	accion acc;
+	char* buffer = malloc(sizeof(int));
+	int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
+	memcpy(&acc, buffer, sizeof(int));
+	if(valueResponse < 0) {
+		log_info(g_logger,"Error al recibir los datos del handshake");
+	} else {
+		resultado res;
+		res.accionEjecutar = acc;
+		int status = recibirYDeserializarRespuesta(serverSocket, &res);
+		if(status<0) {
+			log_info(g_logger,"Error");
+		} else {
+			log_info(g_logger,"Recibi la respuesta del HANDSHAKE");
+			log_info(g_logger,"El tamaño del value es: %i", ((resultadoHandshake*)(res.contenido))->tamanioValue);
+			tamValue=((resultadoHandshake*)(res.contenido))->tamanioValue;
+
+		}
+	}
+	free(buffer);
+
+}
+
 
 void actualizarTablaGlobal(int nPagina){
 	bool mismoNumero(void* elem){
@@ -462,7 +497,7 @@ void enviarInsert(void *element){ //ver los casos de error
 		cont->nombreTabla = malloc(strlen(((NodoTablaPaginas*)element)->segmento->nombre_tabla)+1);
 		strcpy(cont->nombreTabla,((NodoTablaPaginas*)element)->segmento->nombre_tabla);
 		sleep(retardoMemoria/1000);
-		memcpy(&cont->key,&(memoria[indice+tamValue]),sizeof(int));
+		memcpy(&cont->key,&(memoria[(indice*offset)+tamValue]),sizeof(int));
 		cont->value = strdup(&memoria[indice*offset]);
 		memcpy(&cont->timestamp,&(memoria[(indice*offset)+tamValue+sizeof(int)]),sizeof(long));
 		resParser.contenido=cont;
@@ -852,30 +887,31 @@ resultado parsear_mensaje(resultadoParser* resParser)
 			res.mensaje = NULL;
 			break;
 		}
-		case HANDSHAKE:
-		{
-			char* pi = serializarPaquete(&resParser, &size_to_send);
-			send(serverSocket, pi, size_to_send, 0);
-
-			accion acc;
-			char* buffer = malloc(sizeof(int));
-			int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
-			memcpy(&acc, buffer, sizeof(int));
-			if(valueResponse < 0) {
-				printf("Error al recibir los datos\n");
-			} else {
-				resultado res;
-				res.accionEjecutar = acc;
-				int status = recibirYDeserializarRespuesta(serverSocket, &res);
-				if(status<0) {
-					printf("Error\n");
-				} else {
-					printf("Recibi la respuesta del HANDSHAKE\n");
-					printf("El tamaño del value es: %i\n", ((resultadoHandshake*)(res.contenido))->tamanioValue);
-				}
-			}
-			break;
-		}
+//		case HANDSHAKE:
+//		{
+//			char* pi = serializarPaquete(&resParser, &size_to_send);
+//			send(serverSocket, pi, size_to_send, 0);
+//
+//			accion acc;
+//			char* buffer = malloc(sizeof(int));
+//			int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
+//			memcpy(&acc, buffer, sizeof(int));
+//			if(valueResponse < 0) {
+//				printf("Error al recibir los datos\n");
+//			} else {
+//				resultado res;
+//				res.accionEjecutar = acc;
+//				int status = recibirYDeserializarRespuesta(serverSocket, &res);
+//				if(status<0) {
+//					printf("Error\n");
+//				} else {
+//					printf("Recibi la respuesta del HANDSHAKE\n");
+//					printf("El tamaño del value es: %i\n", ((resultadoHandshake*)(res.contenido))->tamanioValue);
+//				}
+//			}
+//			free(buffer);
+//			break;
+//		}
 		default:
 		{
 			res.resultado = SALIR;
