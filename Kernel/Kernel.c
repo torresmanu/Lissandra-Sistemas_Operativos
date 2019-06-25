@@ -182,8 +182,7 @@ void leerConsola(){
 			add_history(linea);							// Para recordar el comando
 
 		resultadoParser aux = parseConsole(linea);
-		res->accionEjecutar = aux.accionEjecutar;
-		res->contenido = aux.contenido;
+		memcpy(res,&aux,sizeof(resultadoParser));
 
 		pthread_mutex_lock(&mNew);
 		agregarScriptAEstado(res, NEW);
@@ -205,14 +204,11 @@ void planificadorLargoPlazo(){
 	while(1){
 		sem_wait(&sNuevo);
 
-		printf("entre al plp\n");
+		printf("Entre al plp\n");
 
 		pthread_mutex_lock(&mNew);
 		r = queue_pop(new);
 		pthread_mutex_unlock(&mNew);
-
-		printf("PLP accion rq: %d\n",r->accionEjecutar);
-
 
 		Script *s = crearScript(r);
 
@@ -227,8 +223,6 @@ void planificadorLargoPlazo(){
 		if(r->accionEjecutar==SALIR_CONSOLA)
 			break;
 
-		free(r->contenido);
-		free(r);
 	}
 }
 
@@ -236,7 +230,6 @@ void ejecutador(){
 	status e;
 	while(1){
 		sem_wait(&sListo);
-
 		printf("Entro a ejecutar\n");
 
 		pthread_mutex_lock(&mReady);
@@ -250,7 +243,7 @@ void ejecutador(){
 		for(int i=0; i <= quantum ;i++){ //ver caso en que falla, ejecutarS podria retornar un estado
 
 			if(!terminoScript(s)){
-
+				printf("Voy a ejecutar un script con %d request\n",s->instrucciones->elements_count);
 				e = ejecutarScript(s);
 
 				if(e == REQUEST_ERROR)
@@ -295,7 +288,7 @@ void mandarAexit(Script *s){
 void add(Memoria *memoria,Criterio cons)
 {
 	list_add(cons.memorias,memoria);
-	log_info(g_logger,"Agrege memoria");
+	log_info(g_logger,"Agrege memoria n°:%d al criterio %d",memoria->id,cons.tipo);
 
 }
 

@@ -70,6 +70,8 @@ Script* crearScript(resultadoParser* r){
 		char* path;
 		path = ((contenidoRun*) r->contenido)->path;
 		s = run(path);
+		free(path);
+		free(r->contenido);
 	}
 	else
 	{
@@ -78,7 +80,6 @@ Script* crearScript(resultadoParser* r){
 		s->instrucciones = list_create();
 		s->pc = 0;
 		list_add(s->instrucciones,r);
-		printf("Arme el script de una linea\n");
 	}
 	return s;
 }
@@ -118,7 +119,9 @@ status ejecutarScript(Script *s){
 	printf("Entro a ejecutarScript\n");
 
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
-	printf("Accion:%d\n",(int)r->accionEjecutar);
+	printf("PC:%d\n",s->pc);
+	printf("Accion:%d\n",r->accionEjecutar);
+
 	status estado = ejecutarRequest(r);
 
 	(s->pc)++;
@@ -126,8 +129,6 @@ status ejecutarScript(Script *s){
 }
 
 status ejecutarRequest(resultadoParser *r){
-	printf("Entro a ejecutarRequest\n");
-	printf("Accion:%d\n",(int)r->accionEjecutar);
 
 	if(usaTabla(r)){
 		Tabla* tabla = obtenerTabla(r);
