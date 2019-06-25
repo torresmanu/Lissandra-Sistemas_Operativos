@@ -39,13 +39,6 @@ int posLibres;
 #define NOMBRE_TABLA 7
 #define PACKAGESIZE 1024
 
-//typedef struct
-//{
-//	char value[TAM_VALUE];
-//	int key;
-//	long timestamp;
-//} Registro;
-
 typedef struct
 {
 	char* value;
@@ -54,7 +47,6 @@ typedef struct
 } Registro;
 
 char* memoria;
-//Registro* memoria;
 int* bitmap;
 int cantidadFrames;
 int serverSocket;
@@ -64,6 +56,8 @@ int retardoJournaling;
 int retardoGossiping;
 int retardoMemoria;
 int offset;
+bool ejecutando;
+bool estaHaciendoJournal;
 
 
 typedef struct
@@ -81,8 +75,6 @@ typedef struct
 	t_list* puntero_tpaginas;
 
 } Segmento;
-
-
 
 typedef struct
 {
@@ -123,8 +115,8 @@ void journalConRetardo();
 void gossipingConRetardo();
 void consola();
 void enviarInsert(void *element);
-resultado insert(char *nombre_tabla,int key,char *value);
-void actualizarRegistro(Pagina *pagina,char *value);
+resultado insert(char *nombre_tabla,int key,char *value,long timestamp);
+void actualizarRegistro(Pagina *pagina,char *value,long timestamp);
 resultado parsear_mensaje(resultadoParser*);
 
 void escucharKernel();
@@ -144,15 +136,5 @@ void drop(char* nombre_tabla);
 char* PUERTO_M;
 char* PUERTO;
 char* IP_M;
-
-/*
-void gestionarConexionEntrante();
-int iniciarServidor();
-int esperarCliente(int listenningSocket);
-void* recibir_mensaje(int socketCliente);
-int iniciarCliente();
-int gestionarConexionSaliente();
-int enviar_mensaje(int socket_cliente, char *buffer);
-*/
 
 #endif /* POOLMEMORIAS_H_ */

@@ -4,23 +4,23 @@ int main(int argc, char* argv[]) {
 
 	iniciar_programa();
 
-//	pthread_t journalAutomatico;
-//	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
+	pthread_t journalAutomatico;
+	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
 
 //	pthread_t gossipingAutomatico;
 //	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
 
 
-	pthread_t conexionKernel;
-	pthread_create(&conexionKernel,NULL,(void*) escucharKernel,NULL);
+//	pthread_t conexionKernel;
+//	pthread_create(&conexionKernel,NULL,(void*) escucharKernel,NULL);
 
 	consola();
 
 	//ver si esta bien que este aca
 	//van a hacer falta mutex para la memoria
-//	pthread_join(journalAutomatico,NULL);
+	pthread_join(journalAutomatico,NULL);
 	//pthread_join(gossipingAutomatico,NULL);
-	pthread_join(conexionKernel,NULL);
+//	pthread_join(conexionKernel,NULL);
 
 	terminar_programa();
 
@@ -35,7 +35,12 @@ void escucharKernel(){
 
 	while(res.resultado!=SALIR){
 		resultadoParser resParser = recibirRequest(conexion_cliente);
-		res = parsear_mensaje(&resParser);
+		if(estaHaciendoJournal){
+			res.resultado=EnJOURNAL;
+			res.mensaje = NULL;
+		}
+		else
+			res = parsear_mensaje(&resParser);
 
 		if(res.resultado == OK)
 		{
@@ -50,7 +55,10 @@ void escucharKernel(){
 		{
 			log_info(g_logger,"Mensaje incorrecto");
 		}
-		//atender_clientes();
+		else if(res.resultado == EnJOURNAL)
+		{
+			log_info(g_logger,"Se esta haciendo Journaling, ingrese la request mas tarde");
+		}
 
 		avisarResultado(res,conexion_cliente);
 
@@ -137,14 +145,14 @@ int conectarAlKernel(int conexion_servidor){
 }
 
 void journalConRetardo(){
-	while(1){
+	while(ejecutando){
 		sleep(retardoJournaling/1000);
 		journal();
 	}
 }
 
 void gossipingConRetardo(){
-	while(1){
+	while(ejecutando){
 		sleep(retardoGossiping/1000);
 		//gossiping();
 	}
@@ -152,7 +160,7 @@ void gossipingConRetardo(){
 
 void iniciar_programa()
 {
-
+	ejecutando = true;
 
 	//Inicio el logger
 	g_logger = log_create("PoolMemorias.log", "MEM", 1, LOG_LEVEL_INFO);
@@ -441,7 +449,12 @@ void consola(){
 			add_history(mensaje);
 
 		resultadoParser resParser = parseConsole(mensaje);
-		res = parsear_mensaje(&resParser);
+		if(estaHaciendoJournal){
+			res.resultado=EnJOURNAL;
+			res.mensaje = NULL;
+		}
+		else
+			res = parsear_mensaje(&resParser);
 
 		if(res.resultado == OK)
 		{
@@ -456,12 +469,15 @@ void consola(){
 		{
 			log_info(g_logger,"Mensaje incorrecto");
 		}
-		//atender_clientes();
+		else if(res.resultado == EnJOURNAL)
+		{
+			log_info(g_logger,"Se esta haciendo Journaling, ingrese la request mas tarde");
+		}
 		if(res.mensaje!=NULL)
 			free(res.mensaje);
 		free(mensaje);
 	}
-
+	ejecutando = false;
 }
 
 void removerPagina(NodoTablaPaginas *nodo){
@@ -489,10 +505,11 @@ bool memoriaFull(){
 }
 
 void journal(){
-	log_info(g_logger,"Journaling");
-
+	log_info(g_logger,"Journaling, por favor espere");
+	estaHaciendoJournal=true;
 	list_iterate(tabla_paginas_global,enviarInsert);
-
+	estaHaciendoJournal=false;
+	log_info(g_logger,"Termino el journal, puede ingrsar sus request");
 }
 
 void enviarInsert(void *element){ //ver los casos de error
@@ -610,13 +627,13 @@ bool encuentraPagina(Segmento* segmento,int key, Pagina** pagina){
 	return true;
 }
 
-resultado insert(char *nombre_tabla,int key,char *value){
+resultado insert(char *nombre_tabla,int key,char *value,long timestamp){
 	Segmento* segmento;
 
 	Pagina* pagina;
 
 	Registro registro;
-	registro.timestamp=time(NULL);
+	registro.timestamp=timestamp;
 	registro.key=key;
 	registro.value=value;
 
@@ -627,7 +644,7 @@ resultado insert(char *nombre_tabla,int key,char *value){
 	if(encuentraSegmento(nombre_tabla,&segmento)){
 
 		if(encuentraPagina(segmento,key,&pagina)){	//en vez de basura(char *) pasarle una pagina
-			actualizarRegistro(pagina,value);
+			actualizarRegistro(pagina,value,timestamp);
 			actualizarTablaGlobal(pagina->numero_pagina);
 			res.resultado=OK;
 		}
@@ -655,7 +672,6 @@ resultado insert(char *nombre_tabla,int key,char *value){
 		char *aux = "Registro insertado exitosamente";
 		res.mensaje=strdup(aux);
 	}
-
 
 	res.accionEjecutar=INSERT;
 	res.contenido=NULL;
@@ -721,17 +737,19 @@ void drop(char* nombre_tabla){
 }
 
 
-void actualizarRegistro(Pagina *pagina,char *value){
+void actualizarRegistro(Pagina *pagina,char *value,long timestamp){
 
-	long timestamp=time(NULL);
 	int posicion=(pagina->indice_registro)*offset;
 	sleep(retardoMemoria/1000);
-	memcpy(&(memoria[posicion]),value,tamValue);
-	memcpy(&(memoria[posicion+tamValue+sizeof(int)]),&timestamp,sizeof(long));
-	//memoria[posicion+tamValue+sizeof(int)]=time(NULL);
 
+	long ts;
+	memcpy(&ts,&(memoria[posicion+tamValue+sizeof(int)]),sizeof(long));
 
-	pagina->flag_modificado=1;
+	if(timestamp>=ts){
+		memcpy(&(memoria[posicion]),value,tamValue);
+		memcpy(&(memoria[posicion+tamValue+sizeof(int)]),&timestamp,sizeof(long));
+		pagina->flag_modificado=1;
+	}
 }
 
 void terminar_programa()
@@ -829,7 +847,7 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		case INSERT:
 		{
 			contenidoInsert* contenido = resParser->contenido;
-			res = insert(contenido->nombreTabla,contenido->key,contenido->value);
+			res = insert(contenido->nombreTabla,contenido->key,contenido->value,contenido->timestamp);
 			break;
 
 		}
