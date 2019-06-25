@@ -88,6 +88,30 @@ bool terminoScript(Script *s){
 	return s->pc == list_size(s->instrucciones);
 }
 
+resultado recibir(){
+
+	resultado res;
+	accion acc;
+	char* buffer = malloc(sizeof(int));
+	int valueResponse = recv(memoriaSocket, buffer, sizeof(int), 0);
+	memcpy(&acc, buffer, sizeof(int));
+	if(valueResponse < 0) {
+		res.resultado=ERROR;
+		log_info(g_logger,"Error al recibir los datos");
+	} else {
+
+		res.accionEjecutar = acc;
+		int status = recibirYDeserializarRespuesta(memoriaSocket, &res);
+		if(status<0) {
+			log_info(g_logger,"Error");
+		} else if(res.resultado != OK) {
+			log_info(g_logger,res.mensaje);
+		}
+	}
+	free(buffer);
+	return res;
+}
+
 status ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio);
 	log_info(g_logger,"Elegi mem: %d",mem->id);
@@ -109,9 +133,13 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 
 	send(memoriaSocket, msg, size, 0);
 
-	int resultadoMemoria = recibirYDeserializarRespuesta(memoriaSocket,&res);
+	res = recibir();
 
-	if(resultadoMemoria == -2 || resultadoMemoria == -1)
+	log_info(g_logger,"Recibi respuesta de accion: %d",res.accionEjecutar);
+	if(res.accionEjecutar==SELECT)
+		log_info(g_logger,"Value: %s",((registro*)(res.contenido))->value);
+
+	if(res.resultado == ERROR || res.resultado == MENSAJE_MAL_FORMATEADO)
 		result = REQUEST_ERROR;
 	else
 		result = REQUEST_OK;

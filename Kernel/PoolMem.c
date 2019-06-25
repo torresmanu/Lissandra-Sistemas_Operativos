@@ -12,7 +12,7 @@ void obtenerMemorias(){
 	mem->id = 0;
 	char* ip = config_get_string_value(g_config,"IP_MEMORIA");
 	mem->ipMemoria = strdup(ip);
-	char* puerto = config_get_string_value(g_config,"IP_MEMORIA");
+	char* puerto = config_get_string_value(g_config,"PUERTO_MEMORIA");
 	mem->puerto = strdup(puerto);
 
 	gossiping(mem);//meto en pool la lista de memorias encontradas
@@ -29,7 +29,7 @@ void gossiping(Memoria *mem){
 	char* ip = config_get_string_value(g_config,"IP_MEMORIA");
 	m1->ipMemoria = strdup(ip);
 
-	char* puerto = config_get_string_value(g_config,"IP_MEMORIA");
+	char* puerto = config_get_string_value(g_config,"PUERTO_MEMORIA");
 	m1->puerto = strdup(puerto);
 
 	list_add(pool,m1);

@@ -77,12 +77,12 @@ void iniciar_programa(void)
 	pool = list_create();
 	tablas = list_create();
 
-	Tabla* colores = malloc(sizeof(Tabla));
-	colores->criterio = &sc;
-	char *auxc = "COLORES";
-	colores->nombre = strdup(auxc);
+	Tabla* peliculas = malloc(sizeof(Tabla));
+	peliculas->criterio = &sc;
+	char *auxc = "PELICULAS";
+	peliculas->nombre = strdup(auxc);
 
-	list_add(tablas,colores);
+	list_add(tablas,peliculas);
 
 	iniciarCriterios();
 
@@ -121,7 +121,7 @@ int gestionarConexionAMemoria(Memoria* mem)
 	getaddrinfo(mem->ipMemoria,mem->puerto, &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
 
 	memoriaSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
-	int res = connect(memoriaSocket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
+	int res =	connect(memoriaSocket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
 
 	if(res == -1)
 	{

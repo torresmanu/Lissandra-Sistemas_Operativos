@@ -11,8 +11,8 @@ int main(int argc, char* argv[]) {
 //	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
 
 
-//	pthread_t conexionKernel;
-//	pthread_create(&conexionKernel,NULL,(void*) escucharKernel,NULL);
+	pthread_t conexionKernel;
+	pthread_create(&conexionKernel,NULL,(void*) escucharKernel,NULL);
 
 	consola();
 
@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
 	//van a hacer falta mutex para la memoria
 //	pthread_join(journalAutomatico,NULL);
 	//pthread_join(gossipingAutomatico,NULL);
-	//pthread_join(conexionKernel,NULL);
+	pthread_join(conexionKernel,NULL);
 
 	terminar_programa();
 
@@ -87,6 +87,7 @@ resultadoParser recibirRequest(int conexion_cliente){
 	} else {
 		rp.accionEjecutar = acc;
 		status = recibirYDeserializarPaquete(conexion_cliente, &rp);
+		log_info(g_logger,"La accion es:%d", rp.accionEjecutar);
 		if(status<0)
 			rp.accionEjecutar = SALIR_CONSOLA;
 	}
@@ -303,6 +304,10 @@ resultado select_t(char *nombre_tabla, int key){
 	Pagina* pagina;
 
 	resultado res;
+	res.accionEjecutar = SELECT;
+
+	Registro* registro;
+
 	if(contieneRegistro(nombre_tabla,key,&pagina)){
 
 		int posicion=(pagina->indice_registro)*offset;
@@ -311,12 +316,17 @@ resultado select_t(char *nombre_tabla, int key){
 		res.mensaje= strdup(&memoria[posicion]);
 		res.resultado=OK;
 
+		registro = malloc(sizeof(Registro));
+		registro->value = strdup(&memoria[posicion]);
+		memcpy(&registro->key,(&memoria[posicion+tamValue]),sizeof(int));
+		memcpy(&registro->timestamp,(&memoria[posicion+tamValue+sizeof(int)]),sizeof(long));
+
 		actualizarTablaGlobal(pagina->numero_pagina);
 	}
 	else{
 		log_info(g_logger,"Algo salio mal, voy a hablar con el LFS");	//Tengo que pedirselo al LFS y agregarlo en la pagina
 
-		Registro* registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
+		registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
 
 		int posLibre= espacioLibre();
 		if(posLibre>=0){
@@ -329,7 +339,9 @@ resultado select_t(char *nombre_tabla, int key){
 		if(res.resultado==OK)
 			res.mensaje= string_duplicate((registro)->value);
 
+
 	}
+	res.contenido = registro;
 
 	return res;
 }
