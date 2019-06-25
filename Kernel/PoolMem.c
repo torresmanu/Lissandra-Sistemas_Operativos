@@ -44,7 +44,7 @@ void gossiping(Memoria *mem){
 	Memoria *m3 = malloc(sizeof(Memoria));
 	m3->id = 3;
 	m3->ipMemoria = strdup(ip);
-	m1->puerto = strdup(puerto);
+	m3->puerto = strdup(puerto);
 	list_add(pool,m3);
 }
 

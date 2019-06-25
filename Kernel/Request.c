@@ -8,12 +8,11 @@
 #include "Request.h"
 
 Script* run(char* path){
-	printf("Ruta: %s\n", path);
 	FILE* arch = fopen(path, "r+b");
 	if(arch == NULL)
 		perror("\nError:");
 	else
-		printf("Abro el archivo\n");
+		log_info(g_logger,"Abro el archivo: %s",path);
 
 	Script* script = parsearScript(arch);
 
@@ -27,7 +26,7 @@ resultadoParser leerRequest(FILE* fd){
 
 	resultadoParser r;
 	getline(&linea,&tamanioLeido,fd);//realoca linea y pone el tamaño leido
-	printf("Tamaño linea Rq: %d\n",tamanioLeido);
+	log_info(g_logger,"Tamaño linea Rq: %d",tamanioLeido);
 
 	r = parseConsole(linea);
 
@@ -58,7 +57,7 @@ Script* parsearScript(FILE* fd){
 
 		list_add(script->instrucciones,req);
 	}
-	printf("Script preparado, cantidad instrucciones: %d\n",script->instrucciones->elements_count);
+	log_info(g_logger,"Script preparado, cantidad instrucciones: %d",script->instrucciones->elements_count);
 	return script;
 }
 
@@ -91,7 +90,7 @@ bool terminoScript(Script *s){
 
 status ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio);
-	printf("Elegi mem: \n",mem->id);
+	log_info(g_logger,"Elegi mem: ",mem->id);
 	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
 	return resultado;										// la memoria. enviarRequest está sin implementar, usa sockets.
 }
@@ -102,7 +101,7 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	resultado res;
 	int size;
 
-	printf("Hola\n");
+	log_info(g_logger,"Entro en enviarRequest");
 	char* msg = serializarPaquete(request,&size);
 	send(memoriaSocket, msg, size, 0);
 	int resultadoMemoria = recibirYDeserializarRespuesta(memoriaSocket,&res);
@@ -116,11 +115,11 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 }
 
 status ejecutarScript(Script *s){
-	printf("Entro a ejecutarScript\n");
+	log_info(g_logger,"Entro a ejecutarScript");
 
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
-	printf("PC:%d\n",s->pc);
-	printf("Accion:%d\n",r->accionEjecutar);
+	log_info(g_logger,"PC:%d",s->pc);
+	log_info(g_logger,"Accion:%d",r->accionEjecutar);
 
 	status estado = ejecutarRequest(r);
 
@@ -135,8 +134,8 @@ status ejecutarRequest(resultadoParser *r){
 		printf("UsoTabla %s\n",tabla->nombre);
 
 		if(tabla != NULL){
-			printf("Voy a ejecutar\n");
-			printf("Criterio:%d\n",(tabla->criterio)->tipo);
+			log_info(g_logger,"Voy a ejecutar");
+			log_info(g_logger,"Criterio:%d",(tabla->criterio)->tipo);
 			return ejecutar(tabla->criterio,r);
 		}
 		else
@@ -218,7 +217,7 @@ Tabla* obtenerTabla(resultadoParser* r){
 }
 
 Tabla* buscarTabla(char* nom)
-{	printf("Entre a buscarTabla\n");
+{	log_info(g_logger,"Entre a buscarTabla");
 	bool coincideNombre(void* element)					//Subfunción de busqueda
 	{
 		return strcmp(nom,((Tabla*)element)->nombre) == 0;

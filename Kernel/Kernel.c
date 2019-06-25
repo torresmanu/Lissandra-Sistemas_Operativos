@@ -51,7 +51,7 @@ int main(void) {
 
 	terminar_programa();
 
-	printf("termine programa\n");
+	printf("Termine programa\n");
 	return 0;
 }
 
@@ -188,14 +188,18 @@ void leerConsola(){
 		agregarScriptAEstado(res, NEW);
 		pthread_mutex_unlock(&mNew);
 
-		printf("\nAgrego resParser con accion: %d a new\n",res->accionEjecutar);
+		log_info(g_logger,"Agrego resParser con accion: %d a new\n",res->accionEjecutar);
 
 		sem_post(&sNuevo);
-		if(res->accionEjecutar==SALIR_CONSOLA)
+		if(res->accionEjecutar==SALIR_CONSOLA){
+			log_info(g_logger,"Entre en el if de salir_consola");
 			break;
+		}
+		log_info(g_logger,"Estoy abajo del if");
 
 		free(linea);
 	}
+
 }
 
 void planificadorLargoPlazo(){
@@ -204,7 +208,7 @@ void planificadorLargoPlazo(){
 	while(1){
 		sem_wait(&sNuevo);
 
-		printf("Entre al plp\n");
+		log_info(g_logger,"Entre al plp");
 
 		pthread_mutex_lock(&mNew);
 		r = queue_pop(new);
@@ -216,7 +220,7 @@ void planificadorLargoPlazo(){
 		agregarScriptAEstado(s,READY);
 		pthread_mutex_unlock(&mReady);
 
-		printf("Paso el script a ready, cant rq: %d\n",s->instrucciones->elements_count);
+		log_info(g_logger,"Paso el script a ready, cant rq:%d",s->instrucciones->elements_count);
 
 		sem_post(&sListo);
 
@@ -230,7 +234,7 @@ void ejecutador(){
 	status e;
 	while(1){
 		sem_wait(&sListo);
-		printf("Entro a ejecutar\n");
+		log_info(g_logger,"Entro a ejecutar");
 
 		pthread_mutex_lock(&mReady);
 		Script *s = queue_pop(ready);
@@ -243,7 +247,7 @@ void ejecutador(){
 		for(int i=0; i <= quantum ;i++){ //ver caso en que falla, ejecutarS podria retornar un estado
 
 			if(!terminoScript(s)){
-				printf("Voy a ejecutar un script con %d request\n",s->instrucciones->elements_count);
+				log_info(g_logger,"Voy a ejecutar un script con %d request",s->instrucciones->elements_count);
 				e = ejecutarScript(s);
 
 				if(e == REQUEST_ERROR)
