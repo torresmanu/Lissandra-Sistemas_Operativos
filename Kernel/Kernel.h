@@ -33,7 +33,7 @@ void iniciar_programa(void);
 void terminar_programa(void);
 int enviar_mensaje(int socket_cliente);
 int iniciarCliente();
-void gestionarConexionAMemoria();
+int gestionarConexionAMemoria(Memoria *mem);
 
 //////////// CONSOLA Y PLANIFICADORES ////////////
 void leerConsola();
@@ -46,6 +46,6 @@ bool deboSalir(Script *s);
 //Journal
 
 // Add
-void add(Memoria*, Criterio);
+void add(Memoria*, Criterio*);
 
 #endif /* KERNEL_H_ */

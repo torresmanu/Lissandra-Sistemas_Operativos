@@ -90,7 +90,7 @@ bool terminoScript(Script *s){
 
 status ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio);
-	log_info(g_logger,"Elegi mem: ",mem->id);
+	log_info(g_logger,"Elegi mem: %d",mem->id);
 	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
 	return resultado;										// la memoria. enviarRequest está sin implementar, usa sockets.
 }
@@ -102,8 +102,13 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	int size;
 
 	log_info(g_logger,"Entro en enviarRequest");
+
+	memoriaSocket = gestionarConexionAMemoria(mem);
+
 	char* msg = serializarPaquete(request,&size);
+
 	send(memoriaSocket, msg, size, 0);
+
 	int resultadoMemoria = recibirYDeserializarRespuesta(memoriaSocket,&res);
 
 	if(resultadoMemoria == -2 || resultadoMemoria == -1)
@@ -113,6 +118,7 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 
 	return result;
 }
+
 
 status ejecutarScript(Script *s){
 	log_info(g_logger,"Entro a ejecutarScript");
@@ -131,7 +137,7 @@ status ejecutarRequest(resultadoParser *r){
 
 	if(usaTabla(r)){
 		Tabla* tabla = obtenerTabla(r);
-		printf("UsoTabla %s\n",tabla->nombre);
+		log_info(g_logger,"UsoTabla %s",tabla->nombre);
 
 		if(tabla != NULL){
 			log_info(g_logger,"Voy a ejecutar");
@@ -158,7 +164,9 @@ status ejecutarRequest(resultadoParser *r){
 				if(mem==NULL)
 					return REQUEST_ERROR;
 
-				Criterio cons = toConsistencia(contenido->criterio);
+				printf("Criterio: %s\n",contenido->criterio);//OJO CRITERIO
+
+				Criterio* cons = toConsistencia(contenido->criterio);
 				add(mem,cons);
 
 				break;
@@ -217,11 +225,13 @@ Tabla* obtenerTabla(resultadoParser* r){
 }
 
 Tabla* buscarTabla(char* nom)
-{	log_info(g_logger,"Entre a buscarTabla");
+{
 	bool coincideNombre(void* element)					//Subfunción de busqueda
 	{
 		return strcmp(nom,((Tabla*)element)->nombre) == 0;
 	}
+
+	log_info(g_logger,"Entre a buscarTabla");
 
 	return (Tabla*)list_find(tablas,coincideNombre);
 }

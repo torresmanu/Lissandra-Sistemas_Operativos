@@ -38,8 +38,8 @@ int main(void) {
 	pthread_t plp;
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
 
-	//obtenerMemorias();
-	//gestionarConexionAMemoria();
+	obtenerMemorias();
+
 	leerConsola();										/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
 	pthread_join(plp,NULL);
@@ -109,7 +109,7 @@ void terminar_programa()
 }
 
 
-void gestionarConexionAMemoria()
+int gestionarConexionAMemoria(Memoria* mem)
 {
 	struct addrinfo hints;
 	struct addrinfo* serverInfo;
@@ -118,7 +118,7 @@ void gestionarConexionAMemoria()
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	getaddrinfo(config_get_string_value(g_config, "IP_MEMORIA"), config_get_string_value(g_config, "PUERTO_MEMORIA"), &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
+	getaddrinfo(mem->ipMemoria,mem->puerto, &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
 
 	memoriaSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 	int res = connect(memoriaSocket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
@@ -129,10 +129,10 @@ void gestionarConexionAMemoria()
 	}
 	else
 	{
-		printf("Conectado a la memoria! Listo para enviar\n");
-		log_info(g_logger, "Se conecto a la memoria, listo para enviar scripts.");
+		log_info(g_logger, "Se conecto a la memoria n°:%d, listo para enviar scripts.",mem->id);
 	}
 	freeaddrinfo(serverInfo); // Libero
+	return memoriaSocket;
 }
 
 
@@ -289,10 +289,10 @@ void mandarAexit(Script *s){
 ////////////////////////////////////////////////////
 
 //Agrego la memoria en la lista de memorias del criterio
-void add(Memoria *memoria,Criterio cons)
+void add(Memoria *memoria,Criterio *cons)
 {
-	list_add(cons.memorias,memoria);
-	log_info(g_logger,"Agrege memoria n°:%d al criterio %d",memoria->id,cons.tipo);
+	list_add(cons->memorias,memoria);
+	log_info(g_logger,"Agrege memoria n°:%d al criterio %d",memoria->id,cons->tipo);
 
 }
 

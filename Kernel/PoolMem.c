@@ -48,14 +48,14 @@ void gossiping(Memoria *mem){
 	list_add(pool,m3);
 }
 
-Memoria obtenerMemoria(t_config* config){
-	Memoria mem;
-	int id = config_get_string_value(config,"IP_MEMORIA");
-	int puerto = config_get_string_value(config, "PUERTO_MEMORIA");
-	mem.ipMemoria = id;
-	mem.puerto = puerto;
-	return mem;
-}
+//Memoria obtenerMemoria(t_config* config){
+//	Memoria mem;
+//	int id = config_get_string_value(config,"IP_MEMORIA");
+//	int puerto = config_get_string_value(config, "PUERTO_MEMORIA");
+//	mem.ipMemoria = id;
+//	mem.puerto = puerto;
+//	return mem;
+//}
 
 Memoria *buscarMemoria(int numero){
 	bool numerosIguales(void* elem){

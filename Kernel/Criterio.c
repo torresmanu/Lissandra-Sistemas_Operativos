@@ -34,14 +34,14 @@ void destroy_nodo_memoria(void * elem){
 	free(nodo_tabla_elem);
 }
 
-Criterio toConsistencia(char* cadena)
+Criterio* toConsistencia(char* cadena)
 {
 	if(strcmp(cadena, "SC") == 0)
-		return sc;
+		return &sc;
 	else if(strcmp(cadena, "SHC") == 0)
-		return shc;
+		return &shc;
 	else
-		return ec;
+		return &ec;
 }
 
 Memoria* masApropiada(Criterio* c){
