@@ -657,6 +657,9 @@ resultado insert(char *nombre_tabla,int key,char *value){
 	}
 
 
+	res.accionEjecutar=INSERT;
+	res.contenido=NULL;
+
 	return res;
 }
 
@@ -701,9 +704,7 @@ void corregirIndicesPaginasGlobal(){
 	}
 }
 
-resultado drop(char* nombre_tabla){
-
-	resultado res;
+void drop(char* nombre_tabla){
 
 	Segmento* segmento;
 
@@ -712,22 +713,11 @@ resultado drop(char* nombre_tabla){
 		list_remove_and_destroy_element(tabla_segmentos,segmento->numero_segmento,liberarSegmento);
 		corregirIndicesTablaSegmentos();
 		corregirIndicesPaginasGlobal();
-
-
-		char *aux = "Registro eliminado exitosamente";
-		res.mensaje=strdup(aux);
-		res.resultado=OK;
-
-		//informar al LFS
+		log_info(g_logger, "Se libero el segmento de la tabla %s en memoria",nombre_tabla);
 	}
 	else{
-
-		char *aux = "Tabla no encontrada";
-		res.mensaje=strdup(aux);
-		res.resultado=ERROR;
-
+		log_info(g_logger, "No se encontro el segmento de la tabla %s en memoria",nombre_tabla);
 	}
-	return res;
 }
 
 
@@ -831,61 +821,48 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		}
 		case DESCRIBE:
 		{
-			//send al lfs el describe para obtener la metadata de las tablas
 			mandarALFS(*resParser);
-			char *aux = "Se envió al LFS";
-
-			res.mensaje=strdup(aux);
-			res.resultado=OK;
-
+			log_info(g_logger,"Se envió al LFS");
+			res = recibir();
 			break;
 		}
 		case INSERT:
 		{
 			contenidoInsert* contenido = resParser->contenido;
 			res = insert(contenido->nombreTabla,contenido->key,contenido->value);
-
-
 			break;
 
 		}
 		case JOURNAL:
 		{
 			journal();
-			res.mensaje = NULL;
+			res.accionEjecutar = JOURNAL;
+			res.resultado = OK;
+			res.contenido = NULL;
+			char *aux = "Se realizo JOURNAL";
+			res.mensaje=strdup(aux);
 			break;
 		}
 		case CREATE:
 		{
-			char *aux = "Se envió al LFS";
-
-			res.mensaje=strdup(aux);
-			res.resultado=OK;
-
 			mandarALFS(*resParser);
-
-			//send al lfs para que haga el create
-
+			log_info(g_logger,"Se envió al LFS");
+			res = recibir();
 			break;
 		}
 		case DROP:
 		{
 			contenidoDrop* contDrop = resParser->contenido;
-			res = drop(contDrop->nombreTabla);
-
-			//mandarALFS(DROP, contDrop->nombreTabla,0);
-			//send al lfs para que realice la opercacion necesaria
-
+			drop(contDrop->nombreTabla);
+			mandarALFS(*resParser);
+			res = recibir();
 			break;
 		}
 		case DUMP:
 		{
 			mandarALFS(*resParser);
-
-			char *aux = "Se envió al LFS";
-
-			res.mensaje=strdup(aux);
-			res.resultado=OK;
+			log_info(g_logger,"Se envió al LFS");
+			res = recibir();
 			break;
 		}
 		case ERROR_PARSER:
@@ -901,35 +878,10 @@ resultado parsear_mensaje(resultadoParser* resParser)
 			res.mensaje = NULL;
 			break;
 		}
-//		case HANDSHAKE:
-//		{
-//			char* pi = serializarPaquete(&resParser, &size_to_send);
-//			send(serverSocket, pi, size_to_send, 0);
-//
-//			accion acc;
-//			char* buffer = malloc(sizeof(int));
-//			int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
-//			memcpy(&acc, buffer, sizeof(int));
-//			if(valueResponse < 0) {
-//				printf("Error al recibir los datos\n");
-//			} else {
-//				resultado res;
-//				res.accionEjecutar = acc;
-//				int status = recibirYDeserializarRespuesta(serverSocket, &res);
-//				if(status<0) {
-//					printf("Error\n");
-//				} else {
-//					printf("Recibi la respuesta del HANDSHAKE\n");
-//					printf("El tamaño del value es: %i\n", ((resultadoHandshake*)(res.contenido))->tamanioValue);
-//				}
-//			}
-//			free(buffer);
-//			break;
-//		}
 		default:
 		{
 			res.resultado = SALIR;
-			res.mensaje = malloc(0);
+			res.mensaje = NULL;
 			break;
 		}
 	}

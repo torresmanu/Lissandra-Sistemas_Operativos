@@ -139,7 +139,7 @@ void liberarSegmento(void* elemento);
 void liberarPagina(void* elemento);
 void corregirIndicesTablaSegmentos();
 void corregirIndicesPaginasGlobal();
-resultado drop(char* nombre_tabla);
+void drop(char* nombre_tabla);
 
 char* PUERTO_M;
 char* PUERTO;
