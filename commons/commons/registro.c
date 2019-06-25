@@ -8,9 +8,9 @@
 #include "registro.h"
 
 void parseRegistro(char* linea,registro* regAux, int tamValue){
-	regAux->timestamp = atol (strsep(&linea,";"));
+	regAux->timestamp = atol(strsep(&linea,";"));
 	regAux->key = atoi(strsep(&linea,";"));
-	regAux->value = malloc(tamValue);
+	regAux->value = malloc(tamValue + 1);
 	strcpy(regAux->value, strsep(&linea,"\n"));
 
 }

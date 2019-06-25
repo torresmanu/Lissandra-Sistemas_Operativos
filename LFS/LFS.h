@@ -21,6 +21,7 @@
 #include <pthread.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <string.h>
 
 #define PACKAGESIZE 100
 
@@ -47,6 +48,7 @@ void terminar_programa();
 void gestionarConexion(int);
 int atender_clientes(void);
 int esperarClienteNuevo(int);
+int iniciarServidor(char*);
 
 
 #endif /* LFS_H_ */

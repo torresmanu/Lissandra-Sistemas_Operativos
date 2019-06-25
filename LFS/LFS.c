@@ -13,6 +13,7 @@
 
 int main(void) {
 	resultado res;
+	resultadoParser resParser;
 	char* mensaje;
 	res.resultado = OK;
 	iniciar_programa();
@@ -20,7 +21,7 @@ int main(void) {
 	while(res.resultado != SALIR)
 	{
 		mensaje = readline(">");
-		resultadoParser resParser = parseConsole(mensaje);
+		resParser = parseConsole(mensaje);
 		res = parsear_mensaje(&resParser);
 		if(res.resultado == OK)
 		{
@@ -34,7 +35,7 @@ int main(void) {
 		{
 			log_info(g_logger,"Mensaje incorrecto");
 		}
-		//atender_clientes();
+		free(mensaje);
 	}
 
 	terminar_programa();
@@ -59,14 +60,18 @@ void iniciar_programa()
 
 	server_fd = iniciarServidor(config_get_string_value(g_config,"PUERTO_SERVIDOR"));
 	if(server_fd < 0) {
-		printf("[iniciar_programa] Ocurrió un error al intentar iniciar el servidor\n");
+		log_error(g_logger, "[iniciar_programa] Ocurrió un error al intentar iniciar el servidor");
 	} else {
 		pthread_attr_init(&attr);
 		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 		int err = pthread_create(&thread, &attr, esperarClienteNuevo, server_fd);
 		if(err != 0) {
-			printf("[iniciar_programa] Hubo un problema al crear el thread esperarClienteNuevo:[%s]\n", strerror(err));
+			char* message_error = malloc(1024 * sizeof(char));
+			*message_error = "[iniciar_programa] Hubo un problema al crear el thread esperarClienteNuevo: ";
+			strcat(message_error, strerror(err));
+			log_error(g_logger, message_error);
+			free(message_error);
 		}
 		pthread_attr_destroy(&attr);
 	}
@@ -359,7 +364,6 @@ void gestionarConexion(int conexion_cliente) {
 	int recibiendo = 1;
 	int status;
 	resultadoParser rp;
-	char buffer[100];
 	int size_to_send;
 
 	char* buffer2 = malloc(sizeof(int));
@@ -401,12 +405,12 @@ int esperarClienteNuevo(int conexion_servidor) {
 
 	int conexion_cliente;
 	struct sockaddr_in cliente;
-	socklen_t longc; //Debemos declarar una variable que contendrá la longitud de la estructura
+	socklen_t longc = sizeof(cliente); //Debemos declarar una variable que contendrá la longitud de la estructura
 
 	while(1) {
-		conexion_cliente = accept(conexion_servidor, (struct sockaddr *)&cliente, &longc);
+		conexion_cliente = accept(conexion_servidor, (struct sockaddr *) &cliente, &longc);
 		if(conexion_cliente<0) {
-			printf("Error al aceptar trafico\n");
+			printf("Error al aceptar tráfico\n");
 			return 1;
 		} else {
 			pthread_attr_t attr;
