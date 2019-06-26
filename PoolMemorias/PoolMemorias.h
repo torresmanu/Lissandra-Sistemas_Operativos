@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <arpa/inet.h>
+#include <sys/inotify.h>
 
 t_log* g_logger;
 t_config* g_config;
@@ -32,12 +33,16 @@ t_config* g_config;
 t_list* tabla_segmentos;
 t_list* tabla_paginas_global;
 
+
 int posLibres;
 
 
 #define TAM_VALUE 20
 #define NOMBRE_TABLA 7
 #define PACKAGESIZE 1024
+
+#define EVENT_SIZE  (sizeof(struct inotify_event))
+#define BUF_LEN     (1024 * (EVENT_SIZE + 16))
 
 typedef struct
 {
@@ -47,6 +52,7 @@ typedef struct
 } Registro;
 
 char* memoria;
+char* pathConfig;
 int* bitmap;
 int cantidadFrames;
 int serverSocket;
@@ -83,7 +89,9 @@ typedef struct
 	Segmento* segmento;
 }NodoTablaPaginas;
 
+void monitorearConfig();
 void iniciar_programa();
+void actualizarRetardos();
 
 void terminar_programa(void);
 void gestionarConexionALFS(void);

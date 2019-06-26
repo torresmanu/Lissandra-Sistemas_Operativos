@@ -2,6 +2,8 @@
 
 int main(int argc, char* argv[]) {
 
+	pathConfig = argv[1];
+
 	iniciar_programa();
 
 	pthread_t journalAutomatico;
@@ -14,6 +16,9 @@ int main(int argc, char* argv[]) {
 //	pthread_t conexionKernel;
 //	pthread_create(&conexionKernel,NULL,(void*) escucharKernel,NULL);
 
+	pthread_t monitoreador;
+	pthread_create(&monitoreador,NULL,(void*) monitorearConfig,NULL);
+
 	consola();
 
 	//ver si esta bien que este aca
@@ -21,6 +26,9 @@ int main(int argc, char* argv[]) {
 	pthread_join(journalAutomatico,NULL);
 	//pthread_join(gossipingAutomatico,NULL);
 //	pthread_join(conexionKernel,NULL);
+
+//	pthread_join(monitoreador,NULL); //NO VA CON JOIN CREO XQ SI NO SE QUEDA ESPERANDO UN CAMBIO EN ARCHIVO
+
 
 	terminar_programa();
 
@@ -154,12 +162,71 @@ void journalConRetardo(){
 void gossipingConRetardo(){
 	while(ejecutando){
 		sleep(retardoGossiping/1000);
+
 		//gossiping();
 	}
 }
 
+void actualizarRetardos(){
+
+	g_config = config_create(pathConfig);
+
+	retardoJournaling = config_get_int_value(g_config,"RETARDO_JOURNAL");
+
+	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
+
+	retardoMemoria = config_get_int_value(g_config,"RETARDO_MEM");
+}
+
+void monitorearConfig() {
+    int length, i = 0;
+    int fd;
+    int wd;
+    char buffer[BUF_LEN];
+
+    fd = inotify_init();
+
+    if (fd < 0) {
+        perror("inotify_init");
+    }
+
+    wd = inotify_add_watch(fd, "/home/utnso/workspace/tp-2019-1c-creativOS/PoolMemorias",
+        IN_MODIFY);
+
+    while(ejecutando){
+    	i=0;
+        length = read(fd, buffer, BUF_LEN);
+
+        if (length < 0) {
+            perror("read");
+        }
+        if(length == 0){
+        	printf("no lei nada\n");
+        }
+
+        while (i < length) {
+            struct inotify_event *event =
+                (struct inotify_event *) &buffer[i];
+            if (event->len) {
+                if (event->mask & IN_MODIFY) {
+                	if(strcmp(pathConfig,event->name)==0){
+                		log_info(g_logger,"El archivo %s fue modificado.", event->name);
+                		actualizarRetardos();
+                	}
+                }
+            }
+            i += EVENT_SIZE + event->len;
+        }
+    }
+
+    (void) inotify_rm_watch(fd, wd);
+    (void) close(fd);
+
+}
+
 void iniciar_programa()
 {
+	estaHaciendoJournal = false;
 	ejecutando = true;
 
 	//Inicio el logger
@@ -167,7 +234,7 @@ void iniciar_programa()
 	log_info(g_logger,"Inicio Aplicacion Pool Memorias");
 
 	//Inicio las configs
-	g_config = config_create("PoolMemorias.config");
+	g_config = config_create(pathConfig);
 	log_info(g_logger,"Configuraciones inicializadas");
 
 
@@ -188,6 +255,7 @@ void iniciar_programa()
 	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
 	retardoMemoria = config_get_int_value(g_config,"RETARDO_MEM");
 	retardoLFS = config_get_int_value(g_config,"RETARDO_FS");
+
 
 	TAM_MEMORIA_PRINCIPAL = config_get_int_value(g_config,"TAM_MEM");
 
@@ -324,6 +392,7 @@ resultado select_t(char *nombre_tabla, int key){
 		int posicion=(pagina->indice_registro)*offset;
 
 		sleep(retardoMemoria/1000);
+
 		res.mensaje= strdup(&memoria[posicion]);
 		res.resultado=OK;
 
@@ -528,7 +597,9 @@ void enviarInsert(void *element){ //ver los casos de error
 		contenidoInsert* cont = malloc(sizeof(contenidoInsert));
 		cont->nombreTabla = malloc(strlen(((NodoTablaPaginas*)element)->segmento->nombre_tabla)+1);
 		strcpy(cont->nombreTabla,((NodoTablaPaginas*)element)->segmento->nombre_tabla);
+
 		sleep(retardoMemoria/1000);
+
 		memcpy(&cont->key,&(memoria[(indice*offset)+tamValue]),sizeof(int));
 		cont->value = strdup(&memoria[indice*offset]);
 		memcpy(&cont->timestamp,&(memoria[(indice*offset)+tamValue+sizeof(int)]),sizeof(long));
@@ -565,6 +636,7 @@ void cambiarNumerosPaginas(t_list* listaPaginas){
 void guardarEnMemoria(Registro registro, int posLibre){
 
 	sleep(retardoMemoria/1000);
+
 	memcpy(&memoria[(posLibre*offset)],registro.value,tamValue);
 	memcpy(&memoria[(posLibre*offset)+tamValue],&(registro.key),sizeof(int));
 	memcpy(&memoria[(posLibre*offset)+tamValue+sizeof(int)],&(registro.timestamp),sizeof(long));
@@ -614,6 +686,7 @@ bool encuentraPagina(Segmento* segmento,int key, Pagina** pagina){
 		int posicion=(((Pagina *)elemento)->indice_registro)*offset;
 		int i=0;
 		sleep(retardoMemoria/1000);
+
 		memcpy(&i,&(memoria[posicion+tamValue]),sizeof(int));
 		return i==key;
 	}
@@ -897,6 +970,7 @@ resultado parsear_mensaje(resultadoParser* resParser)
 			resParser->contenido = malloc(0);
 			res.resultado = SALIR;
 			res.mensaje = NULL;
+			ejecutando = false;
 			break;
 		}
 		default:
