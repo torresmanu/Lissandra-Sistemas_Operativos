@@ -4,7 +4,9 @@ int main(int argc, char* argv[]) {
 
 	pathConfig = argv[1];
 
-	iniciar_programa();
+	bool estado = iniciar_programa();
+	if(!estado)
+		return 0;
 
 	pthread_t journalAutomatico;
 	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
@@ -224,10 +226,11 @@ void monitorearConfig() {
 
 }
 
-void iniciar_programa()
+bool iniciar_programa()
 {
 	estaHaciendoJournal = false;
 	ejecutando = true;
+
 
 	//Inicio el logger
 	g_logger = log_create("PoolMemorias.log", "MEM", 1, LOG_LEVEL_INFO);
@@ -237,19 +240,17 @@ void iniciar_programa()
 	g_config = config_create(pathConfig);
 	log_info(g_logger,"Configuraciones inicializadas");
 
-
 	//Me conecto al LFS
-	gestionarConexionALFS();
-//	char* message="hola";
-//	char* value;
-//	send(serverSocket, message, strlen(message) + 1, 0); 	// Solo envio si el usuario no quiere salir.
-//	recv(serverSocket, value, 100, 0);						// LFS me manda el value en el buffer
-//	printf("%s\n", value);
-
+	bool estado = gestionarConexionALFS();
+	if(!estado){
+		log_info(g_logger,"Error al conectarse al LFS");
+		return false;
+	}
 
 	//hacer handshake con LFS y obtener tamaño de mem ppl y value
-	handshake();
-//	tamValue=20;
+	estado = handshake();
+	if(!estado)
+		return false;
 
 	retardoJournaling = config_get_int_value(g_config,"RETARDO_JOURNAL");
 	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
@@ -260,6 +261,12 @@ void iniciar_programa()
 	TAM_MEMORIA_PRINCIPAL = config_get_int_value(g_config,"TAM_MEM");
 
 	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
+
+	if(memoria==NULL){
+		log_info(g_logger,"Error al inicializar la memoria principal");
+		return false;
+	}
+
 	memset(memoria,'0',TAM_MEMORIA_PRINCIPAL);
 
 	offset = sizeof(int)+sizeof(long)+tamValue;
@@ -274,12 +281,11 @@ void iniciar_programa()
 
 	iniciar_tablas();
 
-
-
+	return true;
 }
 
-void handshake(){
-
+bool handshake(){
+	bool estado;
 	resultadoParser resParser;
 	resParser.accionEjecutar = HANDSHAKE;
 
@@ -296,21 +302,23 @@ void handshake(){
 	memcpy(&acc, buffer, sizeof(int));
 	if(valueResponse < 0) {
 		log_info(g_logger,"Error al recibir los datos del handshake");
+		estado = false;
 	} else {
 		resultado res;
 		res.accionEjecutar = acc;
 		int status = recibirYDeserializarRespuesta(serverSocket, &res);
 		if(status<0) {
 			log_info(g_logger,"Error");
+			estado = false;
 		} else {
 			log_info(g_logger,"Recibi la respuesta del HANDSHAKE");
 			log_info(g_logger,"El tamaño del value es: %i", ((resultadoHandshake*)(res.contenido))->tamanioValue);
 			tamValue=((resultadoHandshake*)(res.contenido))->tamanioValue;
-
+			estado = true;
 		}
 	}
 	free(buffer);
-
+	return estado;
 }
 
 
@@ -864,7 +872,7 @@ void terminar_programa()
 
 }
 
-void gestionarConexionALFS()
+bool gestionarConexionALFS()
 {
 	struct addrinfo hints;
 	struct addrinfo *serverInfo;
@@ -878,11 +886,12 @@ void gestionarConexionALFS()
 
 	serverSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 
-	connect(serverSocket, serverInfo->ai_addr, serverInfo->ai_addrlen);
+	int status = connect(serverSocket, serverInfo->ai_addr, serverInfo->ai_addrlen);
 	freeaddrinfo(serverInfo);	// No lo necesitamos mas
 
-
-
+	if((serverSocket==-1) || (status ==-1))
+		return false;
+	return true;
 }
 
 void iniciar_tablas(){

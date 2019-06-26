@@ -90,11 +90,11 @@ typedef struct
 }NodoTablaPaginas;
 
 void monitorearConfig();
-void iniciar_programa();
+bool iniciar_programa();
 void actualizarRetardos();
 
 void terminar_programa(void);
-void gestionarConexionALFS(void);
+bool gestionarConexionALFS(void);
 void destroy_nodo_pagina(void *);
 void destroy_nodo_segmento(void *);
 void destroy_nodo_pagina_global(void * elem);
@@ -108,7 +108,7 @@ Registro* pedirAlLFS(char* nombre_tabla, int key);
 resultado mandarALFS(resultadoParser resParser);
 resultado recibir();
 int espacioLibre();
-void handshake();
+bool handshake();
 void almacenarRegistro(char *nombre_tabla,Registro registro, int posLibre);
 Segmento *agregarSegmento(char *nombre_tabla);
 void agregarPagina(Registro registro, Segmento *segmento, int posLibre, int valorFlag);
