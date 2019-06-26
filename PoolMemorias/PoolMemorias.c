@@ -362,6 +362,7 @@ resultado recibir(){
 	char* buffer = malloc(sizeof(int));
 	int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
 	memcpy(&acc, buffer, sizeof(int));
+
 	if(valueResponse < 0) {
 		res.resultado=ERROR;
 		log_info(g_logger,"Error al recibir los datos");
@@ -375,6 +376,7 @@ resultado recibir(){
 			log_info(g_logger,res.mensaje);
 		}
 	}
+
 	free(buffer);
 	return res;
 }
@@ -617,6 +619,7 @@ void enviarInsert(void *element){ //ver los casos de error
 		((NodoTablaPaginas*)element)->pagina->flag_modificado = 0;
 
 		resultado res = recibir();
+
 
 	}
 	else{
