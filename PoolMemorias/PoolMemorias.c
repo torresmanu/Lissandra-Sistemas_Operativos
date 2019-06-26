@@ -404,7 +404,7 @@ resultado select_t(char *nombre_tabla, int key){
 		actualizarTablaGlobal(pagina->numero_pagina);
 	}
 	else{
-		log_info(g_logger,"Algo salio mal, voy a hablar con el LFS");	//Tengo que pedirselo al LFS y agregarlo en la pagina
+		log_info(g_logger,"No encontre el registro, voy a hablar con el LFS");	//Tengo que pedirselo al LFS y agregarlo en la pagina
 
 		registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
 
@@ -580,8 +580,11 @@ void journal(){
 	log_info(g_logger,"Journaling, por favor espere");
 	estaHaciendoJournal=true;
 	list_iterate(tabla_paginas_global,enviarInsert);
+	list_clean_and_destroy_elements(tabla_segmentos,liberarSegmento);
+	log_info(g_logger,"Cantidad de segmentos:%d, cantidad de paginas:%d.",tabla_segmentos->elements_count,tabla_paginas_global->elements_count);
+
 	estaHaciendoJournal=false;
-	log_info(g_logger,"Termino el journal, puede ingrsar sus request");
+	log_info(g_logger,"Termino el journal, puede ingresar sus request");
 }
 
 void enviarInsert(void *element){ //ver los casos de error
