@@ -187,6 +187,7 @@ void iniciar_programa()
 	retardoJournaling = config_get_int_value(g_config,"RETARDO_JOURNAL");
 	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
 	retardoMemoria = config_get_int_value(g_config,"RETARDO_MEM");
+	retardoLFS = config_get_int_value(g_config,"RETARDO_FS");
 
 	TAM_MEMORIA_PRINCIPAL = config_get_int_value(g_config,"TAM_MEM");
 
@@ -217,6 +218,7 @@ void handshake(){
 
 	int size_to_send;
 
+	sleep(retardoLFS/1000);
 	char* pi = serializarPaquete(&resParser, &size_to_send);
 	send(serverSocket, pi, size_to_send, 0);
 
@@ -278,6 +280,7 @@ resultado mandarALFS(resultadoParser resParser){
 
 	int size_to_send;
 
+	sleep(retardoLFS/1000);
 	char* pi = serializarPaquete(&resParser, &size_to_send);
 	send(serverSocket, pi, size_to_send, 0);
 
