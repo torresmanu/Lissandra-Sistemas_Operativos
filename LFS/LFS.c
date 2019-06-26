@@ -213,7 +213,19 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 	//Primero verifico que exista la tabla
 	if(existeMetadata(tabla) != 0){
 		res.resultado=ERROR;
-		res.mensaje="No existe la tabla";
+//		res.mensaje="No existe la tabla";
+		//ACA METIO MANO MANU TORRES. NESECITO TENER EL RESULTADO COMPLETO PARA QUE ME AVISE CUANDO MEMORIAS
+		// HACE UN INSERT DE UNA TABLA QUE NO EXISTE
+		res.mensaje="No existe la tabla: ";
+		char* aux;
+		aux=malloc(strlen(res.mensaje)+strlen(tabla)+1);
+		strcpy(aux,res.mensaje);
+		strcat(aux,tabla);
+		res.mensaje = aux;
+
+		res.accionEjecutar=INSERT;
+		res.contenido=NULL;
+		//ACA TERMINA LA MANO DE MANU1. SALUDOS. ESPERO NO HABER OCASIONADO MOLESTIAS
 		return res;
 	}
 	//Creo un registro que es con el que voy a llamar a los proyectos
@@ -401,10 +413,11 @@ void gestionarConexion(int conexion_cliente) {
 				resultado res = parsear_mensaje(&rp);
 				char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
 				send(conexion_cliente, paqueteRespuesta, size_to_send, 0);
+
 			}
 		}
 	}
-
+	//aca creo que se podria liberar la memoria de buffer2 Atte Manu1
 	printf("Cierro la conexion normalmente\n");
 }
 
