@@ -21,6 +21,10 @@ int main(void) {
 	while(res.resultado != SALIR)
 	{
 		mensaje = readline(">");
+
+		if(mensaje)
+			add_history(mensaje);
+
 		resParser = parseConsole(mensaje);
 		res = parsear_mensaje(&resParser);
 		if(res.resultado == OK)
@@ -86,6 +90,7 @@ resultado parsear_mensaje(resultadoParser* resParser)
 			contenidoSelect* contSel;
 			contSel = (contenidoSelect*)resParser->contenido;
 			res = select_acc(contSel->nombreTabla,contSel->key);
+			//free(contSel->nombreTabla);
 			break;
 		}
 		case DESCRIBE:
@@ -170,6 +175,8 @@ resultado select_acc(char* tabla,int key)
 	if(particion == 0){
 		particion = metadata.partitions;
 	}
+
+	free(metadata.consistency);
 
 	//Paso 3: Escanear la partición objetivo, todos los archivos temporales
 	//y la memoria temporal de dicha tabla (si existe) buscando la key deseada.
