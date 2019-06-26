@@ -55,6 +55,7 @@ int TAM_MEMORIA_PRINCIPAL;
 int retardoJournaling;
 int retardoGossiping;
 int retardoMemoria;
+int retardoLFS;
 int offset;
 bool ejecutando;
 bool estaHaciendoJournal;
