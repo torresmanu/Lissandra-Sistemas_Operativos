@@ -24,9 +24,10 @@
 char* IP;
 char* PUERTO;
 
-int quantum; // Cantidad de Scripts en el estado EXEC
-int nivelMultiprocesamiento;
+int quantum; 					// Cantidad de Scripts en el estado EXEC
+int nivelMultiprocesamiento;    // Cuantos procesos (hilos) voy a ejecutar
 int nivelActual;
+int metadataRefresh;
 
 //////////// SOCKETS ////////////
 void iniciar_programa(void);
@@ -43,9 +44,13 @@ void mandarAready(Script *s);
 void mandarAexit(Script *s);
 bool deboSalir(Script *s);
 
-//Journal
+// JOURNAL
 
-// Add
+// ADD
 void add(Memoria*, Criterio*);
+
+// DESCRIBE GLOBAL
+void realizarDescribeGlobal();
+void describe();
 
 #endif /* KERNEL_H_ */

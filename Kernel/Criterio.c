@@ -11,8 +11,7 @@
 void iniciarCriterios(){
 	sc.tipo = SC;
 	sc.memorias = list_create();
-	//list_add(sc.memorias,criterioSC());  Directamente la inicializo con la unica memoria que puede tener y asignada por archivo
-	//									   de configuración?
+	//list_add(sc.memorias,criterioSC());  Directamente la inicializo con la unica memoria que puede tener y asignada por archivo de configuración?
 
 	shc.tipo = SHC;
 	shc.memorias = list_create();
@@ -49,14 +48,14 @@ Memoria* masApropiada(Criterio* c){
 	switch(c->tipo)
 	{
 		case SC:
-			mem = (Memoria*)list_get(sc.memorias,0);
+			mem = (Memoria*)list_get(sc.memorias,0);		// LOGICA DE CRITERIO STRONG CONSISTENCY
 			break;
 		case SHC:											// Necesito aplicar Hash
 			break;
 		case EC:
 		{
 			int cantidadMemorias = rand()%list_size(ec.memorias)+1;	// Que sea aleatoria
-			mem = (Memoria*)list_get(ec.memorias,cantidadMemorias);
+			mem = (Memoria*)list_get(ec.memorias,cantidadMemorias); // LOGICA DE CRITERIO EVENTUAL CONSISTENCY
 			break;
 		}
 		default:
@@ -65,8 +64,3 @@ Memoria* masApropiada(Criterio* c){
 	return mem;
 }
 
-Memoria criterioSC(){
-	/* LOGICA DE CRITERIO STRONG CONSISTENCY*/
-}
-
-t_consist obtenerConsistencia();

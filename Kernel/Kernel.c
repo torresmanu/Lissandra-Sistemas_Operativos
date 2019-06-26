@@ -10,8 +10,8 @@
 
 #include "Kernel.h"
 
-sem_t sNuevo;
-sem_t sListo;
+sem_t sNuevo; // Semáforo para el estado NEW
+sem_t sListo; // Semáforo para el estado READY
 
 pthread_mutex_t mNew;
 pthread_mutex_t mReady;
@@ -27,22 +27,24 @@ int main(void) {
 	pthread_mutex_init(&mExit,NULL);
 
 	iniciar_programa();
-	//Lanzamos tantos hilos como nivelMultiprocesamiento haya
-	pthread_t *executer = malloc( nivelMultiprocesamiento * sizeof(pthread_t) );
 
+	//Lanzamos tantos hilos como nivelMultiprocesamiento haya
+	pthread_t *executer = malloc(nivelMultiprocesamiento * sizeof(pthread_t));
 	for(int i=0; i<nivelMultiprocesamiento; i++ )
 	{
 	    pthread_create(&executer[i], NULL, (void*)ejecutador, NULL);
 	}
 
-	pthread_t plp;
+	pthread_t plp; // Planificador a largo plazo
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
 
-	obtenerMemorias();
+	pthread_t describeGlobal;
+	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 
 	leerConsola();										/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
 	pthread_join(plp,NULL);
+	pthread_join(describeGlobal,NULL);
 
 	for(int i=0; i<nivelMultiprocesamiento; i++)
 	{
@@ -71,23 +73,24 @@ void iniciar_programa(void)
 	//Obtengo el quantum
 	quantum = config_get_int_value(g_config,"QUANTUM");
 
-	// Nivel de multiprocesamiento
+	//Nivel de multiprocesamiento
 	nivelMultiprocesamiento = config_get_int_value(g_config,"MULTIPROCESAMIENTO");
 
-	pool = list_create();
-	tablas = list_create();
+	//Tasa de refresh de la metada
+	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
 
+	pool = list_create();			// POOL DE MEMORIAS
+	tablas = list_create();			// ESTRUCTURA QUE CONTIENE TODAS LAS TABLAS
+
+	/*
 	Tabla* peliculas = malloc(sizeof(Tabla));
 	peliculas->criterio = &sc;
 	char *auxc = "PELICULAS";
 	peliculas->nombre = strdup(auxc);
+	*/
 
-	list_add(tablas,peliculas);
-
-	iniciarCriterios();
-
-	obtenerMemorias();
-
+	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
+	obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
 }
 
 void terminar_programa()
@@ -296,4 +299,41 @@ void add(Memoria *memoria,Criterio *cons)
 
 }
 
+////////////////////////////////////////////////////
+
+void realizarDescribeGlobal()
+{
+	while(1)
+	{
+		sleep(metadataRefresh/1000); // Lo paso a ms
+		describe();
+	}
+}
+
+void describe()
+{
+	t_list* TablaLFS;
+
+	int size;
+	resultado res;
+	resultadoParser* describe = malloc(sizeof(resultadoParser));
+	describe->accionEjecutar = DESCRIBE;
+	char* msg = serializarPaquete(describe,&size);
+	send(memoriaSocket, msg, size, 0);
+
+	int status = recibirYDeserializarRespuesta(memoriaSocket,&res);
+	if(status<0)
+	{
+		log_info(g_logger,"Describe fallido");
+	}
+	else
+	{
+		printf("Cantidad de tablas indexadas en Kernel: %d\n", tablas->elements_count);
+		TablaLFS = (t_list*)res.contenido;
+		list_add_all(tablas,TablaLFS);
+		log_info(g_logger,"Describe global realizado con éxito\n");
+		printf("Cantidad de tablas indexadas en Kernel posterior Describe: %d\n", tablas->elements_count);
+	}
+	free(describe);
+}
 
