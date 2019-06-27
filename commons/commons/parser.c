@@ -60,6 +60,10 @@ resultadoParser parseConsole(char* mensaje){
 	{
 		resParser.accionEjecutar=JOURNAL;
 	}
+	else if(strcmp(accion,"DUMP") == 0)
+	{
+		resParser.accionEjecutar=DUMP;
+	}
 	else if(strcmp(accion,"RUN") == 0)
 	{
 		resParser.accionEjecutar=RUN;
@@ -104,6 +108,10 @@ resultadoParser parseConsole(char* mensaje){
 	else if(strcmp(accion,"SALIR") == 0)
 	{
 		resParser.accionEjecutar=SALIR_CONSOLA;
+	}
+	else if(strcmp(accion,"HANDSHAKE") == 0)
+	{
+		resParser.accionEjecutar=HANDSHAKE;
 	}
 	else
 	{

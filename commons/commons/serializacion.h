@@ -10,6 +10,8 @@
 
 #include <stdio.h>
 #include "parser.h"
+#include "metadata.h"
+#include "registro.h"
 
 typedef struct {
 	int operacion;
@@ -78,5 +80,7 @@ typedef struct {
 
 char* serializarPaquete(resultadoParser* rp, int* size_to_send);
 int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp);
+char* serializarRespuesta(resultado* res, int* size_to_send);
+int recibirYDeserializarRespuesta(int socketCliente, resultado* res);
 
 #endif /* SERIALIZACION_H_ */

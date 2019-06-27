@@ -5,8 +5,8 @@
  *      Author: utnso
  */
 
-#ifndef METADATA_H_
-#define METADATA_H_
+#ifndef COMMONS_METADATA_H_
+#define COMMONS_METADATA_H_
 
 
 typedef struct
@@ -18,4 +18,4 @@ typedef struct
 
 
 
-#endif /* METADATA_H_ */
+#endif /* COMMONS_METADATA_H_ */

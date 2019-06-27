@@ -5,8 +5,8 @@
  *      Author: utnso
  */
 
-#ifndef REGISTRO_H_
-#define REGISTRO_H_
+#ifndef COMMONS_REGISTRO_H_
+#define COMMONS_REGISTRO_H_
 
 #include "stdint.h"
 
@@ -20,4 +20,4 @@ typedef struct
 
 void parseRegistro(char*,registro*,int);
 
-#endif /* REGISTRO_H_ */
+#endif /* COMMONS_REGISTRO_H_ */

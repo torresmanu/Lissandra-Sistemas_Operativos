@@ -8,19 +8,20 @@
 #ifndef LFS_H_
 #define LFS_H_
 
-#include<commons/log.h>
-#include<commons/config.h>
-#include<commons/sockets.h>
-#include<commons/string.h>
-#include<commons/parser.h>
-#include<commons/collections/list.h>
+#include <commons/log.h>
+#include <commons/config.h>
+#include <commons/sockets.h>
+#include <commons/string.h>
+#include <commons/collections/list.h>
+#include <commons/parser.h>
+#include <commons/metadata.h>
+#include <commons/registro.h>
 #include "memtable.h"
-#include "metadata.h"
 #include "fileSystem.h"
 #include <pthread.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include "registro.h"
+#include <commons/registro.h>
 #include "fileSystemPropio.h"
 #include "stdint.h"
 
@@ -30,24 +31,10 @@ int server_fd;
 char* IP_FS;
 char* PUERTO_FS;
 
-typedef enum
-{
-	OK,
-	SALIR,
-	MENSAJE_MAL_FORMATEADO,
-	ERROR
-}estado;
-
-typedef struct
-{
-	estado resultado;
-	char* mensaje;
-} resultado;
-
 t_log* g_logger;
 
 
-resultado parsear_mensaje(char *);
+resultado parsear_mensaje(resultadoParser *);
 resultado select_acc(char *,int);
 resultado insert(char*,int,char*,long);
 resultado create(char*,char*,int,int);
@@ -55,6 +42,7 @@ resultado describe(char*);
 resultado drop(char*);
 resultado journal();
 resultado dump();
+resultado handshake();
 
 int iniciar_programa();
 void terminar_programa();

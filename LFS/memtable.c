@@ -82,3 +82,17 @@ void memtable_insert(char* nombre_tabla, registro reg){
 	list_add(nodo->lista_registros,reg_aux);
 	log_info(g_logger,"Valor memtable insertado tabla %s key %d value %s",nombre_tabla,reg_aux->key,reg_aux->value);
 }
+
+int memtable_dump(){
+	//Itero entre las tablas de la memtable
+	for(int i = 0; i < list_size(memtable_list); i++){
+		nodo_tabla* nodo = ((nodo_tabla*)list_get(memtable_list,i));
+		int status = fs_create_tmp(nodo->nombre_tabla,nodo->lista_registros);
+		if(status != 0){
+			return status;
+		}
+	}
+	finalizar_memtable();
+	iniciar_memtable();
+	return 0;
+}

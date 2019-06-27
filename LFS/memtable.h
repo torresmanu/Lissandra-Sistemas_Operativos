@@ -9,10 +9,10 @@
 #define MEMTABLE_H_
 
 #include<stdlib.h>
-#include "metadata.h"
-#include "registro.h"
 #include "LFS.h"
 #include<commons/collections/list.h>
+#include <commons/metadata.h>
+#include <commons/registro.h>
 
 t_list* memtable_list;
 
@@ -28,6 +28,7 @@ void destroy_nodo_tabla(void *);
 void destroy_nodo_registro(void *);
 registro* memtable_select(char*,int);
 void memtable_insert(char*,registro);
+int memtable_dump();
 
 
 #endif /* MEMTABLE_H_ */

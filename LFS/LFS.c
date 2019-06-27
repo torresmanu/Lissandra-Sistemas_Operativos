@@ -23,7 +23,8 @@ int main(void) {
 	while(res.resultado != SALIR)
 	{
 		mensaje = readline(">");
-		res = parsear_mensaje(mensaje);
+		resultadoParser resParser = parseConsole(mensaje);
+		res = parsear_mensaje(&resParser);
 		if(res.resultado == OK)
 		{
 			log_info(g_logger,res.mensaje);
@@ -79,27 +80,26 @@ int iniciar_programa()
 	return 0;
 }
 
-resultado parsear_mensaje(char* mensaje)
+resultado parsear_mensaje(resultadoParser* resParser)
 {
 	resultado res;
-	resultadoParser resParser = parseConsole(mensaje);
-	switch(resParser.accionEjecutar){
+	switch(resParser->accionEjecutar){
 		case SELECT:
 		{
 			contenidoSelect* contSel;
-			contSel = (contenidoSelect*)resParser.contenido;
+			contSel = (contenidoSelect*)resParser->contenido;
 			res = select_acc(contSel->nombreTabla,contSel->key);
 			break;
 		}
 		case DESCRIBE:
 		{
-			contenidoDescribe* contDes = resParser.contenido;
+			contenidoDescribe* contDes = resParser->contenido;
 			res = describe(contDes->nombreTabla);
 			break;
 		}
 		case INSERT:
 		{
-			contenidoInsert* contIns = resParser.contenido;
+			contenidoInsert* contIns = resParser->contenido;
 			res = insert(contIns->nombreTabla,contIns->key,contIns->value,contIns->timestamp);
 			break;
 		}
@@ -110,13 +110,13 @@ resultado parsear_mensaje(char* mensaje)
 		}
 		case CREATE:
 		{
-			contenidoCreate* contCreate = resParser.contenido;
+			contenidoCreate* contCreate = resParser->contenido;
 			res = create(contCreate->nombreTabla,contCreate->consistencia,contCreate->cant_part,contCreate->tiempo_compresion);
 			break;
 		}
 		case DROP:
 		{
-			contenidoDrop* contDrop = resParser.contenido;
+			contenidoDrop* contDrop = resParser->contenido;
 			res = drop(contDrop->nombreTabla);
 			break;
 		}
@@ -137,6 +137,11 @@ resultado parsear_mensaje(char* mensaje)
 			res.mensaje = "";
 			break;
 		}
+		case HANDSHAKE:
+		{
+			res = handshake();
+			break;
+		}
 		default:
 		{
 			res.resultado = SALIR;
@@ -151,13 +156,14 @@ resultado parsear_mensaje(char* mensaje)
 resultado select_acc(char* tabla,int key)
 {
 	resultado res;
+	res.accionEjecutar = SELECT;
 
 	//Paso 1: Verificar que la tabla exista en el file system y obtengo la metadata
 	metadataTabla metadata;
 	if(existeMetadata(tabla) == 0){
 		metadata = obtenerMetadata(tabla);
 	}else{
-		res.mensaje="Prueba";
+		res.mensaje="La tabla no existe.";
 		res.resultado=ERROR;
 		return res;
 	}
@@ -171,57 +177,72 @@ resultado select_acc(char* tabla,int key)
 	//Paso 3: Escanear la partición objetivo, todos los archivos temporales
 	//y la memoria temporal de dicha tabla (si existe) buscando la key deseada.
 	registro* regMemTable = memtable_select(tabla,key);
-
 	registro* regFs = fs_select(tabla,key,particion);
-
 	//Paso 4: Comparo la de mayor timestamp
 
 	if(regMemTable == NULL && regFs == NULL){
+		res.contenido = NULL;
 		log_info(g_logger,"No se encontro el registro");
 	}else if(regMemTable == NULL && regFs != NULL){
+		res.contenido = regFs;
 		log_info(g_logger,regFs->value);
 	}else if(regMemTable != NULL && regFs == NULL){
+		res.contenido = regMemTable;
 		log_info(g_logger,regMemTable->value);
 	}else{
 		if(regMemTable->timestamp > regFs->timestamp){
+			res.contenido = regMemTable;
 			log_info(g_logger,regMemTable->value);
 		}else{
+			res.contenido = regFs;
 			log_info(g_logger,regFs->value);
 		}
 	}
-	res.mensaje="Prueba";
+	res.mensaje="Ok.";
 	res.resultado=OK;
 	return res;
 }
 
 resultado insert(char* tabla,int key,char* value,long timestamp)
 {
+	resultado res;
+	//Primero verifico que exista la tabla
+	if(existeMetadata(tabla) != 0){
+		res.resultado=ERROR;
+		res.mensaje="No existe la tabla";
+		return res;
+	}
 	//Creo un registro que es con el que voy a llamar a los proyectos
 	registro reg;
 	reg.key=key;
 	strcpy(reg.value,value);
 	reg.timestamp = timestamp;
-
 	//Llamo al insert
 	memtable_insert(tabla,reg);
 
 	//Devuelvo el resultado
-	resultado res;
-	res.mensaje="Registro insertado exitosamente";
+
 	res.resultado=OK;
+	res.accionEjecutar=INSERT;
+	res.contenido=NULL;
+	res.mensaje = "Se insertó correctamente el registro.";
 	return res;
 }
 
 resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 {
 	resultado res;
+	res.accionEjecutar = CREATE;
+	res.contenido = NULL;
+
 	//Valido que exista la tabla
-	if(existeMetadata(tabla)){
+	if(existeMetadata(tabla) != 0){
 		//Creo la tabla con su directorio, metadata y archivos binarios
 		int status = crear_tabla(tabla,t_cons,cant_part,tiempo_comp);
 		if(status != 0){
 			res.mensaje="Error al crear la tabla";
 			res.resultado=ERROR;
+			return res;
 		}
 		res.mensaje="Tabla creada exitosamente";
 		res.resultado=OK;
@@ -235,11 +256,20 @@ resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 
 resultado describe(char* tabla)
 {
+	resultado res;
+	res.accionEjecutar = DESCRIBE;
+
 	if(tabla != NULL){
 		if(existeMetadata(tabla) == 0){
 			metadataTabla metadata = obtenerMetadata(tabla);
+			res.contenido = &metadata;
+			res.mensaje = "Ok.";
+			res.resultado = OK;
 			log_info(g_logger,metadata.consistency);
 		}else{
+			res.contenido = NULL;
+			res.mensaje = "No se encontró la tabla o la metadata.";
+			res.resultado = ERROR;
 			log_info(g_logger,"NO LA ENCONTRE");
 		}
 	}else{
@@ -249,81 +279,73 @@ resultado describe(char* tabla)
 				metadataTabla* metadata = (metadataTabla*) list_get(listaMetadata,i);
 				log_info(g_logger,metadata->consistency);
 			}
+			res.contenido = listaMetadata;
+			res.mensaje = "Ok.";
+			res.resultado = OK;
 		}
 	}
-	resultado res;
-	res.mensaje="Resultado prueba";
-	res.resultado=OK;
+
 	return res;
 }
 
 resultado drop(char* tabla)
 {
 	resultado res;
+	res.accionEjecutar = DROP;
+	res.contenido = NULL;
+
 	if(existeMetadata(tabla) == 0){
 		int status = dropTableFS(tabla);
 		if(status == 0){
+			res.mensaje = "Tabla dropeada exitosamente.";
+			res.resultado = OK;
 			log_info(g_logger,"Tabla dropeada exitosamente");
 		}else{
+			res.mensaje = "Error al dropear la tabla.";
+			res.resultado = ERROR;
 			log_info(g_logger,"Error al dropear la tabla");
 		}
 	}else{
+		res.mensaje = "No existe la tabla a dropear.";
+		res.resultado = ERROR;
 		log_info(g_logger,"No existe la tabla a dropear");
 	}
-	res.mensaje="Mensaje de prueba";
-	res.resultado=OK;
+
 	return res;
 }
 
 resultado journal()
 {
+	compactar();
 	resultado res;
-
-	//CREO ARCHIVO
-	int status = fs_fcreate("/home/utnso/workspace/prueba/tables/colores/6.bin");
-	if(status != 0){
-		res.mensaje="Salida prueba2";
-		res.resultado=ERROR;
-		return res;
-	}
-	//ABRO ARCHIVO
-	fs_file* f3 = fs_fopen("/home/utnso/workspace/prueba/tables/colores/6.bin");
-	//ESCRIBO ARCHIVO
-	for(int i = 0; i < 20; i++){
-		registro reg;
-		reg.key= 100 + i;
-		strcpy(reg.value,"value prueba");
-		reg.timestamp=1234567;
-		int status =fs_fprint(f3,&reg,sizeof(registro));
-		if(status != 0){
-			log_info(g_logger,"ERROR AL GUARDAR EL REGISTRO");
-		}
-	}
-
-	//LEO ARCHIVO
-	for(int i = 0; i < 20; i++){
-		registro reg;
-		fs_fread(f3,&reg,sizeof(registro),i);
-		if(&reg == NULL){
-			printf("ERROR\n");
-		}else{
-			printf("%i;%s;%ld\n",reg.key,reg.value,reg.timestamp);
-		}
-	}
-
-	//CIERRO ARCHIVO
-	fs_fclose(f3);
-	//resultado res;
-
-	res.resultado = OK;
-	res.mensaje = "Salida prueba";
+	res.accionEjecutar = JOURNAL;
+	res.contenido = NULL;
+	res.mensaje="Ok.";
+	res.resultado=OK;
 	return res;
 }
 
 resultado dump(){
 	resultado res;
+	int status = memtable_dump();
+	if(status != 0){
+		res.mensaje="Salida prueba";
+		res.resultado=ERROR;
+	}
 	res.mensaje="Salida prueba";
 	res.resultado=OK;
+	return res;
+}
+
+resultado handshake() {
+	resultado res;
+	resultadoHandshake* rh = malloc(sizeof(resultadoHandshake));
+	rh->tamanioValue = getIntConfig("TAMANIO_VALUE");
+
+	res.accionEjecutar = HANDSHAKE;
+	res.mensaje = "Ok.";
+	res.resultado = OK;
+	res.contenido = rh;
 	return res;
 }
 
@@ -343,12 +365,11 @@ void gestionarConexion(int conexion_cliente) {
 	int status;
 	resultadoParser rp;
 	char buffer[100];
+	int size_to_send;
 
 	char* buffer2 = malloc(sizeof(int));
 
 	while(recibiendo) {
-		//int valueResponse = recv(conexion_cliente, buffer, 100, 0);
-
 		accion acc;
 		int valueResponse = recv(conexion_cliente, buffer2, sizeof(int), 0);
 		memcpy(&acc, buffer2, sizeof(int));
@@ -361,22 +382,19 @@ void gestionarConexion(int conexion_cliente) {
 			printf("El cliente se desconectó\n");
 			recibiendo = 0;
 		} else {
-			/*
-			printf("%s\n", buffer);
-			bzero((char *)&buffer, sizeof(buffer));
-			send(conexion_cliente, "Recibido\n", 13, 0);
-			*/
-
 			rp.accionEjecutar = acc;
 			status = recibirYDeserializarPaquete(conexion_cliente, &rp);
 			if(status<0) {
 				recibiendo = 0;
 			} else {
-				printf("Recibi el paquete\n");
+				/*printf("Recibi el paquete\n");
 				printf("[gestionarConexion] key recibida = %i\n", ((contenidoInsert*)(rp.contenido))->key);
 				printf("[gestionarConexion] value recibido = %s\n", ((contenidoInsert*)(rp.contenido))->value);
 				printf("[gestionarConexion] nombreTabla recibido = %s\n", ((contenidoInsert*)(rp.contenido))->nombreTabla);
-				printf("[gestionarConexion] Timestamp recibido = %ld\n", ((contenidoInsert*)(rp.contenido))->timestamp);
+				printf("[gestionarConexion] Timestamp recibido = %ld\n", ((contenidoInsert*)(rp.contenido))->timestamp);*/
+				resultado res = parsear_mensaje(&rp);
+				char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
+				send(conexion_cliente, paqueteRespuesta, size_to_send, 0);
 			}
 		}
 	}

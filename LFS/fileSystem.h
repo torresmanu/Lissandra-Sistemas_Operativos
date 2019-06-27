@@ -8,7 +8,6 @@
 #ifndef FILESYSTEM_H_
 #define FILESYSTEM_H_
 
-#include "registro.h"
 #include "LFS.h"
 #include <dirent.h>
 #include <sys/types.h>
@@ -27,5 +26,8 @@ int crear_tabla(char* tabla,char* t_cons,int cant_part,int tiempo_comp);
 int crearArchivoMetadata(char* tablePath,metadataTabla metadata);
 int crearArchivosBinarios(char* tablesPath,metadataTabla metadata);
 int dropTableFS(char * tabla);
+int fs_create_tmp(char* tabla,t_list* regList);
+void compactarTabla(char* tabla);
+void compactar();
 
 #endif /* FILESYSTEM_H_ */

@@ -152,6 +152,10 @@ registro* obtenerRegistroDeArchivo(FILE* file, int key){
 int crear_tabla(char* tabla,char* t_cons,int cant_part,int tiempo_comp){
 	//Obtengo el path de la tabla a crear
 	char* tablesPath= obtenerTablePath();
+
+	//Chequeo si el directorio tables esta creado, en caso contrario lo creo
+	mkdir(tablesPath,0777);
+
 	string_append(&tablesPath,tabla);
 
 	//Creo el directorio
@@ -230,4 +234,235 @@ int dropTableFS(char * tabla){
 		perror("Error: ");
 	}
 	return status;
+}
+
+int fs_create_tmp(char* tabla,t_list* regList){
+	//Chequeo que exista el directorio de la tabla, si existe lo creo
+	char* tablesPath= obtenerTablePath();
+	string_append(&tablesPath,tabla);
+	mkdir(tablesPath,0777);
+
+	//Busco archivos tmp hasta que no encuentre
+	int i=1;
+	int ultimoTemp = 0;
+	char strUltimoTemp[20];
+	while(ultimoTemp == 0){
+		sprintf(strUltimoTemp, "%s/%i.tmp",tablesPath, i);
+		FILE* f = fopen(strUltimoTemp,"r");
+		if(f != NULL){
+			fclose(f);
+		}else{
+			ultimoTemp = i;
+		}
+		i++;
+	}
+
+	//Creo el archivo
+	FILE* file = fopen(strUltimoTemp,"w");
+	if(file == NULL){
+		return -1;
+	}
+
+	//Guardo todos los registros
+	for(int n = 0; n < list_size(regList); n++){
+		registro* reg = ((registro*)list_get(regList,n));
+		char strReg[200];
+		sprintf(strReg, "%ld;%i;%s\n",reg->timestamp,reg->key,reg->value);
+		fprintf(file, "%s",strReg);
+	}
+
+	//Cierro el archivo
+	fclose(file);
+	return 0;
+}
+
+void compactarTabla(char* tabla){
+	char* tablesPath= obtenerTablePath();
+	string_append(&tablesPath,tabla);
+	DIR* tabledir = opendir(tablesPath);
+	struct dirent* tablesde;
+	if(tabledir == NULL){
+		return;
+	}
+	int cantidadACompactar = 0;
+	//Itero entre los archivos temporales para renombrarlos
+	while((tablesde=readdir(tabledir))!= NULL){
+		if(string_contains(tablesde->d_name,"tmp") && !string_contains(tablesde->d_name,"tmpc")){
+			char * tmpPath = string_duplicate(tablesPath);
+			string_append(&tmpPath,"/");
+			string_append(&tmpPath,tablesde->d_name);
+			char * tmpcPath = string_duplicate(tmpPath);
+			string_append(&tmpcPath,"c");
+			int status = rename(tmpPath, tmpcPath);
+			if(status != 0){
+				log_info(g_logger,"Error al cambiar el temporal a memoria");
+			}else{
+				cantidadACompactar ++;
+			}
+		}
+	}
+
+	closedir(tabledir);
+
+	//Si son 0 a compactar entonces vuelvo porque no tiene sentido seguir
+	if(cantidadACompactar ==  0){
+		return;
+	}
+
+	//Creo la lista
+	t_list* list = list_create();
+
+	tabledir = opendir(tablesPath);
+	if(tabledir == NULL){
+		return;
+	}
+
+	//Cargo los archivos de particiones en la lista en memoria
+	while((tablesde=readdir(tabledir))!= NULL){
+		if(string_contains(tablesde->d_name,".bin")){
+			char * binPath = string_duplicate(tablesPath);
+			string_append(&binPath,"/");
+			string_append(&binPath,tablesde->d_name);
+
+			//Agrego el nodo de la particion a la lista
+			nodo_tabla* nodo = malloc(sizeof(nodo_tabla));
+			nodo->nombre_tabla = string_duplicate(binPath);
+			nodo->lista_registros = list_create();
+			list_add(list,nodo);
+
+			//Abro el archivo
+			FILE * file = fopen(binPath,"r");
+			char linea[1024];
+			//Itero entre los registros agregandolos a la lista
+			while(fgets(linea,1024,(FILE*)file)){
+				registro * reg_aux = malloc(sizeof(registro));
+				parseRegistro(linea,reg_aux,getIntConfig("TAMANIO_VALUE"));
+				list_add(nodo->lista_registros,reg_aux);
+			}
+
+			//Cierro el archivo
+			fclose(file);
+		}
+	}
+
+	closedir(tabledir);
+	tabledir = opendir(tablesPath);
+	if(tabledir == NULL){
+		return;
+	}
+
+	//Cargo los temporales en la lista en memoria
+	while((tablesde=readdir(tabledir))!= NULL){
+		if(string_contains(tablesde->d_name,".tmpc")){
+			char * tempcPath = string_duplicate(tablesPath);
+			string_append(&tempcPath,"/");
+			string_append(&tempcPath,tablesde->d_name);
+
+			//Abro el archivo
+			FILE * file = fopen(tempcPath,"r");
+			char linea[1024];
+			registro* reg = NULL;
+
+			//Itero entre los registros agregandolos a la lista
+			while(fgets(linea,1024,(FILE*)file)){
+				registro * reg = malloc(sizeof(registro));
+				parseRegistro(linea,reg,getIntConfig("TAMANIO_VALUE"));
+
+				//Busco la particion correspondiente donde guardarlo
+				int particion = reg->key % list_size(list);
+				if(particion == 0){
+					particion = list_size(list);
+				}
+
+				//Busco el nodo correspondiente a la particion
+				nodo_tabla* nodo;
+				for(int i=0;i<list_size(list);i++){
+					nodo_tabla* nodAux = (nodo_tabla*)list_get(list,i);
+					char binName[20];
+					sprintf(binName,"%i.bin",particion);
+					if(string_contains(nodAux->nombre_tabla,binName)){
+						nodo = nodAux;
+					}
+				}
+
+				//Itero entre los registros, si lo encuentro lo actualizo si el timestamp es mayor
+				int crear = 1;
+				for(int i = 0; i < list_size(nodo->lista_registros); i++){
+					registro* reg_aux = ((registro*)list_get(nodo->lista_registros,i));
+					if(reg_aux->key == reg->key){
+						if(reg_aux->timestamp < reg->timestamp){
+							strcpy(reg_aux->value,reg->value);
+							reg_aux->timestamp = reg->timestamp;
+						}
+						crear = 0;
+					}
+				}
+				//Si no encontre el registro entonces lo creo
+				if(crear == 1){
+					list_add(nodo->lista_registros,reg);
+				}
+				else{
+					free(reg);
+				}
+			}
+			//Cierro el archivo
+			fclose(file);
+			remove(tempcPath);
+		}
+	}
+	closedir(tabledir);
+
+	//Bloqueo la tabla
+	//TODO
+
+	//Borro los archivos de particiones y los vuelvo a crear con los nuevos valores
+	for(int i = 0; i < list_size(list);i ++){
+		nodo_tabla* nodo = list_get(list,i);
+
+		//Borro el archivo
+		int status = remove(nodo->nombre_tabla);
+		if(status != 0){
+			log_info(g_logger,"Error al borrar el archivo binario");
+		}
+
+		//Creo el archivo
+		FILE* file = fopen(nodo->nombre_tabla,"w");
+		if(file == NULL){
+			log_info(g_logger,"Error al crear el archivo binario");
+		}
+
+		//Guardo todos los registros
+		for(int n = 0; n < list_size(nodo->lista_registros); n++){
+			registro* reg = ((registro*)list_get(nodo->lista_registros,n));
+			char strReg[200];
+			sprintf(strReg, "%ld;%i;%s\n",reg->timestamp,reg->key,reg->value);
+			fprintf(file, "%s",strReg);
+		}
+		//Cierro el archivo
+		fclose(file);
+
+	}
+
+	//Libero la lista
+	//list_destroy_and_destroy_elements(list,destroy_nodo_tabla);
+
+	//Libero el bloqueo
+	//TODO
+}
+
+void compactar(){
+	char* tablesPath= obtenerTablePath();
+	DIR* tabledir = opendir(tablesPath);
+	struct dirent* tablesde;
+	if(tabledir == NULL){
+		return;
+	}
+	//Itero entre las tablas
+	while((tablesde=readdir(tabledir))!= NULL){
+		if(strcmp(tablesde->d_name,".")!= 0 && strcmp(tablesde->d_name,"..")!= 0){
+			//Llamo a la funcion para cada tabla
+			compactarTabla(tablesde->d_name);
+		}
+	}
+	closedir(tabledir);
 }

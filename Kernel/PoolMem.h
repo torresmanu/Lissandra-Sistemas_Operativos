@@ -12,14 +12,16 @@
 #include <commons/config.h>
 #include <stdlib.h>
 
-
 typedef struct{
-	int idMemoria;
+	char* ipMemoria;
+	char* puerto;
 }Memoria;
 
 // Pool de Memorias
 t_list *pool;
 
+// MANEJO DE MEMORIAS
 Memoria obtenerMemoria(t_config* config);
+
 
 #endif /* POOLMEM_H_ */
