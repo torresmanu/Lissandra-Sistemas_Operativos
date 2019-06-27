@@ -7,6 +7,7 @@
 
 #include "Request.h"
 
+// EJECUTAR ARCHIVO LQL
 Script* run(char* path){
 	FILE* arch = fopen(path, "r+b");
 	if(arch == NULL)
@@ -26,19 +27,11 @@ resultadoParser leerRequest(FILE* fd){
 
 	resultadoParser r;
 	getline(&linea,&tamanioLeido,fd);//realoca linea y pone el tamaño leido
-	log_info(g_logger,"Tamaño linea Rq: %d",tamanioLeido);
+	log_info(g_logger,"Tamaño linea Rrequest: %d",tamanioLeido);
 
 	r = parseConsole(linea);
 
 	free(linea);
-	return r;
-}
-
-///////////////// Linea por consola /////////////////
-resultadoParser leerLineaSQL(char* mensaje)
-{
-	resultadoParser r;
-	r = parseConsole(mensaje);
 	return r;
 }
 
@@ -57,7 +50,7 @@ Script* parsearScript(FILE* fd){
 
 		list_add(script->instrucciones,req);
 	}
-	log_info(g_logger,"Script preparado, cantidad instrucciones: %d",script->instrucciones->elements_count);
+	log_info(g_logger,"Script preparado. Cantidad de instrucciones: %d",script->instrucciones->elements_count);
 	return script;
 }
 
@@ -95,18 +88,21 @@ resultado recibir(){
 	char* buffer = malloc(sizeof(int));
 	int valueResponse = recv(memoriaSocket, buffer, sizeof(int), 0);
 	memcpy(&acc, buffer, sizeof(int));
-	if(valueResponse < 0) {
+	if(valueResponse < 0)
+	{
 		res.resultado=ERROR;
 		log_info(g_logger,"Error al recibir los datos");
-	} else {
-
+	}
+	else
+	{
 		res.accionEjecutar = acc;
 		int status = recibirYDeserializarRespuesta(memoriaSocket, &res);
-		if(status<0) {
-			log_info(g_logger,"Error");
-		} else if(res.resultado != OK) {
+
+		if(status<0)
+			log_info(g_logger,"Error!!");
+		else if(res.resultado != OK)
 			log_info(g_logger,res.mensaje);
-		}
+
 	}
 	free(buffer);
 	return res;
@@ -114,7 +110,7 @@ resultado recibir(){
 
 status ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio);
-	log_info(g_logger,"Elegi mem: %d",mem->id);
+	log_info(g_logger,"Elegi memoria: %d",mem->id);
 	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
 	return resultado;										// la memoria. enviarRequest está sin implementar, usa sockets.
 }
@@ -128,11 +124,8 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	log_info(g_logger,"Entro en enviarRequest");
 
 	memoriaSocket = gestionarConexionAMemoria(mem);
-
 	char* msg = serializarPaquete(request,&size);
-
 	send(memoriaSocket, msg, size, 0);
-
 	res = recibir();
 
 	log_info(g_logger,"Recibi respuesta de accion: %d",res.accionEjecutar);
