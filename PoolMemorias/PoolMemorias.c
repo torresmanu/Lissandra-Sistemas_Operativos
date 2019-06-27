@@ -165,9 +165,10 @@ void gossipingConRetardo(){
 	while(ejecutando){
 		sleep(retardoGossiping/1000);
 
-		//gossiping();
+		gossiping();
 	}
 }
+
 
 void actualizarRetardos(){
 
@@ -279,10 +280,45 @@ bool iniciar_programa()
 
 	posLibres= cantidadFrames;
 
+	memoriasConocidas = list_create();
+
+	yo = malloc(sizeof(Memoria));
+
+	yo->ip = config_get_string_value(g_config,"IP_PROPIA");;
+	yo->puerto=config_get_string_value(g_config,"PUERTO");
+	yo->numero = config_get_int_value(g_config,"MEMORY_NUMBER");
+	yo->socket=-1;
+
+	iniciarTablaSeeds();
+
+	list_add(memoriasConocidas,yo);
+
 	iniciar_tablas();
 
 	return true;
 }
+
+void iniciarTablaSeeds(){
+	int i=0;
+
+	memoriasSeeds = list_create();
+	char** ips = config_get_array_value(g_logger,"IP_SEEDS");
+	char** puertos = config_get_array_value(g_logger,"PUERTO_SEEDS");
+
+	while(ips[i]!=NULL){
+		Memoria* mem = malloc(sizeof(Memoria));
+
+		mem->ip = ips[i];
+		mem->puerto = puertos[i];
+		mem->numero = -1;
+		mem->socket = -1;
+
+		list_add(memoriasSeeds,mem);
+
+		i++;
+	}
+}
+
 
 bool handshake(){
 	bool estado;
@@ -854,10 +890,6 @@ void terminar_programa()
 	list_destroy_and_destroy_elements(tabla_segmentos, destroy_nodo_segmento);
 
 	//Liberar memoria
-	//FILE *archivo = fopen ("archivoBinario.dat", "wb");
-	//fwrite (memoria, 1, TAM_MEMORIA_PRINCIPAL, archivo);
-	//fclose(archivo);
-
 	free(memoria);
 
 	//Liberar bitmap
@@ -869,7 +901,11 @@ void terminar_programa()
 	//Destruyo tabla de paginas global
 	list_destroy_and_destroy_elements(tabla_paginas_global,destroy_nodo_pagina_global);
 
+	//Destruyo la lista de memorias seeds
+	list_destroy_and_destroy_elements(memoriasSeeds, destroy_nodo_memoria);
 
+	//Destruyo la lista de memorias conocidas
+	list_destroy_and_destroy_elements(memoriasConocidas, destroy_nodo_memoria);
 }
 
 bool gestionarConexionALFS()
@@ -897,6 +933,13 @@ bool gestionarConexionALFS()
 void iniciar_tablas(){
 	tabla_segmentos = list_create();
 	tabla_paginas_global = list_create();
+}
+
+void destroy_nodo_memoria(void* elem){
+	Memoria* mem = (Memoria*) elem;
+	free(mem->ip);
+	free(mem->puerto);
+	free(mem);
 }
 
 void destroy_nodo_pagina(void * elem){
