@@ -205,6 +205,7 @@ resultado select_acc(char* tabla,int key)
 
 resultado insert(char* tabla,int key,char* value,long timestamp)
 {
+
 	resultado res;
 	//Primero verifico que exista la tabla
 	if(existeMetadata(tabla) != 0){
