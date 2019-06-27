@@ -203,6 +203,7 @@ void fs_fread(fs_file* fs,void* resultado,int size,int position){
 	int tamBloque = getIntConfig("BLOCK_SIZE");
 	int cantObjPorBloque = tamBloque / size;
 	int posBloque = position/cantObjPorBloque;
+	int relPosition = position - posBloque * cantObjPorBloque;
 	char * bloque;
 	//Obtengo el bloque calculado anteriormente
 	for(int i= 0;i<=posBloque;i++){
@@ -220,7 +221,7 @@ void fs_fread(fs_file* fs,void* resultado,int size,int position){
 		resultado = NULL;
 		return;
 	}
-	fseek(fBloque, position*size, SEEK_SET );
+	fseek(fBloque, relPosition*size, SEEK_SET );
 	fread(resultado,size,1,fBloque);
 	fclose(fBloque);
 }
@@ -236,7 +237,7 @@ int fs_fprint(fs_file* fs, void* obj, int size){
 	//Me fijo si el ultimo bloque esta ocupado, si no lo esta escribo sobre el ultimo y si lo esta pido otro
 	int tamBloque = getIntConfig("BLOCK_SIZE");
 	int cantObjPorBloque = tamBloque / size;
-	int tamanoDisponible = cantObjPorBloque * cantBloques;
+	int tamanoDisponible = cantObjPorBloque * cantBloques * size;
 	if(tamanoDisponible < (fs->size + size)){
 		//Pido un nuevo bloque
 		ultimoBloque = obtenerSiguienteBloque();

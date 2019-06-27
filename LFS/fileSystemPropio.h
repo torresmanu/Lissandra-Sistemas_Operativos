@@ -25,6 +25,10 @@ int fs_fprint(fs_file* file, void* obj, int size);
 void fs_fclose(fs_file* fs);
 void fs_fdelete(fs_file* fs);
 
+//Funcion auxiliar
+int fs_printf_registro(fs_file*,registro*);
+void fs_fread_registro(fs_file*,registro*,int);
+
 //Funciones del bitmap
 void liberarBloque(int bloque);
 int obtenerSiguienteBloque();

@@ -66,7 +66,7 @@ void memtable_insert(char* nombre_tabla, registro reg){
 		registro* reg_aux = ((registro*)list_get(nodo->lista_registros,i));
 		if(reg_aux->key == reg.key){
 			if(reg_aux->timestamp < reg.timestamp){
-				reg_aux->value = reg.value;
+				strcpy(reg_aux->value,reg.value);
 				reg_aux->timestamp = reg.timestamp;
 				log_info(g_logger,"Valor memtable actualizado tabla %s key %d value %s",nombre_tabla,reg_aux->key,reg_aux->value);
 				return;

@@ -22,6 +22,7 @@
 #include <arpa/inet.h>
 #include "registro.h"
 #include "fileSystemPropio.h"
+#include "stdint.h"
 
 #define PACKAGESIZE 100
 

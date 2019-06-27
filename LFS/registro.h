@@ -8,11 +8,12 @@
 #ifndef REGISTRO_H_
 #define REGISTRO_H_
 
+#include "stdint.h"
 
 typedef struct
 {
-	char* value;
-	int key;
+	char value[200];
+	uint16_t key;
 	long timestamp;
 } registro;
 

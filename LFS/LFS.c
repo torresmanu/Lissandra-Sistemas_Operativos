@@ -105,7 +105,7 @@ resultado parsear_mensaje(char* mensaje)
 		}
 		case JOURNAL:
 		{
-			journal();
+			res = journal();
 			break;
 		}
 		case CREATE:
@@ -199,7 +199,7 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 	//Creo un registro que es con el que voy a llamar a los proyectos
 	registro reg;
 	reg.key=key;
-	reg.value = string_duplicate(value);
+	strcpy(reg.value,value);
 	reg.timestamp = timestamp;
 
 	//Llamo al insert
@@ -278,54 +278,45 @@ resultado drop(char* tabla)
 resultado journal()
 {
 	resultado res;
-	/*int status = fs_fcreate("/home/utnso/workspace/prueba/tables/colores/1.bin");
-	if(status != 0){
-		res.mensaje="Salida prueba";
-		res.resultado=ERROR;
-		return res;
-	}
-	log_info(g_logger,"ARCHIVO 1 CREADO");
-	status = fs_fcreate("/home/utnso/workspace/prueba/tables/colores/2.bin");
-	if(status != 0){
-		res.mensaje="Salida prueba";
-		res.resultado=ERROR;
-		return res;
-	}
-	log_info(g_logger,"ARCHIVO 2 CREADO");
-	fs_file* f1 = fs_fopen("/home/utnso/workspace/prueba/tables/colores/1.bin");
-	log_info(g_logger,"ARCHIVO 1 LEIDO");
-	log_info(g_logger,f1->name);
-	fs_file* f2 = fs_fopen("/home/utnso/workspace/prueba/tables/colores/2.bin");
-	log_info(g_logger,"ARCHIVO 2 LEIDO");
-	log_info(g_logger,f2->name);
-	fs_fclose(f1);
-	log_info(g_logger,"ARCHIVO 1 CERRADO");
-	fs_fdelete(f2);
-	log_info(g_logger,"ARCHIVO 2 BORRADO");
-	fs_fclose(f2);
-	log_info(g_logger,"ARCHIVO 2 CERRADO");
-	status = fs_fcreate("/home/utnso/workspace/prueba/tables/colores/2.bin");
-	if(status != 0){
-		res.mensaje="Salida prueba";
-		res.resultado=ERROR;
-		return res;
-	}
-	fs_file* f3 = fs_fopen("/home/utnso/workspace/prueba/tables/colores/2.bin");
-	log_info(g_logger,"ARCHIVO 3 LEIDO");
-	log_info(g_logger,f3->name);
-	fs_fclose(f3);
-	log_info(g_logger,"ARCHIVO 3 CERRADO");*/
 
-	printf("ENTRO\n");
-	fs_file* f3 = fs_fopen("/home/utnso/workspace/prueba/tables/colores/2.bin");
-	for(int i = 0; i < 20; i++){
-		long l;
-		fs_fread(f3,&l,sizeof(l),i);
-		printf("%ld\n",l);
+	//CREO ARCHIVO
+	int status = fs_fcreate("/home/utnso/workspace/prueba/tables/colores/6.bin");
+	if(status != 0){
+		res.mensaje="Salida prueba2";
+		res.resultado=ERROR;
+		return res;
 	}
+	//ABRO ARCHIVO
+	fs_file* f3 = fs_fopen("/home/utnso/workspace/prueba/tables/colores/6.bin");
+	//ESCRIBO ARCHIVO
+	for(int i = 0; i < 20; i++){
+		registro reg;
+		reg.key= 100 + i;
+		strcpy(reg.value,"value prueba");
+		reg.timestamp=1234567;
+		int status =fs_fprint(f3,&reg,sizeof(registro));
+		if(status != 0){
+			log_info(g_logger,"ERROR AL GUARDAR EL REGISTRO");
+		}
+	}
+
+	//LEO ARCHIVO
+	for(int i = 0; i < 20; i++){
+		registro reg;
+		fs_fread(f3,&reg,sizeof(registro),i);
+		if(&reg == NULL){
+			printf("ERROR\n");
+		}else{
+			printf("%i;%s;%ld\n",reg.key,reg.value,reg.timestamp);
+		}
+	}
+
+	//CIERRO ARCHIVO
 	fs_fclose(f3);
-	res.mensaje = "Salida prueba";
+	//resultado res;
+
 	res.resultado = OK;
+	res.mensaje = "Salida prueba";
 	return res;
 }
 
