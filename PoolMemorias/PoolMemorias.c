@@ -973,9 +973,15 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		}
 		case DESCRIBE:
 		{
-			mandarALFS(*resParser);
+			res = mandarALFS(*resParser);
 			log_info(g_logger,"Se envió al LFS");
-			res = recibir();
+			printf("Accion: %i\n", res.accionEjecutar);
+			printf("Mensaje: %s\n", res.mensaje);
+			printf("Resultado: %i\n", res.resultado);
+
+			if(res.contenido != NULL) {
+				printf("Size lista= %i\n", list_size(res.contenido));
+			}
 			break;
 		}
 		case INSERT:

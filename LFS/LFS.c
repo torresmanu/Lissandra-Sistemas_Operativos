@@ -275,10 +275,16 @@ resultado describe(char* tabla)
 	resultado res;
 	res.accionEjecutar = DESCRIBE;
 
+	t_list* listaMetadata;
+
 	if(tabla != NULL){
 		if(existeMetadata(tabla) == 0){
+			listaMetadata = list_create();
+			metadataTabla* metaIns = malloc(sizeof(metadataTabla));
 			metadataTabla metadata = obtenerMetadata(tabla);
-			res.contenido = &metadata;
+			memcpy(metaIns,&metadata,sizeof(metadataTabla));
+			list_add(listaMetadata, metaIns);
+			res.contenido = listaMetadata;
 			res.mensaje = "Ok.";
 			res.resultado = OK;
 			log_info(g_logger,metadata.consistency);
@@ -289,7 +295,7 @@ resultado describe(char* tabla)
 			log_info(g_logger,"NO LA ENCONTRE");
 		}
 	}else{
-		t_list* listaMetadata = obtenerTodasMetadata();
+		listaMetadata = obtenerTodasMetadata();
 		if(listaMetadata != NULL){
 			for(int i=0;i<list_size(listaMetadata);i++){
 				metadataTabla* metadata = (metadataTabla*) list_get(listaMetadata,i);
@@ -405,15 +411,9 @@ void gestionarConexion(int conexion_cliente) {
 			if(status<0) {
 				recibiendo = 0;
 			} else {
-				/*printf("Recibi el paquete\n");
-				printf("[gestionarConexion] key recibida = %i\n", ((contenidoInsert*)(rp.contenido))->key);
-				printf("[gestionarConexion] value recibido = %s\n", ((contenidoInsert*)(rp.contenido))->value);
-				printf("[gestionarConexion] nombreTabla recibido = %s\n", ((contenidoInsert*)(rp.contenido))->nombreTabla);
-				printf("[gestionarConexion] Timestamp recibido = %ld\n", ((contenidoInsert*)(rp.contenido))->timestamp);*/
 				resultado res = parsear_mensaje(&rp);
 				char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
 				send(conexion_cliente, paqueteRespuesta, size_to_send, 0);
-
 			}
 		}
 	}

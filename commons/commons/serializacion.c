@@ -166,33 +166,47 @@ char* serializarPaquete(resultadoParser* rp, int* total_size) {
 	}
 	case(DESCRIBE): {
 		int nombreTabla_size;
+		char* paqueteSerializado;
 		contenidoDescribe* cd;
 		offset = 0;
 		cd = (contenidoDescribe *) (rp->contenido);
 
-		*total_size = sizeof(rp->accionEjecutar) + sizeof(int)
-				+ (strlen(cd->nombreTabla) + 1) * sizeof(char) + sizeof(nombreTabla_size);
+		if(cd->nombreTabla != NULL) {
+			*total_size = sizeof(rp->accionEjecutar) + sizeof(int)
+					+ (strlen(cd->nombreTabla) + 1) * sizeof(char) + sizeof(nombreTabla_size);
 
-		char* paqueteSerializado = (char*) malloc(*total_size);
+			paqueteSerializado = (char*) malloc(*total_size);
 
-		size_to_send = sizeof(rp->accionEjecutar);
-		memcpy(paqueteSerializado + offset, &(rp->accionEjecutar), size_to_send);
-		offset += size_to_send;
-
-
-		size_to_send = sizeof(*total_size);
-		memcpy(paqueteSerializado + offset, total_size, size_to_send);
-		offset += size_to_send;
+			size_to_send = sizeof(rp->accionEjecutar);
+			memcpy(paqueteSerializado + offset, &(rp->accionEjecutar), size_to_send);
+			offset += size_to_send;
 
 
-		nombreTabla_size = strlen(cd->nombreTabla) + 1;
-		size_to_send = sizeof(nombreTabla_size);
-		memcpy(paqueteSerializado + offset, &nombreTabla_size, size_to_send);
-		offset += size_to_send;
+			size_to_send = sizeof(*total_size);
+			memcpy(paqueteSerializado + offset, total_size, size_to_send);
+			offset += size_to_send;
 
-		size_to_send = nombreTabla_size;
-		memcpy(paqueteSerializado + offset, cd->nombreTabla, size_to_send);
-		offset += size_to_send;
+
+			nombreTabla_size = strlen(cd->nombreTabla) + 1;
+			size_to_send = sizeof(nombreTabla_size);
+			memcpy(paqueteSerializado + offset, &nombreTabla_size, size_to_send);
+			offset += size_to_send;
+
+			size_to_send = nombreTabla_size;
+			memcpy(paqueteSerializado + offset, cd->nombreTabla, size_to_send);
+
+		} else {
+			*total_size = sizeof(rp->accionEjecutar) + sizeof(int);
+			paqueteSerializado = (char*) malloc(*total_size);
+
+			size_to_send = sizeof(rp->accionEjecutar);
+			memcpy(paqueteSerializado + offset, &(rp->accionEjecutar), size_to_send);
+			offset += size_to_send;
+
+
+			size_to_send = sizeof(*total_size);
+			memcpy(paqueteSerializado + offset, total_size, size_to_send);
+		}
 
 		return paqueteSerializado;
 
@@ -307,7 +321,7 @@ char* serializarPaquete(resultadoParser* rp, int* total_size) {
 
 int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 	int status;
-	int total_size;
+	int total_size = 0;
 
 	int buffer_size = sizeof(int);
 	char* buffer = malloc(buffer_size);
@@ -420,13 +434,17 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		memcpy(&total_size, buffer, buffer_size);
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(int), 0);
-		memcpy(&nombreTablaSize, buffer, buffer_size);
-		if (!status) return -2;
+		if(total_size > (sizeof(rp->accionEjecutar) + sizeof(int))) {
+			status = recv(socketCliente, buffer, sizeof(int), 0);
+			memcpy(&nombreTablaSize, buffer, buffer_size);
+			if (!status) return -2;
 
-		cd->nombreTabla = malloc(nombreTablaSize);
-		status = recv(socketCliente, cd->nombreTabla, nombreTablaSize, 0);
-		if (!status) return -2;
+			cd->nombreTabla = malloc(nombreTablaSize);
+			status = recv(socketCliente, cd->nombreTabla, nombreTablaSize, 0);
+			if (!status) return -2;
+		} else {
+			cd->nombreTabla = NULL;
+		}
 
 		rp->contenido = cd;
 
@@ -630,58 +648,110 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 	}
 	case(DESCRIBE): {
 		int consistency_size;
-		metadataTabla* metadata = (metadataTabla*) (res->contenido);
+		t_list* metadataList = (t_list*) (res->contenido);
 		message_size = 0;
 		offset = 0;
+		int cantidadMetadatas = 0;
+		char* paqueteSerializado;
 
-		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
-				+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size)
-				+ (strlen(metadata->consistency) + 1) * sizeof(char) + sizeof(consistency_size)
-				+ sizeof(metadata->compaction_time)
-				+ sizeof(metadata->partitions);
-		char* paqueteSerializado = (char*) malloc(*total_size);
+		if(res->contenido != NULL) {
+			cantidadMetadatas = list_size(metadataList);
+			metadataTabla* mt = (metadataTabla*) list_get(metadataList, 0);
 
-		//Copio la accion DESCRIBE
-		size_to_send = sizeof(res->accionEjecutar);
-		memcpy(paqueteSerializado + offset, &(res->accionEjecutar), size_to_send);
-		offset += size_to_send;
+			*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
+					+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size)
+					+ ((strlen(mt->consistency) + 1) * sizeof(char) + sizeof(consistency_size)
+					+ sizeof(mt->compaction_time)
+					+ sizeof(mt->partitions)) * list_size(metadataList)
+					+ sizeof(cantidadMetadatas);
 
-		//Copio el tamanio total
-		size_to_send = sizeof(*total_size);
-		memcpy(paqueteSerializado + offset, total_size, size_to_send);
-		offset += size_to_send;
+			paqueteSerializado = (char*) malloc(*total_size);
 
-		//Copio el resultado
-		size_to_send = sizeof(res->resultado);
-		memcpy(paqueteSerializado + offset, &(res->resultado), size_to_send);
-		offset += size_to_send;
+			//Copio la accion DESCRIBE
+			size_to_send = sizeof(res->accionEjecutar);
+			memcpy(paqueteSerializado + offset, &(res->accionEjecutar), size_to_send);
+			offset += size_to_send;
 
-		//Copio el mensaje
-		message_size = strlen(res->mensaje) + 1;
-		size_to_send = sizeof(message_size);
-		memcpy(paqueteSerializado + offset, &message_size, size_to_send);
-		offset += size_to_send;
+			//Copio el tamanio total
+			size_to_send = sizeof(*total_size);
+			memcpy(paqueteSerializado + offset, total_size, size_to_send);
+			offset += size_to_send;
 
-		size_to_send = message_size;
-		memcpy(paqueteSerializado + offset, res->mensaje, size_to_send);
-		offset += size_to_send;
+			//Copio el resultado
+			size_to_send = sizeof(res->resultado);
+			memcpy(paqueteSerializado + offset, &(res->resultado), size_to_send);
+			offset += size_to_send;
 
-		consistency_size = strlen(metadata->consistency) + 1;
-		size_to_send = sizeof(consistency_size);
-		memcpy(paqueteSerializado + offset, &consistency_size, size_to_send);
-		offset += size_to_send;
+			//Copio el mensaje
+			message_size = strlen(res->mensaje) + 1;
+			size_to_send = sizeof(message_size);
+			memcpy(paqueteSerializado + offset, &message_size, size_to_send);
+			offset += size_to_send;
 
-		size_to_send = consistency_size;
-		memcpy(paqueteSerializado + offset, metadata->consistency, size_to_send);
-		offset += size_to_send;
+			size_to_send = message_size;
+			memcpy(paqueteSerializado + offset, res->mensaje, size_to_send);
+			offset += size_to_send;
 
-		size_to_send = sizeof(metadata->compaction_time);
-		memcpy(paqueteSerializado + offset, &(metadata->compaction_time), size_to_send);
-		offset += size_to_send;
+			//Copio la cantidad de metadatas que se envían
+			size_to_send = sizeof(cantidadMetadatas);
+			memcpy(paqueteSerializado + offset, &cantidadMetadatas, size_to_send);
+			offset += size_to_send;
 
+			for(int i=0; i < list_size(metadataList); i++) {
+				mt = (metadataTabla*) list_get(metadataList, i);
 
-		size_to_send = sizeof(metadata->partitions);
-		memcpy(paqueteSerializado + offset, &(metadata->partitions), size_to_send);
+				consistency_size = strlen(mt->consistency) + 1;
+				size_to_send = sizeof(consistency_size);
+				memcpy(paqueteSerializado + offset, &consistency_size, size_to_send);
+				offset += size_to_send;
+
+				size_to_send = consistency_size;
+				memcpy(paqueteSerializado + offset, mt->consistency, size_to_send);
+				offset += size_to_send;
+
+				size_to_send = sizeof(mt->compaction_time);
+				memcpy(paqueteSerializado + offset, &(mt->compaction_time), size_to_send);
+				offset += size_to_send;
+
+				size_to_send = sizeof(mt->partitions);
+				memcpy(paqueteSerializado + offset, &(mt->partitions), size_to_send);
+				offset += size_to_send;
+			}
+		} else {
+			*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
+					+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size);
+
+			paqueteSerializado = (char*) malloc(*total_size);
+
+			//Copio la accion DESCRIBE
+			size_to_send = sizeof(res->accionEjecutar);
+			memcpy(paqueteSerializado + offset, &(res->accionEjecutar), size_to_send);
+			offset += size_to_send;
+
+			//Copio el tamanio total
+			size_to_send = sizeof(*total_size);
+			memcpy(paqueteSerializado + offset, total_size, size_to_send);
+			offset += size_to_send;
+
+			//Copio el resultado
+			size_to_send = sizeof(res->resultado);
+			memcpy(paqueteSerializado + offset, &(res->resultado), size_to_send);
+			offset += size_to_send;
+
+			//Copio el mensaje
+			message_size = strlen(res->mensaje) + 1;
+			size_to_send = sizeof(message_size);
+			memcpy(paqueteSerializado + offset, &message_size, size_to_send);
+			offset += size_to_send;
+
+			size_to_send = message_size;
+			memcpy(paqueteSerializado + offset, res->mensaje, size_to_send);
+			offset += size_to_send;
+
+			//Copio la cantidad de metadatas que se envían que deberian ser 0 en este punto
+			size_to_send = sizeof(cantidadMetadatas);
+			memcpy(paqueteSerializado + offset, &cantidadMetadatas, size_to_send);
+		}
 
 		return paqueteSerializado;
 
@@ -952,8 +1022,9 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		break;
 	}
 	case(DESCRIBE): {
-		metadataTabla* metadata = malloc(sizeof(metadataTabla));
+		//metadataTabla* metadata = malloc(sizeof(metadataTabla));
 		int consistencySize;
+		int cantidadMetadatas;
 
 		//Recibo el tamanio total
 		status = recv(socketCliente, buffer, sizeof(int), 0);
@@ -974,23 +1045,39 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		status = recv(socketCliente, res->mensaje, message_size, 0);
 		if (!status) return -2;
 
+		//Recibo la cantidad de metadatas
 		status = recv(socketCliente, buffer, sizeof(int), 0);
-		memcpy(&consistencySize, buffer, buffer_size);
+		memcpy(&cantidadMetadatas, buffer, buffer_size);
 		if (!status) return -2;
 
-		metadata->consistency = malloc(consistencySize);
-		status = recv(socketCliente, metadata->consistency, consistencySize, 0);
-		if (!status) return -2;
+		if(cantidadMetadatas > 0) {
+			t_list* metadataList = list_create();
+			metadataTabla* metadata = malloc(sizeof(metadataTabla));
 
-		status = recv(socketCliente, buffer, sizeof(int), 0);
-		memcpy(&(metadata->compaction_time), buffer, sizeof(int));
-		if (!status) return -2;
+			for(int i=0; i < cantidadMetadatas; i++) {
+				status = recv(socketCliente, buffer, sizeof(int), 0);
+				memcpy(&consistencySize, buffer, buffer_size);
+				if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(int), 0);
-		memcpy(&(metadata->partitions), buffer, sizeof(int));
-		if (!status) return -2;
+				metadata->consistency = malloc(consistencySize);
+				status = recv(socketCliente, metadata->consistency, consistencySize, 0);
+				if (!status) return -2;
 
-		res->contenido = metadata;
+				status = recv(socketCliente, buffer, sizeof(int), 0);
+				memcpy(&(metadata->compaction_time), buffer, sizeof(int));
+				if (!status) return -2;
+
+				status = recv(socketCliente, buffer, sizeof(int), 0);
+				memcpy(&(metadata->partitions), buffer, sizeof(int));
+				if (!status) return -2;
+
+				list_add(metadataList, metadata);
+			}
+
+			res->contenido = metadataList;
+		} else {
+			res->contenido = NULL;
+		}
 
 		break;
 	}
