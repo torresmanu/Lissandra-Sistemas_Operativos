@@ -15,8 +15,8 @@ int main(int argc, char* argv[]) {
 //	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
 
 
-//	pthread_t conexionKernel;
-//	pthread_create(&conexionKernel,NULL,(void*) escucharKernel,NULL);
+	pthread_t conexionKernel;
+	pthread_create(&conexionKernel,NULL,(void*) escucharKernel,NULL);
 
 	pthread_t monitoreador;
 	pthread_create(&monitoreador,NULL,(void*) monitorearConfig,NULL);

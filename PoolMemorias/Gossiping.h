@@ -14,7 +14,7 @@
 void gossiping();
 void gossipear(void* elem);
 bool estaConectada(Memoria* mem);
-char* serializarTabla(t_list* memoriasConocidas,int *totalSize);
+char* serializarTabla(t_list* memoriasConocidas,uint32_t *totalSize);
 void* sumarTamanios(void* seed,void* elem);
 void intercambiarTablas(Memoria* mem);
 int mandarTabla(Memoria* mem);

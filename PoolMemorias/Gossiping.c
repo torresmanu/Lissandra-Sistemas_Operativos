@@ -54,7 +54,7 @@ void intercambiarTablas(Memoria* mem){
 }
 
 int mandarTabla(Memoria* mem){
-	int totalSize;
+	uint32_t totalSize;
 
 	char *tablaSerializada = serializarTabla(memoriasConocidas,&totalSize);
 
@@ -69,19 +69,19 @@ int mandarTabla(Memoria* mem){
 
 //suma los tamaños de ip,puerto,numero y los dos int con los tamaños de ip y puerto
 void* sumarTamanios(void* seed,void* elem){
-	int* valor = (int*) seed;
+	uint32_t* valor = (uint32_t*) seed;
 	Memoria* memoria = (Memoria*) elem;
 
-	*valor = *valor + strlen(memoria->ip) + strlen(memoria->puerto) + sizeof(int)*3;
+	*valor = *valor + strlen(memoria->ip) + strlen(memoria->puerto) + sizeof(uint32_t)*3;
 	return valor;
 }
 
-char* serializarTabla(t_list* memoriasConocidas,int *totalSize){
-	int size_to_send, offset=0;
-	int seed=0;
-	int cantElementos = memoriasConocidas->elements_count;
+char* serializarTabla(t_list* memoriasConocidas,uint32_t *totalSize){
+	uint32_t size_to_send, offset=0;
+	uint32_t seed=0;
+	uint32_t cantElementos = memoriasConocidas->elements_count;
 
-	*totalSize = *(int*)list_fold(memoriasConocidas,&seed,sumarTamanios) + sizeof(int);
+	*totalSize = *(uint32_t*)list_fold(memoriasConocidas,&seed,sumarTamanios) + sizeof(uint32_t);
 
 	char* tablaSerializada = malloc(*totalSize);
 
@@ -89,13 +89,13 @@ char* serializarTabla(t_list* memoriasConocidas,int *totalSize){
 	memcpy(tablaSerializada,&cantElementos,size_to_send);
 	offset += size_to_send;
 
-	for(int i=0;i<cantElementos;i++){
+	for(uint32_t i=0;i<cantElementos;i++){
 		Memoria* elem = list_get(memoriasConocidas,i);
 
-		int tamIp = strlen(elem->ip);
-		int tamPuerto = strlen(elem->puerto);
+		uint32_t tamIp = strlen(elem->ip);
+		uint32_t tamPuerto = strlen(elem->puerto);
 
-		size_to_send = sizeof(int);
+		size_to_send = sizeof(uint32_t);
 		memcpy(tablaSerializada,&tamIp,size_to_send);
 		offset += size_to_send;
 
@@ -103,7 +103,7 @@ char* serializarTabla(t_list* memoriasConocidas,int *totalSize){
 		memcpy(tablaSerializada,elem->ip,size_to_send);
 		offset += size_to_send;
 
-		size_to_send = sizeof(int);
+		size_to_send = sizeof(uint32_t);
 		memcpy(tablaSerializada,&tamPuerto,size_to_send);
 		offset += size_to_send;
 
@@ -111,7 +111,7 @@ char* serializarTabla(t_list* memoriasConocidas,int *totalSize){
 		memcpy(tablaSerializada,elem->puerto,size_to_send);
 		offset += size_to_send;
 
-		size_to_send = sizeof(int);
+		size_to_send = sizeof(uint32_t);
 		memcpy(tablaSerializada,&elem->numero,size_to_send);
 		offset += size_to_send;
 	}
@@ -121,33 +121,33 @@ char* serializarTabla(t_list* memoriasConocidas,int *totalSize){
 
 int recibirTablas(Memoria* mem){
 	int status=0;
-	int tamLeer;
+	uint32_t tamLeer;
 
-	char* buffer = malloc(sizeof(int));
-	status = recv(mem->socket,buffer,sizeof(int),0);
-	if(status != sizeof(int)) return -2;
+	char* buffer = malloc(sizeof(uint32_t));
+	status = recv(mem->socket,buffer,sizeof(uint32_t),0);
+	if(status != sizeof(uint32_t)) return -2;
 
 	for(int i=0;i < *(int*)buffer;i++){
 		Memoria* memNueva = malloc(sizeof(Memoria));
 
-		status = recv(mem->socket,buffer,sizeof(int),0);
-		memcpy(&tamLeer,buffer,sizeof(int));
-		if(status != sizeof(int)) return -2;
+		status = recv(mem->socket,buffer,sizeof(uint32_t),0);
+		memcpy(&tamLeer,buffer,sizeof(uint32_t));
+		if(status != sizeof(uint32_t)) return -2;
 
 		memNueva->ip = malloc(tamLeer);
 		status = recv(mem->socket,memNueva->ip,tamLeer,0);
 		if(status != tamLeer) return -2;
 
-		status = recv(mem->socket,buffer,sizeof(int),0);
-		memcpy(&tamLeer,buffer,sizeof(int));
-		if(status != sizeof(int)) return -2;
+		status = recv(mem->socket,buffer,sizeof(uint32_t),0);
+		memcpy(&tamLeer,buffer,sizeof(uint32_t));
+		if(status != sizeof(uint32_t)) return -2;
 
 		memNueva->puerto = malloc(tamLeer);
 		status = recv(mem->socket,memNueva->puerto,tamLeer,0);
 		if(status != tamLeer) return -2;
 
-		status = recv(mem->socket,&memNueva->numero,sizeof(int),0);
-		if(status != sizeof(int)) return -2;
+		status = recv(mem->socket,&memNueva->numero,sizeof(uint32_t),0);
+		if(status != sizeof(uint32_t)) return -2;
 
 		memNueva->socket=-1;
 

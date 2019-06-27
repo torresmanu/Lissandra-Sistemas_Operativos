@@ -60,8 +60,8 @@ typedef struct
 typedef struct{
 	char* ip;
 	char* puerto;
-	int socket;
-	int numero;
+	uint32_t socket;
+	uint32_t numero;
 }Memoria;
 
 t_log* g_logger;
