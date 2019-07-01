@@ -15,8 +15,11 @@ int main(void) {
 	resultado res;
 	resultadoParser resParser;
 	char* mensaje;
-	res.resultado = OK;
-	iniciar_programa();
+	res.resultado= OK;
+	int status= iniciar_programa();
+	if(status != 0){
+		return status;
+	}
 
 	while(res.resultado != SALIR)
 	{
@@ -46,7 +49,7 @@ int main(void) {
 
 }
 
-void iniciar_programa()
+int iniciar_programa()
 {
 	pthread_attr_t attr;
 	pthread_t thread;
@@ -55,14 +58,18 @@ void iniciar_programa()
 	g_logger = log_create("LFS.log", "LFS", 1, LOG_LEVEL_INFO);
 	log_info(g_logger,"Inicio Aplicacion LFS");
 
-	//Inicio las configs
-	g_config = config_create("LFS.config");
-	log_info(g_logger,"Configuraciones inicializadas");
+	//Inicializo el FS Propio
+	int status = inicializarFSPropio();
+	if(status != 0){
+		log_info(g_logger,"ERROR al iniciar FS Propio inicializado");
+		return status;
+	}
+	log_info(g_logger,"FS Propio inicializado");
 
 	//Inicio la memtable
 	iniciar_memtable();
 
-	server_fd = iniciarServidor(config_get_string_value(g_config,"PUERTO_SERVIDOR"));
+	server_fd = iniciarServidor(getStringConfig("PUERTO_SERVIDOR"));
 	if(server_fd < 0) {
 		log_error(g_logger, "[iniciar_programa] Ocurrió un error al intentar iniciar el servidor");
 	} else {
@@ -79,6 +86,7 @@ void iniciar_programa()
 		}
 		pthread_attr_destroy(&attr);
 	}
+	return 0;
 }
 
 resultado parsear_mensaje(resultadoParser* resParser)
@@ -107,7 +115,7 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		}
 		case JOURNAL:
 		{
-			journal();
+			res = journal();
 			break;
 		}
 		case CREATE:
@@ -209,6 +217,7 @@ resultado select_acc(char* tabla,int key)
 
 resultado insert(char* tabla,int key,char* value,long timestamp)
 {
+
 	resultado res;
 	//Primero verifico que exista la tabla
 	if(existeMetadata(tabla) != 0){
@@ -231,7 +240,7 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 	//Creo un registro que es con el que voy a llamar a los proyectos
 	registro reg;
 	reg.key=key;
-	reg.value = string_duplicate(value);
+	reg.value= string_duplicate(value);
 	reg.timestamp = timestamp;
 	//Llamo al insert
 	memtable_insert(tabla,reg);
@@ -362,7 +371,7 @@ resultado dump(){
 resultado handshake() {
 	resultado res;
 	resultadoHandshake* rh = malloc(sizeof(resultadoHandshake));
-	rh->tamanioValue = config_get_int_value(g_config, "TAMANIO_VALUE");
+	rh->tamanioValue = getIntConfig("TAMANIO_VALUE");
 
 	res.accionEjecutar = HANDSHAKE;
 	res.mensaje = "Ok.";
@@ -375,9 +384,6 @@ void terminar_programa()
 {
 	//Destruyo el logger
 	log_destroy(g_logger);
-
-	//Destruyo las configs
-	config_destroy(g_config);
 
 	//Finalizar programa
 	finalizar_memtable();
@@ -476,4 +482,17 @@ int iniciarServidor(char* configPuerto) {
 	printf("A la escucha en el puerto %d\n", ntohs(servidor.sin_port));
 
 	return conexion_servidor;
+}
+
+char* getStringConfig(char* key){
+	t_config* config = config_create("LFS.config");
+	char* value = string_duplicate(config_get_string_value(config,key));
+	config_destroy(config);
+	return value;
+}
+int getIntConfig(char* key){
+	t_config* config = config_create("LFS.config");
+	int value = config_get_int_value(config,key);
+	config_destroy(config);
+	return value;
 }
