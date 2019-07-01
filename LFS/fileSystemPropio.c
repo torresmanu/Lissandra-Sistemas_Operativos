@@ -193,17 +193,18 @@ void fs_fclose(fs_file* f){
 	free(f);
 }
 
-void fs_fread(fs_file* fs,void* resultado,int size,int position){
+void fs_fread(fs_file* fs,registro* resultado,int position){
+	int size = sizeof(registro)+getIntConfig("TAMANIO_VALUE");
 	//Si el registro que quiero que leer esta por fuera del size retorno null en resultado
-	if(fs->size < (position*size+size)){
+	if(fs->size < (position+size)){
 		resultado = NULL;
 		return;
 	}
 	//Calculo en que bloque esta el registro
 	int tamBloque = getIntConfig("BLOCK_SIZE");
-	int cantObjPorBloque = tamBloque / size;
-	int posBloque = position/cantObjPorBloque;
-	int relPosition = position - posBloque * cantObjPorBloque;
+	int cantPorBloque = tamBloque/size;
+	int posBloque = position/cantPorBloque;
+	int relPosition = position - posBloque * cantPorBloque;
 	char * bloque;
 	//Obtengo el bloque calculado anteriormente
 	for(int i= 0;i<=posBloque;i++){
@@ -222,11 +223,14 @@ void fs_fread(fs_file* fs,void* resultado,int size,int position){
 		return;
 	}
 	fseek(fBloque, relPosition*size, SEEK_SET );
-	fread(resultado,size,1,fBloque);
+	fread(resultado,sizeof(registro),1,fBloque);
+	resultado->value=malloc(getIntConfig("TAMANIO_VALUE"));
+	fread(resultado->value,getIntConfig("TAMANIO_VALUE"),1,fBloque);
 	fclose(fBloque);
 }
 
-int fs_fprint(fs_file* fs, void* obj, int size){
+int fs_fprint(fs_file* fs, registro* obj){
+	int size = sizeof(registro) + getIntConfig("TAMANIO_VALUE");
 	//Veo cuantos bloques hay y me quedo con el ultimo
 	int cantBloques=0;
 	int ultimoBloque=0;
@@ -280,7 +284,8 @@ int fs_fprint(fs_file* fs, void* obj, int size){
 	if(fBloque == NULL){
 		return -2;
 	}
-	fwrite(obj,size,1,fBloque);
+	fwrite(obj,sizeof(registro),1,fBloque);
+	fwrite(obj->value,getIntConfig("TAMANIO_VALUE"),1,fBloque);
 	fclose(fBloque);
 	//Actualizo el size
 	fs->size = fs->size + size;

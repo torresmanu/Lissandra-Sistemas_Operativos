@@ -12,7 +12,7 @@
 
 typedef struct
 {
-	char value[200];
+	char* value;
 	uint16_t key;
 	long timestamp;
 } registro;

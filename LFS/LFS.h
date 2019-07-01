@@ -17,12 +17,12 @@
 #include <commons/metadata.h>
 #include <commons/registro.h>
 #include "memtable.h"
+#include "fileSystemPropio.h"
 #include "fileSystem.h"
 #include <pthread.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <commons/registro.h>
-#include "fileSystemPropio.h"
 #include "stdint.h"
 
 #define PACKAGESIZE 100

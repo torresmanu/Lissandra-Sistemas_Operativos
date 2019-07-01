@@ -216,7 +216,7 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 	//Creo un registro que es con el que voy a llamar a los proyectos
 	registro reg;
 	reg.key=key;
-	strcpy(reg.value,value);
+	reg.value= string_duplicate(value);
 	reg.timestamp = timestamp;
 	//Llamo al insert
 	memtable_insert(tabla,reg);

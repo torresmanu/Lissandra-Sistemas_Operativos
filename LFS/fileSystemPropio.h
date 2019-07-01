@@ -20,8 +20,8 @@ typedef struct{
 //Funciones del FS propio
 fs_file* fs_fopen(char*);
 int fs_fcreate(char* ruta);
-void fs_fread(fs_file* file,void* resultado,int size,int position);
-int fs_fprint(fs_file* file, void* obj, int size);
+void fs_fread(fs_file* file,registro* resultado,int position);
+int fs_fprint(fs_file* file, registro* obj);
 void fs_fclose(fs_file* fs);
 void fs_fdelete(fs_file* fs);
 
