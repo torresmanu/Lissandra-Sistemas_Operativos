@@ -21,21 +21,20 @@
 #include "Estados.h"
 #include "Request.h"
 
-t_log* g_logger;
-t_config* g_config;
 char* IP;
 char* PUERTO;
 
-int quantum; // Cantidad de Scripts en el estado EXEC
-int nivelMultiprocesamiento;
+int quantum; 					// Cantidad de Scripts en el estado EXEC
+int nivelMultiprocesamiento;    // Cuantos procesos (hilos) voy a ejecutar
 int nivelActual;
+int metadataRefresh;
 
 //////////// SOCKETS ////////////
 void iniciar_programa(void);
 void terminar_programa(void);
 int enviar_mensaje(int socket_cliente);
 int iniciarCliente();
-void gestionarConexionAMemoria();
+int gestionarConexionAMemoria(Memoria *mem);
 
 //////////// CONSOLA Y PLANIFICADORES ////////////
 void leerConsola();
@@ -45,9 +44,13 @@ void mandarAready(Script *s);
 void mandarAexit(Script *s);
 bool deboSalir(Script *s);
 
-//Journal
+// JOURNAL
 
-// Add
-void add(Memoria*, Criterio);
+// ADD
+void add(Memoria*, Criterio*);
+
+// DESCRIBE GLOBAL
+void realizarDescribeGlobal();
+void describe();
 
 #endif /* KERNEL_H_ */

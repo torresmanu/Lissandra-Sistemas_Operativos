@@ -37,6 +37,7 @@ registro* obtenerRegistroDeArchivoPropio(fs_file* file, int key){
 int existeMetadata(char* nombreTabla){
 	char* metadataPath = obtenerMetadataPath(nombreTabla);
 	FILE* metadataFile = fopen(metadataPath,"r");
+	free(metadataPath);
 	//Si el file es null significa que no existe el archivo metadata por lo tanto no existe la tabla
 	if(metadataFile == NULL){
 		return -1;
@@ -64,6 +65,7 @@ metadataTabla obtenerMetadata(char* nombreTabla){
 	metadataTabla metadata;
 	char* metadataPath=obtenerMetadataPath(nombreTabla);
 	t_config* config = config_create(metadataPath);
+	free(metadataPath);
 	metadata.compaction_time = config_get_int_value(config,"COMPACTION_TIME");
 	metadata.partitions = config_get_int_value(config,"PARTITIONS");
 	metadata.consistency = string_duplicate(config_get_string_value(config,"CONSISTENCY"));
@@ -99,9 +101,17 @@ registro* fs_select(char* nombreTabla, int key, int partition){
 		return regAux;
 	}else if(regAux != NULL && reg != NULL){
 		if(regAux->timestamp > reg->timestamp){
+			free(reg->value);
+			free(reg);
 			return regAux;
 		}
 	}
+
+	if(regAux != NULL) {
+		free(regAux->value);
+		free(regAux);
+	}
+
 	return reg;
 }
 
@@ -115,6 +125,7 @@ registro* fs_select_partition(char* nombreTabla, int key, int partition){
 	//FILE* partitionFile = fopen(partitionPath,"r");
 	//Abro el archivo para el FS propio
 	fs_file* partitionFile = fs_fopen(partitionPath);
+  free(partitionPath);
 	//Si el file es null significa que no encuentro la particion
 	if(partitionFile == NULL){
 		return NULL;
@@ -139,6 +150,7 @@ registro* fs_select_temporal(char* nombreTabla, int key){
 	DIR* tabledir = opendir(tablesPath);
 	struct dirent* tablesde;
 	if(tabledir == NULL){
+		free(tablesPath);
 		return NULL;
 	}
 	while((tablesde=readdir(tabledir))!= NULL){
@@ -151,7 +163,7 @@ registro* fs_select_temporal(char* nombreTabla, int key){
 			//FILE* temporalFile = fopen(temporalPath,"r");
 			//Abro el archivo del FS propio
 			fs_file* temporalFile = fs_fopen(temporalPath);
-
+      free(temporalPath);
 			//Si el file es null significa que no encuentro el archivo
 			if(temporalFile != NULL){
 				//Obtengo el registro para el FS Ubuntu
@@ -172,12 +184,14 @@ registro* fs_select_temporal(char* nombreTabla, int key){
 			}
 		}
 	}
+	closedir(tabledir);
 	return reg;
 }
 
 registro* obtenerRegistroDeArchivo(FILE* file, int key){
 	char linea[1024];
 	registro* reg = NULL;
+
 	while(fgets(linea,1024,(FILE*)file)){
 		registro* auxReg = malloc (sizeof(registro));
 		parseRegistro(linea,auxReg,getIntConfig("TAMAÑO_VALUE"));
@@ -185,13 +199,18 @@ registro* obtenerRegistroDeArchivo(FILE* file, int key){
 		if(auxReg->key == key){
 			//Si el registro todavia no se habia seteado lo seteo
 			if(reg == NULL){
-				reg = malloc(sizeof(registro));
-				memcpy(reg,auxReg,sizeof(registro));
+				//reg = malloc(sizeof(registro));
+				//memcpy(reg,auxReg,sizeof(registro));
+				reg = auxReg;
 			}
 			//Si ya tengo un registro comparo los timestamp
 			else if(auxReg->timestamp > reg->timestamp){
-				memcpy(reg,auxReg,sizeof(registro));
+				//memcpy(reg,auxReg,sizeof(registro));
+				reg = auxReg;
 			}
+		} else {
+			free(auxReg->value);
+			free(auxReg);
 		}
 	}
 	return reg;

@@ -26,7 +26,7 @@ Memoria criterioSC();
 void iniciarCriterios();
 void liberarCriterios();
 void destroy_nodo_memoria(void * elem);
-Criterio toConsistencia(char*);
+Criterio* toConsistencia(char*);
 Memoria* masApropiada(Criterio*);
 
 

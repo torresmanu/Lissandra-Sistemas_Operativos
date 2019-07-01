@@ -2,25 +2,35 @@
 
 int main(int argc, char* argv[]) {
 
-	iniciar_programa(argv[1]);
-	/*
+	pathConfig = argv[1];
+
+	bool estado = iniciar_programa();
+	if(!estado)
+		return 0;
+
 	pthread_t journalAutomatico;
 	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
 
-	pthread_t gossipingAutomatico;
-	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
-	*/
+//	pthread_t gossipingAutomatico;
+//	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
+
 
 	pthread_t conexionKernel;
 	pthread_create(&conexionKernel,NULL,(void*) escucharKernel,NULL);
+
+	pthread_t monitoreador;
+	pthread_create(&monitoreador,NULL,(void*) monitorearConfig,NULL);
 
 	consola();
 
 	//ver si esta bien que este aca
 	//van a hacer falta mutex para la memoria
-	//pthread_join(journalAutomatico,NULL);
+	pthread_join(journalAutomatico,NULL);
 	//pthread_join(gossipingAutomatico,NULL);
-	pthread_join(conexionKernel,NULL);
+//	pthread_join(conexionKernel,NULL);
+
+//	pthread_join(monitoreador,NULL); //NO VA CON JOIN CREO XQ SI NO SE QUEDA ESPERANDO UN CAMBIO EN ARCHIVO
+
 
 	terminar_programa();
 
@@ -35,7 +45,12 @@ void escucharKernel(){
 
 	while(res.resultado!=SALIR){
 		resultadoParser resParser = recibirRequest(conexion_cliente);
-		res = parsear_mensaje(&resParser);
+		if(estaHaciendoJournal){
+			res.resultado=EnJOURNAL;
+			res.mensaje = NULL;
+		}
+		else
+			res = parsear_mensaje(&resParser);
 
 		if(res.resultado == OK)
 		{
@@ -50,7 +65,10 @@ void escucharKernel(){
 		{
 			log_info(g_logger,"Mensaje incorrecto");
 		}
-		//atender_clientes();
+		else if(res.resultado == EnJOURNAL)
+		{
+			log_info(g_logger,"Se esta haciendo Journaling, ingrese la request mas tarde");
+		}
 
 		avisarResultado(res,conexion_cliente);
 
@@ -87,6 +105,7 @@ resultadoParser recibirRequest(int conexion_cliente){
 	} else {
 		rp.accionEjecutar = acc;
 		status = recibirYDeserializarPaquete(conexion_cliente, &rp);
+		log_info(g_logger,"La accion es:%d", rp.accionEjecutar);
 		if(status<0)
 			rp.accionEjecutar = SALIR_CONSOLA;
 	}
@@ -136,21 +155,82 @@ int conectarAlKernel(int conexion_servidor){
 }
 
 void journalConRetardo(){
-	while(1){
+	while(ejecutando){
 		sleep(retardoJournaling/1000);
 		journal();
 	}
 }
 
 void gossipingConRetardo(){
-	while(1){
+	while(ejecutando){
 		sleep(retardoGossiping/1000);
-		//gossiping();
+
+		gossiping();
 	}
 }
 
-void iniciar_programa(char* path)
+
+void actualizarRetardos(){
+
+	g_config = config_create(pathConfig);
+
+	retardoJournaling = config_get_int_value(g_config,"RETARDO_JOURNAL");
+
+	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
+
+	retardoMemoria = config_get_int_value(g_config,"RETARDO_MEM");
+}
+
+void monitorearConfig() {
+    int length, i = 0;
+    int fd;
+    int wd;
+    char buffer[BUF_LEN];
+
+    fd = inotify_init();
+
+    if (fd < 0) {
+        perror("inotify_init");
+    }
+
+    wd = inotify_add_watch(fd, "/home/utnso/workspace/tp-2019-1c-creativOS/PoolMemorias",
+        IN_MODIFY);
+
+    while(ejecutando){
+    	i=0;
+        length = read(fd, buffer, BUF_LEN);
+
+        if (length < 0) {
+            perror("read");
+        }
+        if(length == 0){
+        	printf("no lei nada\n");
+        }
+
+        while (i < length) {
+            struct inotify_event *event =
+                (struct inotify_event *) &buffer[i];
+            if (event->len) {
+                if (event->mask & IN_MODIFY) {
+                	if(strcmp(pathConfig,event->name)==0){
+                		log_info(g_logger,"El archivo %s fue modificado.", event->name);
+                		actualizarRetardos();
+                	}
+                }
+            }
+            i += EVENT_SIZE + event->len;
+        }
+    }
+
+    (void) inotify_rm_watch(fd, wd);
+    (void) close(fd);
+
+}
+
+bool iniciar_programa()
 {
+	estaHaciendoJournal = false;
+	ejecutando = true;
 
 
 	//Inicio el logger
@@ -158,30 +238,36 @@ void iniciar_programa(char* path)
 	log_info(g_logger,"Inicio Aplicacion Pool Memorias");
 
 	//Inicio las configs
-	g_config = config_create(path);
+	g_config = config_create(pathConfig);
 	log_info(g_logger,"Configuraciones inicializadas");
 
-
 	//Me conecto al LFS
-	gestionarConexionALFS();
-//	char* message="hola";
-//	char* value;
-//	send(serverSocket, message, strlen(message) + 1, 0); 	// Solo envio si el usuario no quiere salir.
-//	recv(serverSocket, value, 100, 0);						// LFS me manda el value en el buffer
-//	printf("%s\n", value);
-
+	bool estado = gestionarConexionALFS();
+	if(!estado){
+		log_info(g_logger,"Error al conectarse al LFS");
+		return false;
+	}
 
 	//hacer handshake con LFS y obtener tamaño de mem ppl y value
-	//tamValue = handshake();
-	tamValue=20;
+	estado = handshake();
+	if(!estado)
+		return false;
 
 	retardoJournaling = config_get_int_value(g_config,"RETARDO_JOURNAL");
 	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
 	retardoMemoria = config_get_int_value(g_config,"RETARDO_MEM");
+	retardoLFS = config_get_int_value(g_config,"RETARDO_FS");
+
 
 	TAM_MEMORIA_PRINCIPAL = config_get_int_value(g_config,"TAM_MEM");
 
 	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
+
+	if(memoria==NULL){
+		log_info(g_logger,"Error al inicializar la memoria principal");
+		return false;
+	}
+
 	memset(memoria,'0',TAM_MEMORIA_PRINCIPAL);
 
 	offset = sizeof(int)+sizeof(long)+tamValue;
@@ -194,11 +280,83 @@ void iniciar_programa(char* path)
 
 	posLibres= cantidadFrames;
 
+	memoriasConocidas = list_create();
+
+	yo = malloc(sizeof(Memoria));
+
+	yo->ip = config_get_string_value(g_config,"IP_PROPIA");;
+	yo->puerto=config_get_string_value(g_config,"PUERTO");
+	yo->numero = config_get_int_value(g_config,"MEMORY_NUMBER");
+	yo->socket=-1;
+
+	iniciarTablaSeeds();
+
+	list_add(memoriasConocidas,yo);
+
 	iniciar_tablas();
 
-
-
+	return true;
 }
+
+void iniciarTablaSeeds(){
+	int i=0;
+
+	memoriasSeeds = list_create();
+	char** ips = config_get_array_value(g_logger,"IP_SEEDS");
+	char** puertos = config_get_array_value(g_logger,"PUERTO_SEEDS");
+
+	while(ips[i]!=NULL){
+		Memoria* mem = malloc(sizeof(Memoria));
+
+		mem->ip = ips[i];
+		mem->puerto = puertos[i];
+		mem->numero = -1;
+		mem->socket = -1;
+
+		list_add(memoriasSeeds,mem);
+
+		i++;
+	}
+}
+
+
+bool handshake(){
+	bool estado;
+	resultadoParser resParser;
+	resParser.accionEjecutar = HANDSHAKE;
+
+
+	int size_to_send;
+
+	sleep(retardoLFS/1000);
+	char* pi = serializarPaquete(&resParser, &size_to_send);
+	send(serverSocket, pi, size_to_send, 0);
+
+	accion acc;
+	char* buffer = malloc(sizeof(int));
+	int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
+	memcpy(&acc, buffer, sizeof(int));
+	if(valueResponse < 0) {
+		log_info(g_logger,"Error al recibir los datos del handshake");
+		estado = false;
+	} else {
+		resultado res;
+		res.accionEjecutar = acc;
+		int status = recibirYDeserializarRespuesta(serverSocket, &res);
+		if(status<0) {
+			log_info(g_logger,"Error");
+			estado = false;
+		} else {
+			log_info(g_logger,"Recibi la respuesta del HANDSHAKE");
+			log_info(g_logger,"El tamaño del value es: %i", ((resultadoHandshake*)(res.contenido))->tamanioValue);
+			tamValue=((resultadoHandshake*)(res.contenido))->tamanioValue;
+			estado = true;
+		}
+	}
+	free(buffer);
+	return estado;
+}
+
 
 void actualizarTablaGlobal(int nPagina){
 	bool mismoNumero(void* elem){
@@ -234,6 +392,7 @@ resultado mandarALFS(resultadoParser resParser){
 
 	int size_to_send;
 
+	sleep(retardoLFS/1000);
 	char* pi = serializarPaquete(&resParser, &size_to_send);
 	send(serverSocket, pi, size_to_send, 0);
 
@@ -247,6 +406,7 @@ resultado recibir(){
 	char* buffer = malloc(sizeof(int));
 	int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
 	memcpy(&acc, buffer, sizeof(int));
+
 	if(valueResponse < 0) {
 		res.resultado=ERROR;
 		log_info(g_logger,"Error al recibir los datos");
@@ -260,6 +420,7 @@ resultado recibir(){
 			log_info(g_logger,res.mensaje);
 		}
 	}
+
 	free(buffer);
 	return res;
 }
@@ -268,20 +429,30 @@ resultado select_t(char *nombre_tabla, int key){
 	Pagina* pagina;
 
 	resultado res;
+	res.accionEjecutar = SELECT;
+
+	Registro* registro;
+
 	if(contieneRegistro(nombre_tabla,key,&pagina)){
 
 		int posicion=(pagina->indice_registro)*offset;
 
 		sleep(retardoMemoria/1000);
+
 		res.mensaje= strdup(&memoria[posicion]);
 		res.resultado=OK;
+
+		registro = malloc(sizeof(Registro));
+		registro->value = strdup(&memoria[posicion]);
+		memcpy(&registro->key,(&memoria[posicion+tamValue]),sizeof(int));
+		memcpy(&registro->timestamp,(&memoria[posicion+tamValue+sizeof(int)]),sizeof(long));
 
 		actualizarTablaGlobal(pagina->numero_pagina);
 	}
 	else{
-		log_info(g_logger,"Algo salio mal, voy a hablar con el LFS");	//Tengo que pedirselo al LFS y agregarlo en la pagina
+		log_info(g_logger,"No encontre el registro, voy a hablar con el LFS");	//Tengo que pedirselo al LFS y agregarlo en la pagina
 
-		Registro* registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
+		registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
 
 		int posLibre= espacioLibre();
 		if(posLibre>=0){
@@ -294,7 +465,9 @@ resultado select_t(char *nombre_tabla, int key){
 		if(res.resultado==OK)
 			res.mensaje= string_duplicate((registro)->value);
 
+
 	}
+	res.contenido = registro;
 
 	return res;
 }
@@ -313,7 +486,7 @@ int espacioLibre(){
 
 void almacenarRegistro(char *nombre_tabla,Registro registro, int posLibre){
 	Segmento *segmento;
-	if(!encuentraSegmento(nombre_tabla,segmento))
+	if(!encuentraSegmento(nombre_tabla,&segmento))
 		segmento = agregarSegmento(nombre_tabla);
 	agregarPagina(registro, segmento, posLibre, 0); //le paso cero como valorFlag porque solo la usamos en el select esta funcion
 }
@@ -394,7 +567,12 @@ void consola(){
 			add_history(mensaje);
 
 		resultadoParser resParser = parseConsole(mensaje);
-		res = parsear_mensaje(&resParser);
+		if(estaHaciendoJournal){
+			res.resultado=EnJOURNAL;
+			res.mensaje = NULL;
+		}
+		else
+			res = parsear_mensaje(&resParser);
 
 		if(res.resultado == OK)
 		{
@@ -409,12 +587,15 @@ void consola(){
 		{
 			log_info(g_logger,"Mensaje incorrecto");
 		}
-		//atender_clientes();
+		else if(res.resultado == EnJOURNAL)
+		{
+			log_info(g_logger,"Se esta haciendo Journaling, ingrese la request mas tarde");
+		}
 		if(res.mensaje!=NULL)
 			free(res.mensaje);
 		free(mensaje);
 	}
-
+	ejecutando = false;
 }
 
 void removerPagina(NodoTablaPaginas *nodo){
@@ -442,10 +623,14 @@ bool memoriaFull(){
 }
 
 void journal(){
-	log_info(g_logger,"Journaling");
-
+	log_info(g_logger,"Journaling, por favor espere");
+	estaHaciendoJournal=true;
 	list_iterate(tabla_paginas_global,enviarInsert);
+	list_clean_and_destroy_elements(tabla_segmentos,liberarSegmento);
+	log_info(g_logger,"Cantidad de segmentos:%d, cantidad de paginas:%d.",tabla_segmentos->elements_count,tabla_paginas_global->elements_count);
 
+	estaHaciendoJournal=false;
+	log_info(g_logger,"Termino el journal, puede ingresar sus request");
 }
 
 void enviarInsert(void *element){ //ver los casos de error
@@ -459,19 +644,26 @@ void enviarInsert(void *element){ //ver los casos de error
 		resParser.accionEjecutar=INSERT;
 
 		contenidoInsert* cont = malloc(sizeof(contenidoInsert));
+		cont->nombreTabla = malloc(strlen(((NodoTablaPaginas*)element)->segmento->nombre_tabla)+1);
 		strcpy(cont->nombreTabla,((NodoTablaPaginas*)element)->segmento->nombre_tabla);
+
 		sleep(retardoMemoria/1000);
-		memcpy(&cont->key,&(memoria[indice+tamValue]),sizeof(int));
+
+		memcpy(&cont->key,&(memoria[(indice*offset)+tamValue]),sizeof(int));
 		cont->value = strdup(&memoria[indice*offset]);
 		memcpy(&cont->timestamp,&(memoria[(indice*offset)+tamValue+sizeof(int)]),sizeof(long));
 		resParser.contenido=cont;
 
 		char* pi = serializarPaquete(&resParser, &size_to_send);
 		send(serverSocket, pi, size_to_send, 0);
+		free(cont->nombreTabla);
 		free(cont->value);
 		free(cont);
 
+		((NodoTablaPaginas*)element)->pagina->flag_modificado = 0;
+
 		resultado res = recibir();
+
 
 	}
 	else{
@@ -494,6 +686,7 @@ void cambiarNumerosPaginas(t_list* listaPaginas){
 void guardarEnMemoria(Registro registro, int posLibre){
 
 	sleep(retardoMemoria/1000);
+
 	memcpy(&memoria[(posLibre*offset)],registro.value,tamValue);
 	memcpy(&memoria[(posLibre*offset)+tamValue],&(registro.key),sizeof(int));
 	memcpy(&memoria[(posLibre*offset)+tamValue+sizeof(int)],&(registro.timestamp),sizeof(long));
@@ -515,7 +708,6 @@ bool encuentraSegmento(char *ntabla,Segmento **segmento){ 	//Me dice si ya exist
 		return strcmp(((Segmento *)elemento)->nombre_tabla, ntabla)==0;
 	}
 
-	//Segmento* s=malloc(sizeof(Segmento));
 	Segmento* s;
 	if (list_is_empty(tabla_segmentos)){
 	//free(s);
@@ -530,7 +722,6 @@ bool encuentraSegmento(char *ntabla,Segmento **segmento){ 	//Me dice si ya exist
 		}
 		else{
 			memcpy(segmento,&s,sizeof(Segmento*));
-			//free(s);							//COMPARACION VALGRIND V1.1
 			return true;
 
 		}
@@ -545,6 +736,7 @@ bool encuentraPagina(Segmento* segmento,int key, Pagina** pagina){
 		int posicion=(((Pagina *)elemento)->indice_registro)*offset;
 		int i=0;
 		sleep(retardoMemoria/1000);
+
 		memcpy(&i,&(memoria[posicion+tamValue]),sizeof(int));
 		return i==key;
 	}
@@ -561,13 +753,13 @@ bool encuentraPagina(Segmento* segmento,int key, Pagina** pagina){
 	return true;
 }
 
-resultado insert(char *nombre_tabla,int key,char *value){
+resultado insert(char *nombre_tabla,int key,char *value,long timestamp){
 	Segmento* segmento;
 
 	Pagina* pagina;
 
 	Registro registro;
-	registro.timestamp=time(NULL);
+	registro.timestamp=timestamp;
 	registro.key=key;
 	registro.value=value;
 
@@ -578,7 +770,7 @@ resultado insert(char *nombre_tabla,int key,char *value){
 	if(encuentraSegmento(nombre_tabla,&segmento)){
 
 		if(encuentraPagina(segmento,key,&pagina)){	//en vez de basura(char *) pasarle una pagina
-			actualizarRegistro(pagina,value);
+			actualizarRegistro(pagina,value,timestamp);
 			actualizarTablaGlobal(pagina->numero_pagina);
 			res.resultado=OK;
 		}
@@ -607,6 +799,8 @@ resultado insert(char *nombre_tabla,int key,char *value){
 		res.mensaje=strdup(aux);
 	}
 
+	res.accionEjecutar=INSERT;
+	res.contenido=NULL;
 
 	return res;
 }
@@ -652,9 +846,7 @@ void corregirIndicesPaginasGlobal(){
 	}
 }
 
-resultado drop(char* nombre_tabla){
-
-	resultado res;
+void drop(char* nombre_tabla){
 
 	Segmento* segmento;
 
@@ -663,36 +855,27 @@ resultado drop(char* nombre_tabla){
 		list_remove_and_destroy_element(tabla_segmentos,segmento->numero_segmento,liberarSegmento);
 		corregirIndicesTablaSegmentos();
 		corregirIndicesPaginasGlobal();
-
-
-		char *aux = "Registro eliminado exitosamente";
-		res.mensaje=strdup(aux);
-		res.resultado=OK;
-
-		//informar al LFS
+		log_info(g_logger, "Se libero el segmento de la tabla %s en memoria",nombre_tabla);
 	}
 	else{
-
-		char *aux = "Tabla no encontrada";
-		res.mensaje=strdup(aux);
-		res.resultado=ERROR;
-
+		log_info(g_logger, "No se encontro el segmento de la tabla %s en memoria",nombre_tabla);
 	}
-	return res;
 }
 
 
-void actualizarRegistro(Pagina *pagina,char *value){
+void actualizarRegistro(Pagina *pagina,char *value,long timestamp){
 
-	long timestamp=time(NULL);
 	int posicion=(pagina->indice_registro)*offset;
 	sleep(retardoMemoria/1000);
-	memcpy(&(memoria[posicion]),value,tamValue);
-	memcpy(&(memoria[posicion+tamValue+sizeof(int)]),&timestamp,sizeof(long));
-	//memoria[posicion+tamValue+sizeof(int)]=time(NULL);
 
+	long ts;
+	memcpy(&ts,&(memoria[posicion+tamValue+sizeof(int)]),sizeof(long));
 
-	pagina->flag_modificado=1;
+	if(timestamp>=ts){
+		memcpy(&(memoria[posicion]),value,tamValue);
+		memcpy(&(memoria[posicion+tamValue+sizeof(int)]),&timestamp,sizeof(long));
+		pagina->flag_modificado=1;
+	}
 }
 
 void terminar_programa()
@@ -707,10 +890,6 @@ void terminar_programa()
 	list_destroy_and_destroy_elements(tabla_segmentos, destroy_nodo_segmento);
 
 	//Liberar memoria
-	FILE *archivo = fopen ("archivoBinario.dat", "wb");
-	fwrite (memoria, 1, TAM_MEMORIA_PRINCIPAL, archivo);
-	fclose(archivo);
-
 	free(memoria);
 
 	//Liberar bitmap
@@ -722,10 +901,14 @@ void terminar_programa()
 	//Destruyo tabla de paginas global
 	list_destroy_and_destroy_elements(tabla_paginas_global,destroy_nodo_pagina_global);
 
+	//Destruyo la lista de memorias seeds
+	list_destroy_and_destroy_elements(memoriasSeeds, destroy_nodo_memoria);
 
+	//Destruyo la lista de memorias conocidas
+	list_destroy_and_destroy_elements(memoriasConocidas, destroy_nodo_memoria);
 }
 
-void gestionarConexionALFS()
+bool gestionarConexionALFS()
 {
 	struct addrinfo hints;
 	struct addrinfo *serverInfo;
@@ -739,16 +922,24 @@ void gestionarConexionALFS()
 
 	serverSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 
-	connect(serverSocket, serverInfo->ai_addr, serverInfo->ai_addrlen);
+	int status = connect(serverSocket, serverInfo->ai_addr, serverInfo->ai_addrlen);
 	freeaddrinfo(serverInfo);	// No lo necesitamos mas
 
-
-
+	if((serverSocket==-1) || (status ==-1))
+		return false;
+	return true;
 }
 
 void iniciar_tablas(){
 	tabla_segmentos = list_create();
 	tabla_paginas_global = list_create();
+}
+
+void destroy_nodo_memoria(void* elem){
+	Memoria* mem = (Memoria*) elem;
+	free(mem->ip);
+	free(mem->puerto);
+	free(mem);
 }
 
 void destroy_nodo_pagina(void * elem){
@@ -782,61 +973,54 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		}
 		case DESCRIBE:
 		{
-			//send al lfs el describe para obtener la metadata de las tablas
-			mandarALFS(*resParser);
-			char *aux = "Se envió al LFS";
+			res = mandarALFS(*resParser);
+			log_info(g_logger,"Se envió al LFS");
+			printf("Accion: %i\n", res.accionEjecutar);
+			printf("Mensaje: %s\n", res.mensaje);
+			printf("Resultado: %i\n", res.resultado);
 
-			res.mensaje=strdup(aux);
-			res.resultado=OK;
-
+			if(res.contenido != NULL) {
+				printf("Size lista= %i\n", list_size(res.contenido));
+			}
 			break;
 		}
 		case INSERT:
 		{
 			contenidoInsert* contenido = resParser->contenido;
-			res = insert(contenido->nombreTabla,contenido->key,contenido->value);
-
-
+			res = insert(contenido->nombreTabla,contenido->key,contenido->value,contenido->timestamp);
 			break;
 
 		}
 		case JOURNAL:
 		{
 			journal();
-			res.mensaje = NULL;
+			res.accionEjecutar = JOURNAL;
+			res.resultado = OK;
+			res.contenido = NULL;
+			char *aux = "Se realizo JOURNAL";
+			res.mensaje=strdup(aux);
 			break;
 		}
 		case CREATE:
 		{
-			char *aux = "Se envió al LFS";
-
-			res.mensaje=strdup(aux);
-			res.resultado=OK;
-
 			mandarALFS(*resParser);
-
-			//send al lfs para que haga el create
-
+			log_info(g_logger,"Se envió al LFS");
+			res = recibir();
 			break;
 		}
 		case DROP:
 		{
 			contenidoDrop* contDrop = resParser->contenido;
-			res = drop(contDrop->nombreTabla);
-
-			//mandarALFS(DROP, contDrop->nombreTabla,0);
-			//send al lfs para que realice la opercacion necesaria
-
+			drop(contDrop->nombreTabla);
+			mandarALFS(*resParser);
+			res = recibir();
 			break;
 		}
 		case DUMP:
 		{
 			mandarALFS(*resParser);
-
-			char *aux = "Se envió al LFS";
-
-			res.mensaje=strdup(aux);
-			res.resultado=OK;
+			log_info(g_logger,"Se envió al LFS");
+			res = recibir();
 			break;
 		}
 		case ERROR_PARSER:
@@ -850,36 +1034,13 @@ resultado parsear_mensaje(resultadoParser* resParser)
 			resParser->contenido = malloc(0);
 			res.resultado = SALIR;
 			res.mensaje = NULL;
-			break;
-		}
-		case HANDSHAKE:
-		{
-			char* pi = serializarPaquete(&resParser, &size_to_send);
-			send(serverSocket, pi, size_to_send, 0);
-
-			accion acc;
-			char* buffer = malloc(sizeof(int));
-			int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
-			memcpy(&acc, buffer, sizeof(int));
-			if(valueResponse < 0) {
-				printf("Error al recibir los datos\n");
-			} else {
-				resultado res;
-				res.accionEjecutar = acc;
-				int status = recibirYDeserializarRespuesta(serverSocket, &res);
-				if(status<0) {
-					printf("Error\n");
-				} else {
-					printf("Recibi la respuesta del HANDSHAKE\n");
-					printf("El tamaño del value es: %i\n", ((resultadoHandshake*)(res.contenido))->tamanioValue);
-				}
-			}
+			ejecutando = false;
 			break;
 		}
 		default:
 		{
 			res.resultado = SALIR;
-			res.mensaje = malloc(0);
+			res.mensaje = NULL;
 			break;
 		}
 	}

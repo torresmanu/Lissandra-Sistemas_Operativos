@@ -10,8 +10,8 @@
 
 #include "Kernel.h"
 
-sem_t sNuevo;
-sem_t sListo;
+sem_t sNuevo; // Semáforo para el estado NEW
+sem_t sListo; // Semáforo para el estado READY
 
 pthread_mutex_t mNew;
 pthread_mutex_t mReady;
@@ -27,22 +27,24 @@ int main(void) {
 	pthread_mutex_init(&mExit,NULL);
 
 	iniciar_programa();
-	//Lanzamos tantos hilos como nivelMultiprocesamiento haya
-	pthread_t *executer = malloc( nivelMultiprocesamiento * sizeof(pthread_t) );
 
+	//Lanzamos tantos hilos como nivelMultiprocesamiento haya
+	pthread_t *executer = malloc(nivelMultiprocesamiento * sizeof(pthread_t));
 	for(int i=0; i<nivelMultiprocesamiento; i++ )
 	{
 	    pthread_create(&executer[i], NULL, (void*)ejecutador, NULL);
 	}
 
-	pthread_t plp;
+	pthread_t plp; // Planificador a largo plazo
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
 
-	//obtenerMemorias();
-	//gestionarConexionAMemoria();
+	pthread_t describeGlobal;
+	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
+
 	leerConsola();										/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
 	pthread_join(plp,NULL);
+	pthread_join(describeGlobal,NULL);
 
 	for(int i=0; i<nivelMultiprocesamiento; i++)
 	{
@@ -50,6 +52,8 @@ int main(void) {
 	}
 
 	terminar_programa();
+
+	printf("Termine programa\n");
 	return 0;
 }
 
@@ -69,14 +73,24 @@ void iniciar_programa(void)
 	//Obtengo el quantum
 	quantum = config_get_int_value(g_config,"QUANTUM");
 
-	// Nivel de multiprocesamiento
+	//Nivel de multiprocesamiento
 	nivelMultiprocesamiento = config_get_int_value(g_config,"MULTIPROCESAMIENTO");
 
-	pool = list_create();
-	tablas = list_create();
+	//Tasa de refresh de la metada
+	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
 
-	iniciarCriterios();
+	pool = list_create();			// POOL DE MEMORIAS
+	tablas = list_create();			// ESTRUCTURA QUE CONTIENE TODAS LAS TABLAS
 
+	/*
+	Tabla* peliculas = malloc(sizeof(Tabla));
+	peliculas->criterio = &sc;
+	char *auxc = "PELICULAS";
+	peliculas->nombre = strdup(auxc);
+	*/
+
+	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
+	obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
 }
 
 void terminar_programa()
@@ -98,7 +112,7 @@ void terminar_programa()
 }
 
 
-void gestionarConexionAMemoria()
+int gestionarConexionAMemoria(Memoria* mem)
 {
 	struct addrinfo hints;
 	struct addrinfo* serverInfo;
@@ -107,10 +121,10 @@ void gestionarConexionAMemoria()
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	getaddrinfo(config_get_string_value(g_config, "IP_MEMORIA"), config_get_string_value(g_config, "PUERTO_MEMORIA"), &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
+	getaddrinfo(mem->ipMemoria,mem->puerto, &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
 
-	int memoriaSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
-	int res = connect(memoriaSocket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
+	memoriaSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+	int res =	connect(memoriaSocket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
 
 	if(res == -1)
 	{
@@ -118,24 +132,24 @@ void gestionarConexionAMemoria()
 	}
 	else
 	{
-		printf("Conectado a la memoria! Listo para enviar\n");
-		log_info(g_logger, "Se conecto a la memoria, listo para enviar scripts.");
+		log_info(g_logger, "Se conecto a la memoria n°:%d, listo para enviar scripts.",mem->id);
 	}
 	freeaddrinfo(serverInfo); // Libero
+	return memoriaSocket;
 }
 
 
 // Propias de Kernel
 
-void agregarScriptAEstado(Script* script, nombreEstado estado)  // Aca hace las comprobaciones si pueden
+void agregarScriptAEstado(void* elem, nombreEstado estado)  // Aca hace las comprobaciones si pueden
 {
 	switch(estado){
 		case NEW: {
-			queue_push(new, script);
+			queue_push(new, (resultadoParser*)elem);
 			break;
 		}
 		case READY: {
-			queue_push(ready,script);
+			queue_push(ready,(Script*)elem);
 			break;
 		}
 		case EXEC: {
@@ -150,7 +164,7 @@ void agregarScriptAEstado(Script* script, nombreEstado estado)  // Aca hace las 
 			break;
 		}
 		case EXIT: {
-			queue_push(exi,script);
+			queue_push(exi,(Script*)elem);
 			break;
 		}
 		default:
@@ -163,25 +177,32 @@ void leerConsola(){
 	printf("\nBienvenido! Welcome! Youkoso!\n");
 	while(1)
 	{
-		resultadoParser *aux = malloc(sizeof(resultadoParser));
-		Script* s = malloc(sizeof(Script));
+		resultadoParser *res = malloc(sizeof(resultadoParser));
+		//Script* s = malloc(sizeof(Script));
 
 		char* linea = readline(">");					// Leo stdin
-		add_history(linea);								// Para recordar el comando
+		if(linea)
+			add_history(linea);							// Para recordar el comando
 
-		resultadoParser res = parseConsole(linea);
-		memcpy(aux,&res,sizeof(res));
+		resultadoParser aux = parseConsole(linea);
+		memcpy(res,&aux,sizeof(resultadoParser));
 
 		pthread_mutex_lock(&mNew);
-		s = crearScript(aux);
-		agregarScriptAEstado(s, NEW);
+		agregarScriptAEstado(res, NEW);
 		pthread_mutex_unlock(&mNew);
 
+		log_info(g_logger,"Agrego resParser con accion: %d a new\n",res->accionEjecutar);
+
 		sem_post(&sNuevo);
-		printf("\nFunciona\n");
-		if(res.accionEjecutar==SALIR_CONSOLA)
+		if(res->accionEjecutar==SALIR_CONSOLA){
+			log_info(g_logger,"Entre en el if de salir_consola");
 			break;
+		}
+		log_info(g_logger,"Estoy abajo del if");
+
+		free(linea);
 	}
+
 }
 
 void planificadorLargoPlazo(){
@@ -189,6 +210,8 @@ void planificadorLargoPlazo(){
 
 	while(1){
 		sem_wait(&sNuevo);
+
+		log_info(g_logger,"Entre al plp");
 
 		pthread_mutex_lock(&mNew);
 		r = queue_pop(new);
@@ -200,20 +223,21 @@ void planificadorLargoPlazo(){
 		agregarScriptAEstado(s,READY);
 		pthread_mutex_unlock(&mReady);
 
+		log_info(g_logger,"Paso el script a ready, cant rq:%d",s->instrucciones->elements_count);
+
 		sem_post(&sListo);
 
 		if(r->accionEjecutar==SALIR_CONSOLA)
 			break;
 
-		free(r);
 	}
-	free(r);
 }
 
 void ejecutador(){
 	status e;
 	while(1){
 		sem_wait(&sListo);
+		log_info(g_logger,"Entro a ejecutar");
 
 		pthread_mutex_lock(&mReady);
 		Script *s = queue_pop(ready);
@@ -222,9 +246,13 @@ void ejecutador(){
 		if(deboSalir(s))//hay que ver cuando termina, buscar una mejor forma
 			return;
 
-		for(int i=0; i <= quantum ;i++){//ver caso en que falla, ejecutarS podria retornar un estado
+
+		for(int i=0; i <= quantum ;i++){ //ver caso en que falla, ejecutarS podria retornar un estado
+
 			if(!terminoScript(s)){
+				log_info(g_logger,"Voy a ejecutar un script con %d request",s->instrucciones->elements_count);
 				e = ejecutarScript(s);
+
 				if(e == REQUEST_ERROR)
 				{
 					mandarAexit(s);
@@ -233,6 +261,7 @@ void ejecutador(){
 			} else {
 				break;
 			}
+
 		}
 
 		if(!terminoScript(s))
@@ -260,37 +289,51 @@ void mandarAexit(Script *s){
 	pthread_mutex_unlock(&mExit);
 }
 
-//////////////////////////////////////////////////////////
-// Criterios y memorias
-
-void obtenerMemorias(){
-	Memoria *mem;
-	int ip = config_get_int_value(g_config,"MEMORIA");
-	mem->ipMemoria = ip;
-	gossiping(mem);//meto en pool la lista de memorias encontradas
-
-}
-
-// HARDCODEADO SOLO COMO PARA EJEMPLO.	////////////////////
-void gossiping(Memoria *mem){
-	Memoria *m1 = malloc(sizeof(Memoria));
-	//m1->idMemoria = 1;
-	list_add(pool,m1);
-
-	Memoria *m2 = malloc(sizeof(Memoria));
-	//m2->idMemoria = 2;
-	list_add(pool,m2);
-
-	Memoria *m3 = malloc(sizeof(Memoria));
-	//m3->idMemoria = 3;
-	list_add(pool,m3);
-}
 ////////////////////////////////////////////////////
 
 //Agrego la memoria en la lista de memorias del criterio
-void add(Memoria *memoria,Criterio cons){
+void add(Memoria *memoria,Criterio *cons)
+{
+	list_add(cons->memorias,memoria);
+	log_info(g_logger,"Agrege memoria n°:%d al criterio %d",memoria->id,cons->tipo);
 
-	list_add(cons.memorias,memoria);
 }
 
+////////////////////////////////////////////////////
+
+void realizarDescribeGlobal()
+{
+	while(1)
+	{
+		sleep(metadataRefresh/1000); // Lo paso a ms
+		describe();
+	}
+}
+
+void describe()
+{
+	t_list* TablaLFS;
+
+	int size;
+	resultado res;
+	resultadoParser* describe = malloc(sizeof(resultadoParser));
+	describe->accionEjecutar = DESCRIBE;
+	char* msg = serializarPaquete(describe,&size);
+	send(memoriaSocket, msg, size, 0);
+
+	int status = recibirYDeserializarRespuesta(memoriaSocket,&res);
+	if(status<0)
+	{
+		log_info(g_logger,"Describe fallido");
+	}
+	else
+	{
+		printf("Cantidad de tablas indexadas en Kernel: %d\n", tablas->elements_count);
+		TablaLFS = (t_list*)res.contenido;
+		list_add_all(tablas,TablaLFS);
+		log_info(g_logger,"Describe global realizado con éxito\n");
+		printf("Cantidad de tablas indexadas en Kernel posterior Describe: %d\n", tablas->elements_count);
+	}
+	free(describe);
+}
 

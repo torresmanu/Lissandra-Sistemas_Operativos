@@ -24,6 +24,7 @@
 #include <arpa/inet.h>
 #include <commons/registro.h>
 #include "stdint.h"
+#include <string.h>
 
 #define PACKAGESIZE 100
 
@@ -51,6 +52,7 @@ int atender_clientes(void);
 int esperarClienteNuevo(int);
 char* getStringConfig(char*);
 int getIntConfig(char*);
+int iniciarServidor(char*);
 
 
 #endif /* LFS_H_ */

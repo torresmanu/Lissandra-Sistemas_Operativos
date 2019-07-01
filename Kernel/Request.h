@@ -14,6 +14,7 @@
 #include <commons/parser.h>
 #include "Estados.h"
 #include "Criterio.h"
+#include <commons/serializacion.h>
 
 //Sockets
 #include <sys/types.h>
@@ -22,7 +23,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <arpa/inet.h>
-int memoriaSocket;
+int memoriaSocket;			// Almaceno el socket de la memoria para usarlo posteriormente
 
 typedef struct{
 	t_list *instrucciones;

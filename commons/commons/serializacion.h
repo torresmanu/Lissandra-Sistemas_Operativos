@@ -12,6 +12,7 @@
 #include "parser.h"
 #include "metadata.h"
 #include "registro.h"
+#include "collections/list.h"
 
 typedef struct {
 	int operacion;

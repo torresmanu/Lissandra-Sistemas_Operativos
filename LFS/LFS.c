@@ -13,6 +13,7 @@
 
 int main(void) {
 	resultado res;
+	resultadoParser resParser;
 	char* mensaje;
 	res.resultado= OK;
 	int status= iniciar_programa();
@@ -23,7 +24,11 @@ int main(void) {
 	while(res.resultado != SALIR)
 	{
 		mensaje = readline(">");
-		resultadoParser resParser = parseConsole(mensaje);
+
+		if(mensaje)
+			add_history(mensaje);
+
+		resParser = parseConsole(mensaje);
 		res = parsear_mensaje(&resParser);
 		if(res.resultado == OK)
 		{
@@ -37,7 +42,7 @@ int main(void) {
 		{
 			log_info(g_logger,"Mensaje incorrecto");
 		}
-		//atender_clientes();
+		free(mensaje);
 	}
 
 	terminar_programa();
@@ -66,14 +71,18 @@ int iniciar_programa()
 
 	server_fd = iniciarServidor(getStringConfig("PUERTO_SERVIDOR"));
 	if(server_fd < 0) {
-		printf("[iniciar_programa] Ocurrió un error al intentar iniciar el servidor\n");
+		log_error(g_logger, "[iniciar_programa] Ocurrió un error al intentar iniciar el servidor");
 	} else {
 		pthread_attr_init(&attr);
 		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 		int err = pthread_create(&thread, &attr, esperarClienteNuevo, server_fd);
 		if(err != 0) {
-			printf("[iniciar_programa] Hubo un problema al crear el thread esperarClienteNuevo:[%s]\n", strerror(err));
+			char* message_error = malloc(1024 * sizeof(char));
+			*message_error = "[iniciar_programa] Hubo un problema al crear el thread esperarClienteNuevo: ";
+			strcat(message_error, strerror(err));
+			log_error(g_logger, message_error);
+			free(message_error);
 		}
 		pthread_attr_destroy(&attr);
 	}
@@ -89,6 +98,7 @@ resultado parsear_mensaje(resultadoParser* resParser)
 			contenidoSelect* contSel;
 			contSel = (contenidoSelect*)resParser->contenido;
 			res = select_acc(contSel->nombreTabla,contSel->key);
+			//free(contSel->nombreTabla);
 			break;
 		}
 		case DESCRIBE:
@@ -174,6 +184,8 @@ resultado select_acc(char* tabla,int key)
 		particion = metadata.partitions;
 	}
 
+	free(metadata.consistency);
+
 	//Paso 3: Escanear la partición objetivo, todos los archivos temporales
 	//y la memoria temporal de dicha tabla (si existe) buscando la key deseada.
 	registro* regMemTable = memtable_select(tabla,key);
@@ -210,7 +222,19 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 	//Primero verifico que exista la tabla
 	if(existeMetadata(tabla) != 0){
 		res.resultado=ERROR;
-		res.mensaje="No existe la tabla";
+//		res.mensaje="No existe la tabla";
+		//ACA METIO MANO MANU TORRES. NESECITO TENER EL RESULTADO COMPLETO PARA QUE ME AVISE CUANDO MEMORIAS
+		// HACE UN INSERT DE UNA TABLA QUE NO EXISTE
+		res.mensaje="No existe la tabla: ";
+		char* aux;
+		aux=malloc(strlen(res.mensaje)+strlen(tabla)+1);
+		strcpy(aux,res.mensaje);
+		strcat(aux,tabla);
+		res.mensaje = aux;
+
+		res.accionEjecutar=INSERT;
+		res.contenido=NULL;
+		//ACA TERMINA LA MANO DE MANU1. SALUDOS. ESPERO NO HABER OCASIONADO MOLESTIAS
 		return res;
 	}
 	//Creo un registro que es con el que voy a llamar a los proyectos
@@ -260,10 +284,16 @@ resultado describe(char* tabla)
 	resultado res;
 	res.accionEjecutar = DESCRIBE;
 
+	t_list* listaMetadata;
+
 	if(tabla != NULL){
 		if(existeMetadata(tabla) == 0){
+			listaMetadata = list_create();
+			metadataTabla* metaIns = malloc(sizeof(metadataTabla));
 			metadataTabla metadata = obtenerMetadata(tabla);
-			res.contenido = &metadata;
+			memcpy(metaIns,&metadata,sizeof(metadataTabla));
+			list_add(listaMetadata, metaIns);
+			res.contenido = listaMetadata;
 			res.mensaje = "Ok.";
 			res.resultado = OK;
 			log_info(g_logger,metadata.consistency);
@@ -274,7 +304,7 @@ resultado describe(char* tabla)
 			log_info(g_logger,"NO LA ENCONTRE");
 		}
 	}else{
-		t_list* listaMetadata = obtenerTodasMetadata();
+		listaMetadata = obtenerTodasMetadata();
 		if(listaMetadata != NULL){
 			for(int i=0;i<list_size(listaMetadata);i++){
 				metadataTabla* metadata = (metadataTabla*) list_get(listaMetadata,i);
@@ -365,7 +395,6 @@ void gestionarConexion(int conexion_cliente) {
 	int recibiendo = 1;
 	int status;
 	resultadoParser rp;
-	char buffer[100];
 	int size_to_send;
 
 	char* buffer2 = malloc(sizeof(int));
@@ -388,18 +417,13 @@ void gestionarConexion(int conexion_cliente) {
 			if(status<0) {
 				recibiendo = 0;
 			} else {
-				/*printf("Recibi el paquete\n");
-				printf("[gestionarConexion] key recibida = %i\n", ((contenidoInsert*)(rp.contenido))->key);
-				printf("[gestionarConexion] value recibido = %s\n", ((contenidoInsert*)(rp.contenido))->value);
-				printf("[gestionarConexion] nombreTabla recibido = %s\n", ((contenidoInsert*)(rp.contenido))->nombreTabla);
-				printf("[gestionarConexion] Timestamp recibido = %ld\n", ((contenidoInsert*)(rp.contenido))->timestamp);*/
 				resultado res = parsear_mensaje(&rp);
 				char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
 				send(conexion_cliente, paqueteRespuesta, size_to_send, 0);
 			}
 		}
 	}
-
+	//aca creo que se podria liberar la memoria de buffer2 Atte Manu1
 	printf("Cierro la conexion normalmente\n");
 }
 
@@ -407,12 +431,12 @@ int esperarClienteNuevo(int conexion_servidor) {
 
 	int conexion_cliente;
 	struct sockaddr_in cliente;
-	socklen_t longc; //Debemos declarar una variable que contendrá la longitud de la estructura
+	socklen_t longc = sizeof(cliente); //Debemos declarar una variable que contendrá la longitud de la estructura
 
 	while(1) {
-		conexion_cliente = accept(conexion_servidor, (struct sockaddr *)&cliente, &longc);
+		conexion_cliente = accept(conexion_servidor, (struct sockaddr *) &cliente, &longc);
 		if(conexion_cliente<0) {
-			printf("Error al aceptar trafico\n");
+			printf("Error al aceptar tráfico\n");
 			return 1;
 		} else {
 			pthread_attr_t attr;
