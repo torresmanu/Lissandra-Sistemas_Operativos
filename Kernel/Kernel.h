@@ -17,6 +17,7 @@
 #include <readline/history.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include <errno.h>
 #include "Criterio.h"
 #include "Estados.h"
 #include "Request.h"

@@ -175,8 +175,9 @@ void agregarScriptAEstado(void* elem, nombreEstado estado)  // Aca hace las comp
 
 void leerConsola(){
 
+	resultado control;
 	printf("\nBienvenido! Welcome! Youkoso!\n");
-	while(1)
+	while(control.accionEjecutar != SALIR)
 	{
 		resultadoParser *res = malloc(sizeof(resultadoParser));
 		//Script* s = malloc(sizeof(Script));
@@ -188,6 +189,12 @@ void leerConsola(){
 		resultadoParser aux = parseConsole(linea);
 		memcpy(res,&aux,sizeof(resultadoParser));
 
+		if(res->accionEjecutar==SALIR_CONSOLA){
+			control.accionEjecutar = SALIR;
+			log_info(g_logger,"Entre en el if de salir_consola");
+			break;
+		}
+
 		pthread_mutex_lock(&mNew);
 		agregarScriptAEstado(res, NEW);
 		pthread_mutex_unlock(&mNew);
@@ -195,15 +202,12 @@ void leerConsola(){
 		log_info(g_logger,"Agrego resParser con accion: %d a new\n",res->accionEjecutar);
 
 		sem_post(&sNuevo);
-		if(res->accionEjecutar==SALIR_CONSOLA){
-			log_info(g_logger,"Entre en el if de salir_consola");
-			break;
-		}
+
 		log_info(g_logger,"Estoy abajo del if");
 
 		free(linea);
 	}
-
+	terminar_programa();
 }
 
 void planificadorLargoPlazo(){
@@ -312,9 +316,12 @@ void realizarDescribeGlobal()
 void describe()
 {
 	t_list* TablaLFS;
-
 	int size;
+	int status;
+	int valueResponse;
 	resultado res;
+	accion acc;
+	char* buffer = malloc(sizeof(char));
 
 	resultadoParser* describe = malloc(sizeof(resultadoParser));
 	describe->accionEjecutar = DESCRIBE;
@@ -325,21 +332,37 @@ void describe()
 	char* msg = serializarPaquete(describe,&size);
 	send(memoriaSocket, msg, size, 0);								// Pido el describe a la memoria
 
-	int status = recibirYDeserializarRespuesta(memoriaSocket,&res); // Recibo la lista de tablas
-	if(status<0)
+	valueResponse = recv(memoriaSocket,buffer,sizeof(int),0);
+	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
+
+	if(valueResponse < 0)
 	{
-		log_info(g_logger,"Describe fallido");
+		log_error(g_logger,strerror(errno));
+	}
+	else if(valueResponse == 0)
+	{
+		printf("Te desconectaste memoria?\n");
 	}
 	else
 	{
-		printf("Cantidad de tablas indexadas en Kernel: %d\n", tablas->elements_count);
-		TablaLFS = (t_list*)res.contenido;
-		list_add_all(tablas,TablaLFS);
-		log_info(g_logger,"Describe global realizado con éxito\n");
-		log_info(g_logger,"Cantidad de tablas indexadas en Kernel posterior Describe: %d\n", tablas->elements_count);
+		status = recibirYDeserializarRespuesta(memoriaSocket,&res); // Recibo la lista de tablas
+		if(status<0)
+			{
+				log_info(g_logger,"Describe fallido");
+			}
+			else
+			{
+				TablaLFS = (t_list*)res.contenido;
+				list_add_all(tablas,TablaLFS);
+				log_info(g_logger,"Describe global realizado con éxito\n");
+				log_info(g_logger,"Cantidad de tablas indexadas en Kernel posterior Describe: %d\n", tablas->elements_count);
+			}
 	}
+
+	free(buffer);
 	free(describe);
 	free(msg);
+	free(cd);
 }
 
 void establecerConexionPool()
