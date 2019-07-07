@@ -79,7 +79,7 @@ t_list* obtenerTodasMetadata(){
 	struct dirent* tablesde;
 	if(tablesdir == NULL){
 		log_info(g_logger,"Error al obtener el path a las tablas");
-		return NULL;
+		return metadataList;
 	}
 	while((tablesde=readdir(tablesdir))!= NULL){
 		if(!string_contains(tablesde->d_name,".")){

@@ -654,8 +654,9 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		int cantidadMetadatas = 0;
 		char* paqueteSerializado;
 
-		if(res->contenido != NULL) {
-			cantidadMetadatas = list_size(metadataList);
+		cantidadMetadatas = list_size(metadataList);
+
+		if(cantidadMetadatas > 0) {
 			metadataTabla* mt = (metadataTabla*) list_get(metadataList, 0);
 
 			*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
@@ -719,7 +720,8 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 			}
 		} else {
 			*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
-					+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size);
+					+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size)
+					+ sizeof(cantidadMetadatas);
 
 			paqueteSerializado = (char*) malloc(*total_size);
 
