@@ -82,6 +82,7 @@ void memtable_insert(char* nombre_tabla, registro reg){
 }
 
 int memtable_dump(){
+
 	//Itero entre las tablas de la memtable
 	for(int i = 0; i < list_size(memtable_list); i++){
 		nodo_tabla* nodo = ((nodo_tabla*)list_get(memtable_list,i));
