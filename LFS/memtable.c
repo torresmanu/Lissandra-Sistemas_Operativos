@@ -34,13 +34,11 @@ registro* memtable_select(char* nombreTabla, int key){
 			for(int n = 0; n < list_size(nodo->lista_registros); n++){
 				registro* reg = ((registro*)list_get(nodo->lista_registros,n));
 				if(reg->key == key){
-					log_info(g_logger,"Registro obtenido exitosamente tabla %s key %d value %s",nombreTabla,reg->key,reg->value);
 					return reg;
 				}
 			}
 		}
 	}
-	log_info(g_logger,"Registro no obtenido tabla %s key %d",nombreTabla,key);
 	return NULL;
 }
 
@@ -68,10 +66,10 @@ void memtable_insert(char* nombre_tabla, registro reg){
 			if(reg_aux->timestamp < reg.timestamp){
 				strcpy(reg_aux->value,reg.value);
 				reg_aux->timestamp = reg.timestamp;
-				log_info(g_logger,"Valor memtable actualizado tabla %s key %d value %s",nombre_tabla,reg_aux->key,reg_aux->value);
+				log_info(g_logger,"Valor actualizado en memtable");
 				return;
 			}else{
-				log_info(g_logger,"Valor memtable no actualizado hay un registro más nuevo");
+				log_info(g_logger,"Valor no actualizado en memtable");
 				return;
 			}
 		}
@@ -80,7 +78,7 @@ void memtable_insert(char* nombre_tabla, registro reg){
 	registro * reg_aux = malloc(sizeof(registro));
 	memcpy(reg_aux,&reg,sizeof(registro));
 	list_add(nodo->lista_registros,reg_aux);
-	log_info(g_logger,"Valor memtable insertado tabla %s key %d value %s",nombre_tabla,reg_aux->key,reg_aux->value);
+	log_info(g_logger,"Valor insertado en memtable",nombre_tabla,reg_aux->key,reg_aux->value);
 }
 
 int memtable_dump(){
@@ -89,10 +87,12 @@ int memtable_dump(){
 		nodo_tabla* nodo = ((nodo_tabla*)list_get(memtable_list,i));
 		int status = fs_create_tmp(nodo->nombre_tabla,nodo->lista_registros);
 		if(status != 0){
+			log_info(g_logger,"Error al realizar dump");
 			return status;
 		}
 	}
 	finalizar_memtable();
 	iniciar_memtable();
+	log_info(g_logger,"Dump realizado exitosamente");
 	return 0;
 }

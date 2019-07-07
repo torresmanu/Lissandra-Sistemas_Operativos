@@ -20,6 +20,7 @@ int main(void) {
 	if(status != 0){
 		return status;
 	}
+	log_info(g_logger,"Aplicacion LFS inicializada correctamente");
 
 	while(res.resultado != SALIR)
 	{
@@ -30,11 +31,7 @@ int main(void) {
 
 		resParser = parseConsole(mensaje);
 		res = parsear_mensaje(&resParser);
-		if(res.resultado == OK)
-		{
-			log_info(g_logger,res.mensaje);
-		}
-		else if(res.resultado == ERROR)
+		if(res.resultado == ERROR)
 		{
 			log_info(g_logger,"Ocurrio un error al ejecutar la acción");
 		}
@@ -56,7 +53,7 @@ int iniciar_programa()
 
 	//Inicio el logger
 	g_logger = log_create("LFS.log", "LFS", 1, LOG_LEVEL_INFO);
-	log_info(g_logger,"Inicio Aplicacion LFS");
+	log_info(g_logger,"Iniciando aplicacion LFS...");
 
 	//Inicializo el FS Propio
 	int status = inicializarFSPropio();
@@ -64,10 +61,11 @@ int iniciar_programa()
 		log_info(g_logger,"ERROR al iniciar FS Propio inicializado");
 		return status;
 	}
-	log_info(g_logger,"FS Propio inicializado");
+	log_info(g_logger,"FS Propio inicializado correctamente");
 
 	//Inicio la memtable
 	iniciar_memtable();
+	log_info(g_logger,"Memtable inicializada correctamente");
 
 	server_fd = iniciarServidor(getStringConfig("PUERTO_SERVIDOR"));
 	if(server_fd < 0) {
@@ -173,6 +171,7 @@ resultado select_acc(char* tabla,int key)
 	if(existeMetadata(tabla) == 0){
 		metadata = obtenerMetadata(tabla);
 	}else{
+		log_info(g_logger,"No existe la tabla %s",tabla);
 		res.mensaje="La tabla no existe.";
 		res.resultado=ERROR;
 		return res;
@@ -197,17 +196,17 @@ resultado select_acc(char* tabla,int key)
 		log_info(g_logger,"No se encontro el registro");
 	}else if(regMemTable == NULL && regFs != NULL){
 		res.contenido = regFs;
-		log_info(g_logger,regFs->value);
+		log_info(g_logger,"Registro obtenido FS: %i;%s;%ld",regFs->key,regFs->value,regFs->timestamp);
 	}else if(regMemTable != NULL && regFs == NULL){
 		res.contenido = regMemTable;
-		log_info(g_logger,regMemTable->value);
+		log_info(g_logger,"Registro obtenido memtable: %i;%s;%ld",regMemTable->key,regMemTable->value,regMemTable->timestamp);
 	}else{
 		if(regMemTable->timestamp > regFs->timestamp){
 			res.contenido = regMemTable;
-			log_info(g_logger,regMemTable->value);
+			log_info(g_logger,"Registro obtenido memtable: %i;%s;%ld",regMemTable->key,regMemTable->value,regMemTable->timestamp);
 		}else{
 			res.contenido = regFs;
-			log_info(g_logger,regFs->value);
+			log_info(g_logger,"Registro obtenido FS: %i;%s;%ld",regFs->key,regFs->value,regFs->timestamp);
 		}
 	}
 	res.mensaje="Ok.";
@@ -221,10 +220,8 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 	resultado res;
 	//Primero verifico que exista la tabla
 	if(existeMetadata(tabla) != 0){
+		log_info(g_logger,"No existe la tabla %s",tabla);
 		res.resultado=ERROR;
-//		res.mensaje="No existe la tabla";
-		//ACA METIO MANO MANU TORRES. NESECITO TENER EL RESULTADO COMPLETO PARA QUE ME AVISE CUANDO MEMORIAS
-		// HACE UN INSERT DE UNA TABLA QUE NO EXISTE
 		res.mensaje="No existe la tabla: ";
 		char* aux;
 		aux=malloc(strlen(res.mensaje)+strlen(tabla)+1);
@@ -234,7 +231,6 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 
 		res.accionEjecutar=INSERT;
 		res.contenido=NULL;
-		//ACA TERMINA LA MANO DE MANU1. SALUDOS. ESPERO NO HABER OCASIONADO MOLESTIAS
 		return res;
 	}
 	//Creo un registro que es con el que voy a llamar a los proyectos
@@ -265,17 +261,19 @@ resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 		//Creo la tabla con su directorio, metadata y archivos binarios
 		int status = crear_tabla(tabla,t_cons,cant_part,tiempo_comp);
 		if(status != 0){
+			log_info(g_logger,"Error al crear la tabla");
 			res.mensaje="Error al crear la tabla";
 			res.resultado=ERROR;
 			return res;
 		}
+		log_info(g_logger,"Tabla %s creada correctamente",tabla);
 		res.mensaje="Tabla creada exitosamente";
 		res.resultado=OK;
 	}else{
+		log_info(g_logger,"La tabla %s ya existe en LFS",tabla);
 		res.mensaje="Ya existe la tabla";
-		res.resultado=OK;
+		res.resultado=ERROR;
 	}
-
 	return res;
 }
 
@@ -328,20 +326,19 @@ resultado drop(char* tabla)
 	if(existeMetadata(tabla) == 0){
 		int status = dropTableFS(tabla);
 		if(status == 0){
-			res.mensaje = "Tabla dropeada exitosamente.";
+			log_info(g_logger,"Tabla %s borrada exitosamente",tabla);
+			res.mensaje = "Tabla borrada exitosamente.";
 			res.resultado = OK;
-			log_info(g_logger,"Tabla dropeada exitosamente");
 		}else{
-			res.mensaje = "Error al dropear la tabla.";
+			res.mensaje = "Error al borrar la tabla";
 			res.resultado = ERROR;
-			log_info(g_logger,"Error al dropear la tabla");
+			log_info(g_logger,"Error al borrar la tabla %s",tabla);
 		}
 	}else{
-		res.mensaje = "No existe la tabla a dropear.";
+		res.mensaje = "No existe la tabla";
 		res.resultado = ERROR;
-		log_info(g_logger,"No existe la tabla a dropear");
+		log_info(g_logger,"No existe la tabla %s",tabla);
 	}
-
 	return res;
 }
 
@@ -362,6 +359,7 @@ resultado dump(){
 	if(status != 0){
 		res.mensaje="Salida prueba";
 		res.resultado=ERROR;
+		return res;
 	}
 	res.mensaje="Salida prueba";
 	res.resultado=OK;
@@ -406,10 +404,10 @@ void gestionarConexion(int conexion_cliente) {
 
 		if(valueResponse < 0) { //Comenzamos a recibir datos del cliente
 			//Si recv() recibe 0 el cliente ha cerrado la conexion. Si es menor que 0 ha habido algún error.
-			printf("Error al recibir los datos\n");
+			log_info(g_logger,"Error al recibir los datos");
 			recibiendo = 0;
 		} else if(valueResponse == 0) {
-			printf("El cliente se desconectó\n");
+			log_info(g_logger,"El cliente se desconectó");
 			recibiendo = 0;
 		} else {
 			rp.accionEjecutar = acc;
@@ -424,7 +422,7 @@ void gestionarConexion(int conexion_cliente) {
 		}
 	}
 	//aca creo que se podria liberar la memoria de buffer2 Atte Manu1
-	printf("Cierro la conexion normalmente\n");
+	log_info(g_logger,"Cierro la conexion normalmente");
 }
 
 int esperarClienteNuevo(int conexion_servidor) {
@@ -436,21 +434,21 @@ int esperarClienteNuevo(int conexion_servidor) {
 	while(1) {
 		conexion_cliente = accept(conexion_servidor, (struct sockaddr *) &cliente, &longc);
 		if(conexion_cliente<0) {
-			printf("Error al aceptar tráfico\n");
+			log_info(g_logger,"Error al aceptar tráfico");
 			return 1;
 		} else {
 			pthread_attr_t attr;
 			pthread_t thread;
 
 			longc = sizeof(cliente);
-			printf("Conectando con %s:%d\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
+			log_info(g_logger,"Conectando con %s:%d", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
 
 			pthread_attr_init(&attr);
 			pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 			int err = pthread_create(&thread, &attr, gestionarConexion, conexion_cliente);
 			if(err != 0) {
-				printf("[esperarClienteNuevo] Hubo un problema al crear el thread gestionarConexion:[%s]\n", strerror(err));
+				log_info(g_logger,"[esperarClienteNuevo] Hubo un problema al crear el thread gestionarConexion:[%s]", strerror(err));
 			}
 			pthread_attr_destroy(&attr);
 		}
@@ -473,13 +471,13 @@ int iniciarServidor(char* configPuerto) {
 	servidor.sin_addr.s_addr = INADDR_ANY;
 
 	if(bind(conexion_servidor, (struct sockaddr *)&servidor, sizeof(servidor)) < 0) {
-		printf("Error al asociar el puerto a la conexion. Posiblemente el puerto se encuentre ocupado\n");
+		log_info(g_logger,"Error al asociar el puerto a la conexion. Posiblemente el puerto se encuentre ocupado");
 	    close(conexion_servidor);
 	    return -1;
 	}
 
 	listen(conexion_servidor, 3);
-	printf("A la escucha en el puerto %d\n", ntohs(servidor.sin_port));
+	log_info(g_logger,"A la escucha en el puerto %d", ntohs(servidor.sin_port));
 
 	return conexion_servidor;
 }

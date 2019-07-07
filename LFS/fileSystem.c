@@ -392,6 +392,7 @@ void compactarTabla(char* tabla){
 	DIR* tabledir = opendir(tablesPath);
 	struct dirent* tablesde;
 	if(tabledir == NULL){
+		log_info(g_logger,"Error al compactar tabla %s al abrir directorio",tabla);
 		return;
 	}
 	int cantidadACompactar = 0;
@@ -416,6 +417,7 @@ void compactarTabla(char* tabla){
 
 	//Si son 0 a compactar entonces vuelvo porque no tiene sentido seguir
 	if(cantidadACompactar ==  0){
+		log_info(g_logger,"Tabla %s compactada exitosamente",tabla);
 		return;
 	}
 
@@ -424,6 +426,7 @@ void compactarTabla(char* tabla){
 
 	tabledir = opendir(tablesPath);
 	if(tabledir == NULL){
+		log_info(g_logger,"Error al compactar tabla %s al abrir directorio",tabla);
 		return;
 	}
 
@@ -470,6 +473,7 @@ void compactarTabla(char* tabla){
 	closedir(tabledir);
 	tabledir = opendir(tablesPath);
 	if(tabledir == NULL){
+		log_info(g_logger,"Error al compactar tabla %s al abrir directorio",tabla);
 		return;
 	}
 
@@ -545,6 +549,7 @@ void compactarTabla(char* tabla){
 	//Borro los archivos temporales y los binarios
 	tabledir = opendir(tablesPath);
 	if(tabledir == NULL){
+		log_info(g_logger,"Error al compactar tabla %s al abrir directorio",tabla);
 		return;
 	}
 	while((tablesde=readdir(tabledir))!= NULL){
@@ -577,11 +582,11 @@ void compactarTabla(char* tabla){
 
 		int statusCreate = fs_fcreate(nodo->nombre_tabla);
 		if(statusCreate != 0){
-			log_info(g_logger,"Error al crear el archivo binario");
+			log_info(g_logger,"Error al compactar tabla %s al crear archivo binario",tabla);
 		}
 		fs_file* file = fs_fopen(nodo->nombre_tabla);
 		if(file == NULL){
-			log_info(g_logger,"Error al crear el archivo binario");
+			log_info(g_logger,"Error al compactar tabla %s al crear archivo binario",tabla);
 		}
 
 		//Guardo todos los registros
@@ -606,6 +611,7 @@ void compactarTabla(char* tabla){
 
 	//Libero el bloqueo
 	//TODO
+	log_info(g_logger,"Tabla %s compactada exitosamente",tabla);
 }
 
 void compactar(){
