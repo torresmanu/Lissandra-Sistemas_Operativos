@@ -1,12 +1,3 @@
-/*
- ============================================================================
- Name        : Kernel.c
- Author      : 
- Version     :
- Copyright   : Your copyright notice
- Description : Hello World in C, Ansi-style
- ============================================================================
- */
 
 #include "Kernel.h"
 
@@ -41,7 +32,7 @@ int main(void) {
 	pthread_t describeGlobal;
 	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 
-	leerConsola();										/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
+	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
 	pthread_join(plp,NULL);
 	pthread_join(describeGlobal,NULL);
@@ -80,7 +71,10 @@ void iniciar_programa(void)
 	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
 
 	pool = list_create();			// POOL DE MEMORIAS
-	tablas = list_create();			// ESTRUCTURA QUE CONTIENE TODAS LAS TABLAS
+	tablas = list_create();			// ESTRUCTURA QUE CONTIENE TODAS LAS TABLAS (METADATA)
+
+	obtenerMemoriaDescribe();
+	gestionarConexionAMemoria(MemDescribe);
 
 	/*
 	Tabla* peliculas = malloc(sizeof(Tabla));
@@ -233,7 +227,7 @@ void planificadorLargoPlazo(){
 	}
 }
 
-void ejecutador(){
+void ejecutador(){ // ACTUA COMO ESTADO EXEC
 	status e;
 	while(1){
 		sem_wait(&sListo);
@@ -305,8 +299,8 @@ void realizarDescribeGlobal()
 {
 	while(1)
 	{
-		sleep(metadataRefresh/1000); // Lo paso a ms
 		describe();
+		sleep(metadataRefresh/1000); // Lo paso a ms
 	}
 }
 
@@ -318,10 +312,11 @@ void describe()
 	resultado res;
 	resultadoParser* describe = malloc(sizeof(resultadoParser));
 	describe->accionEjecutar = DESCRIBE;
+	describe->contenido = NULL;
 	char* msg = serializarPaquete(describe,&size);
-	send(memoriaSocket, msg, size, 0);
+	send(memoriaSocket, msg, size, 0);				// Pido el describe a la memoria
 
-	int status = recibirYDeserializarRespuesta(memoriaSocket,&res);
+	int status = recibirYDeserializarRespuesta(memoriaSocket,&res); // Recibo la lista de tablas
 	if(status<0)
 	{
 		log_info(g_logger,"Describe fallido");
@@ -332,8 +327,9 @@ void describe()
 		TablaLFS = (t_list*)res.contenido;
 		list_add_all(tablas,TablaLFS);
 		log_info(g_logger,"Describe global realizado con éxito\n");
-		printf("Cantidad de tablas indexadas en Kernel posterior Describe: %d\n", tablas->elements_count);
+		log_info(g_logger,"Cantidad de tablas indexadas en Kernel posterior Describe: %d\n", tablas->elements_count);
 	}
 	free(describe);
+	free(msg);
 }
 

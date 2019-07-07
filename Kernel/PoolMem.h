@@ -25,11 +25,13 @@ typedef struct{
 
 // Pool de Memorias
 t_list *pool;
+Memoria* MemDescribe;
 
 // MANEJO DE MEMORIAS
 void obtenerMemorias();
 void gossiping(Memoria *mem);
 Memoria obtenerMemoria(t_config* config);
 Memoria *buscarMemoria(int numero);
+void obtenerMemoriaDescribe();
 
 #endif /* POOLMEM_H_ */
