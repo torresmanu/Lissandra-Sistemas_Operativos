@@ -72,6 +72,7 @@ void iniciar_programa(void)
 
 	pool = list_create();			// POOL DE MEMORIAS
 	tablas = list_create();			// ESTRUCTURA QUE CONTIENE TODAS LAS TABLAS (METADATA)
+	socketsPool = list_create();	// SOCKETS DE TODO EL POOL
 
 	obtenerMemoriaDescribe();
 	gestionarConexionAMemoria(MemDescribe);
@@ -85,6 +86,7 @@ void iniciar_programa(void)
 
 	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
 	//obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
+	//establecerConexionPool(); 		/// ACA ME CONECTO CON TODAS LAS MEMORIAS DEL POOL ///
 }
 
 void terminar_programa()
@@ -284,13 +286,11 @@ void mandarAexit(Script *s){
 }
 
 ////////////////////////////////////////////////////
-
 //Agrego la memoria en la lista de memorias del criterio
 void add(Memoria *memoria,Criterio *cons)
 {
 	list_add(cons->memorias,memoria);
-	log_info(g_logger,"Agrege memoria n°:%d al criterio %d",memoria->id,cons->tipo);
-
+	log_info(g_logger,"Agrege memoria N°:%d al criterio %d",memoria->id,cons->tipo);
 }
 
 ////////////////////////////////////////////////////
@@ -334,4 +334,24 @@ void describe()
 	free(describe);
 	free(msg);
 }
+
+void establecerConexionPool()
+{
+	// Tengo que ir estableciendo conexion con todas las memorias del pool, y agregar el socket a la lista
+
+	Memoria* mem;
+	int socket;
+	t_list* aux;
+
+	for(int i = 0; i<pool->elements_count; i++)
+	{
+		mem = list_get(pool,i);
+		socket = gestionarConexionAMemoria(mem);
+		mem->socket = socket;
+		list_add(aux,mem);
+	}
+
+	pool = aux;
+}
+
 

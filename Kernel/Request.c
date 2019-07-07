@@ -123,9 +123,10 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 
 	log_info(g_logger,"Entro en enviarRequest");
 
-	memoriaSocket = gestionarConexionAMemoria(mem);
+	//memoriaSocket = gestionarConexionAMemoria(mem);
+
 	char* msg = serializarPaquete(request,&size);
-	send(memoriaSocket, msg, size, 0);
+	send(mem->socket, msg, size, 0);
 	res = recibir();
 
 	log_info(g_logger,"Recibi respuesta de accion: %d",res.accionEjecutar);
@@ -206,6 +207,7 @@ void finalizarScript()	// Debe hacer un free y sacarlo de la cola
 	res = queue_pop(exi);
 	free(res);
 	*/
+
 	free(queue_pop(exi));
 }
 
