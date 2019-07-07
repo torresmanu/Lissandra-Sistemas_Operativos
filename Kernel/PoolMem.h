@@ -24,7 +24,7 @@ typedef struct{
 }Memoria;
 
 // Pool de Memorias
-t_list *pool;
+t_list* pool;
 Memoria* MemDescribe;
 
 // MANEJO DE MEMORIAS

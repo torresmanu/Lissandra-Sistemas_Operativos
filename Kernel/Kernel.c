@@ -84,7 +84,7 @@ void iniciar_programa(void)
 	*/
 
 	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
-	obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
+	//obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
 }
 
 void terminar_programa()
@@ -126,7 +126,7 @@ int gestionarConexionAMemoria(Memoria* mem)
 	}
 	else
 	{
-		log_info(g_logger, "Se conecto a la memoria n°:%d, listo para enviar scripts.",mem->id);
+		log_info(g_logger, "Se conecto a la Memoria N°:%d, listo para enviar scripts.",mem->id);
 	}
 	freeaddrinfo(serverInfo); // Libero
 	return memoriaSocket;
@@ -310,11 +310,13 @@ void describe()
 
 	int size;
 	resultado res;
+
 	resultadoParser* describe = malloc(sizeof(resultadoParser));
 	describe->accionEjecutar = DESCRIBE;
 	describe->contenido = NULL;
+
 	char* msg = serializarPaquete(describe,&size);
-	send(memoriaSocket, msg, size, 0);				// Pido el describe a la memoria
+	send(memoriaSocket, msg, size, 0);								// Pido el describe a la memoria
 
 	int status = recibirYDeserializarRespuesta(memoriaSocket,&res); // Recibo la lista de tablas
 	if(status<0)
