@@ -60,7 +60,7 @@ typedef struct
 typedef struct{
 	char* ip;
 	char* puerto;
-	uint32_t socket;
+	int socket;
 	uint32_t numero;
 }Memoria;
 

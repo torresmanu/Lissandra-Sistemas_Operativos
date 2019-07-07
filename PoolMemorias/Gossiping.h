@@ -14,12 +14,15 @@
 void gossiping();
 void gossipear(void* elem);
 bool estaConectada(Memoria* mem);
+bool conectarMemoria(Memoria* mem);
 char* serializarTabla(t_list* memoriasConocidas,uint32_t *totalSize);
 void* sumarTamanios(void* seed,void* elem);
-void intercambiarTablas(Memoria* mem);
-int mandarTabla(Memoria* mem);
-int recibirTablas(Memoria* mem);
+void mandarYrecibir(Memoria* mem);
+int recibirYmandar(int socket);
+int mandarTabla(int socket);
+int recibirTablas(int socket);
 void agregarMemoria(Memoria* mem);
 void cerrarConexion(Memoria* mem);
 
 #endif /* GOSSIPING_H_ */
+

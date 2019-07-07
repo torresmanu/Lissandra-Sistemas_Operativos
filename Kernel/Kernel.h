@@ -35,6 +35,7 @@ void terminar_programa(void);
 int enviar_mensaje(int socket_cliente);
 int iniciarCliente();
 int gestionarConexionAMemoria(Memoria *mem);
+void establecerConexionPool();
 
 //////////// CONSOLA Y PLANIFICADORES ////////////
 void leerConsola();

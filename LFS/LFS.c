@@ -315,15 +315,14 @@ resultado describe(char* tabla)
 		}
 	}else{
 		listaMetadata = obtenerTodasMetadata();
-		if(listaMetadata != NULL){
-			for(int i=0;i<list_size(listaMetadata);i++){
-				metadataTabla* metadata = (metadataTabla*) list_get(listaMetadata,i);
-				log_info(g_logger,metadata->consistency);
-			}
-			res.contenido = listaMetadata;
-			res.mensaje = "Ok.";
-			res.resultado = OK;
+
+		for(int i=0;i<list_size(listaMetadata);i++){
+			metadataTabla* metadata = (metadataTabla*) list_get(listaMetadata,i);
+			log_info(g_logger,metadata->consistency);
 		}
+		res.contenido = listaMetadata;
+		res.mensaje = "Ok.";
+		res.resultado = OK;
 	}
 
 	return res;

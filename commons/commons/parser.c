@@ -46,7 +46,11 @@ resultadoParser parseConsole(char* mensaje){
 	{
 		resParser.accionEjecutar=DESCRIBE;
 		contenidoDescribe* cont = malloc(sizeof(contenidoDescribe));
-		cont->nombreTabla = strsep(&mensaje," ");
+		if(strsep(&mensaje, " ") == '\0') {
+			cont->nombreTabla = NULL;
+		} else {
+			cont->nombreTabla = strsep(&mensaje," ");
+		}
 		resParser.contenido = cont;
 	}
 	else if(strcmp(accion,"DROP") == 0)
