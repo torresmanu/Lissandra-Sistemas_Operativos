@@ -50,5 +50,8 @@ int atender_clientes(void);
 int esperarClienteNuevo(int);
 int iniciarServidor(char*);
 
+void crearHiloCompactacion(void);
+void compactacionPrueba(void);
+
 
 #endif /* LFS_H_ */
