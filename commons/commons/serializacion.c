@@ -1052,8 +1052,9 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		memcpy(&cantidadMetadatas, buffer, buffer_size);
 		if (!status) return -2;
 
+		t_list* metadataList = list_create();
+
 		if(cantidadMetadatas > 0) {
-			t_list* metadataList = list_create();
 			metadataTabla* metadata = malloc(sizeof(metadataTabla));
 
 			for(int i=0; i < cantidadMetadatas; i++) {
@@ -1078,7 +1079,7 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 
 			res->contenido = metadataList;
 		} else {
-			res->contenido = NULL;
+			res->contenido = metadataList;
 		}
 
 		break;

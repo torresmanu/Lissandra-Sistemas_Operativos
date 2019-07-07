@@ -124,13 +124,18 @@ int gestionarConexionAMemoria(Memoria* mem)
 
 	if(res == -1)
 	{
-		perror("No se pudo conectar: \n");
+		perror("No se pudo conectar: ");
 	}
 	else
 	{
 		log_info(g_logger, "Se conecto a la Memoria N°:%d, listo para enviar scripts.",mem->id);
 	}
 	freeaddrinfo(serverInfo); // Libero
+
+	// Envio un 1
+	uint32_t codigo = 1;
+	send(memoriaSocket,&codigo,sizeof(uint32_t),0);
+
 	return memoriaSocket;
 }
 
@@ -313,7 +318,9 @@ void describe()
 
 	resultadoParser* describe = malloc(sizeof(resultadoParser));
 	describe->accionEjecutar = DESCRIBE;
-	describe->contenido = NULL;
+	contenidoDescribe* cd = malloc(sizeof(contenidoDescribe));
+	cd->nombreTabla = NULL;
+	describe->contenido = cd;
 
 	char* msg = serializarPaquete(describe,&size);
 	send(memoriaSocket, msg, size, 0);								// Pido el describe a la memoria
