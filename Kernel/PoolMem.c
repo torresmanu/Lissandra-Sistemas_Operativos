@@ -32,6 +32,8 @@ void obtenerMemorias(){
 		log_info(g_logger,"Gossiping realizado con éxito y pool actualizado\n");
 		log_info(g_logger,"Cantidad de memorias en el Pool: %d\n", pool->elements_count);
 	}
+	free(msg);
+	free(gossip);
 }
 
 
