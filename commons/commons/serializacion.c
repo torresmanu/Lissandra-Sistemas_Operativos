@@ -977,7 +977,7 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		memcpy(&valueSize, buffer, buffer_size);
 		if (!status) return -2;
 
-		reg->value = malloc(valueSize);
+		//reg->value = malloc(valueSize);
 		status = recv(socketCliente, reg->value, valueSize, 0);
 		if (!status) return -2;
 

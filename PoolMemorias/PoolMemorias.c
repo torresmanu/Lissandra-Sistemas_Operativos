@@ -302,8 +302,8 @@ void iniciarTablaSeeds(){
 	int i=0;
 
 	memoriasSeeds = list_create();
-	char** ips = config_get_array_value(g_logger,"IP_SEEDS");
-	char** puertos = config_get_array_value(g_logger,"PUERTO_SEEDS");
+	char** ips = config_get_array_value(g_config,"IP_SEEDS");
+	char** puertos = config_get_array_value(g_config,"PUERTO_SEEDS");
 
 	while(ips[i]!=NULL){
 		Memoria* mem = malloc(sizeof(Memoria));

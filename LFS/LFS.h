@@ -17,10 +17,13 @@
 #include <commons/metadata.h>
 #include <commons/registro.h>
 #include "memtable.h"
+#include "fileSystemPropio.h"
 #include "fileSystem.h"
 #include <pthread.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <commons/registro.h>
+#include "stdint.h"
 #include <string.h>
 
 #define PACKAGESIZE 100
@@ -30,7 +33,6 @@ char* IP_FS;
 char* PUERTO_FS;
 
 t_log* g_logger;
-t_config* g_config;
 
 
 resultado parsear_mensaje(resultadoParser *);
@@ -43,11 +45,13 @@ resultado journal();
 resultado dump();
 resultado handshake();
 
-void iniciar_programa();
+int iniciar_programa();
 void terminar_programa();
 void gestionarConexion(int);
 int atender_clientes(void);
 int esperarClienteNuevo(int);
+char* getStringConfig(char*);
+int getIntConfig(char*);
 int iniciarServidor(char*);
 
 void crearHiloCompactacion(void);

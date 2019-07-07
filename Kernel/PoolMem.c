@@ -17,6 +17,7 @@ void obtenerMemorias(){
 
 	gossiping(mem);//meto en pool la lista de memorias encontradas
 
+	// ACA TENGO QUE TIRAR UN HILO POR CONEXION POR CADA MEMORIA DEL POOL
 }
 
 // HARDCODEADO SOLO COMO PARA EJEMPLO.	////////////////////
@@ -48,14 +49,13 @@ void gossiping(Memoria *mem){
 	list_add(pool,m3);
 }
 
-//Memoria obtenerMemoria(t_config* config){
-//	Memoria mem;
-//	int id = config_get_string_value(config,"IP_MEMORIA");
-//	int puerto = config_get_string_value(config, "PUERTO_MEMORIA");
-//	mem.ipMemoria = id;
-//	mem.puerto = puerto;
-//	return mem;
-//}
+void obtenerMemoriaDescribe()
+{
+	MemDescribe = malloc(sizeof(Memoria));
+	MemDescribe->id = 0;
+	MemDescribe->ipMemoria = config_get_string_value(g_config,"IP_MEMORIA");
+	MemDescribe->puerto = config_get_string_value(g_config, "PUERTO_MEMORIA");
+}
 
 Memoria *buscarMemoria(int numero){
 	bool numerosIguales(void* elem){
