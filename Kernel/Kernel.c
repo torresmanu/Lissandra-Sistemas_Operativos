@@ -321,7 +321,7 @@ void describe()
 	int valueResponse;
 	resultado res;
 	accion acc;
-	char* buffer = malloc(sizeof(char));
+
 
 	resultadoParser* describe = malloc(sizeof(resultadoParser));
 	describe->accionEjecutar = DESCRIBE;
@@ -331,7 +331,7 @@ void describe()
 
 	char* msg = serializarPaquete(describe,&size);
 	send(memoriaSocket, msg, size, 0);								// Pido el describe a la memoria
-
+	char* buffer = malloc(sizeof(char));
 	valueResponse = recv(memoriaSocket,buffer,sizeof(int),0);
 	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
 
@@ -345,6 +345,7 @@ void describe()
 	}
 	else
 	{
+		res.accionEjecutar=acc;
 		status = recibirYDeserializarRespuesta(memoriaSocket,&res); // Recibo la lista de tablas
 		if(status<0)
 			{
@@ -353,12 +354,12 @@ void describe()
 			else
 			{
 				TablaLFS = (t_list*)res.contenido;
+				list_clean(tablas);						// Para no agregar repetidas
 				list_add_all(tablas,TablaLFS);
 				log_info(g_logger,"Describe global realizado con éxito\n");
 				log_info(g_logger,"Cantidad de tablas indexadas en Kernel posterior Describe: %d\n", tablas->elements_count);
 			}
 	}
-
 	free(buffer);
 	free(describe);
 	free(msg);
