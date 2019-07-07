@@ -8,54 +8,42 @@
 #include "PoolMem.h"
 
 void obtenerMemorias(){
-	Memoria *mem = malloc(sizeof(Memoria));
-	mem->id = 0;
-	char* ip = config_get_string_value(g_config,"IP_MEMORIA");
-	mem->ipMemoria = strdup(ip);
-	char* puerto = config_get_string_value(g_config,"PUERTO_MEMORIA");
-	mem->puerto = strdup(puerto);
+	// ACA LE PIDO GOSSIPING A LA MEMORIA DEL CONFIG
 
-	gossiping(mem);//meto en pool la lista de memorias encontradas
+	t_list* memorias;
+	int size;
+	resultadoParser* gossip = malloc(sizeof(resultadoParser));
+	resultado res;
 
+	//gossip->accionEjecutar = GOSSIPING;			// NO ESTA CONTEMPLADO EN EL PARSER
+	char* msg = serializarPaquete(gossip,&size);
+	send(memoriaSocket, msg, size, 0);
+
+	int status = recibirYDeserializarRespuesta(memoriaSocket,&res);
+	if(status<0)
+	{
+		log_info(g_logger, "Gossiping fallando");
+	}
+	else
+	{
+		printf("Cantidad de memorias en el Pool: ", pool->elements_count);
+		memorias = (t_list*)res.contenido;										// CONTENIDO TIENE QUE MODIFICARSE EN CASO GOSSIP
+		list_add_all(pool,memorias);
+		log_info(g_logger,"Gossiping realizado con éxito y pool actualizado\n");
+		log_info(g_logger,"Cantidad de memorias en el Pool: %d\n", pool->elements_count);
+	}
+	free(msg);
+	free(gossip);
 }
 
-// HARDCODEADO SOLO COMO PARA EJEMPLO.	////////////////////
-void gossiping(Memoria *mem){
-	list_add(pool,mem);
 
-	Memoria *m1 = malloc(sizeof(Memoria));
-	m1->id = 1;
-
-	char* ip = config_get_string_value(g_config,"IP_MEMORIA");
-	m1->ipMemoria = strdup(ip);
-
-	char* puerto = config_get_string_value(g_config,"PUERTO_MEMORIA");
-	m1->puerto = strdup(puerto);
-
-	list_add(pool,m1);
-
-
-	Memoria *m2 = malloc(sizeof(Memoria));
-	m2->id = 2;
-	m2->ipMemoria = strdup(ip);
-	m2->puerto = strdup(puerto);
-	list_add(pool,m2);
-
-	Memoria *m3 = malloc(sizeof(Memoria));
-	m3->id = 3;
-	m3->ipMemoria = strdup(ip);
-	m3->puerto = strdup(puerto);
-	list_add(pool,m3);
+void obtenerMemoriaDescribe()
+{
+	MemDescribe = malloc(sizeof(Memoria));
+	MemDescribe->id = 0;
+	MemDescribe->ipMemoria = config_get_string_value(g_config,"IP_MEMORIA");
+	MemDescribe->puerto = config_get_string_value(g_config, "PUERTO_MEMORIA");
 }
-
-//Memoria obtenerMemoria(t_config* config){
-//	Memoria mem;
-//	int id = config_get_string_value(config,"IP_MEMORIA");
-//	int puerto = config_get_string_value(config, "PUERTO_MEMORIA");
-//	mem.ipMemoria = id;
-//	mem.puerto = puerto;
-//	return mem;
-//}
 
 Memoria *buscarMemoria(int numero){
 	bool numerosIguales(void* elem){

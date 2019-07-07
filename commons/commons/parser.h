@@ -9,6 +9,7 @@
 #define PARSER_H_
 
 #include "string.h"
+#include <stddef.h>
 
 typedef enum
 {

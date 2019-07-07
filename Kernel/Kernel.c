@@ -1,12 +1,3 @@
-/*
- ============================================================================
- Name        : Kernel.c
- Author      : 
- Version     :
- Copyright   : Your copyright notice
- Description : Hello World in C, Ansi-style
- ============================================================================
- */
 
 #include "Kernel.h"
 
@@ -41,7 +32,7 @@ int main(void) {
 	pthread_t describeGlobal;
 	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 
-	leerConsola();										/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
+	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
 	pthread_join(plp,NULL);
 	pthread_join(describeGlobal,NULL);
@@ -80,7 +71,11 @@ void iniciar_programa(void)
 	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
 
 	pool = list_create();			// POOL DE MEMORIAS
-	tablas = list_create();			// ESTRUCTURA QUE CONTIENE TODAS LAS TABLAS
+	tablas = list_create();			// ESTRUCTURA QUE CONTIENE TODAS LAS TABLAS (METADATA)
+	socketsPool = list_create();	// SOCKETS DE TODO EL POOL
+
+	obtenerMemoriaDescribe();
+	gestionarConexionAMemoria(MemDescribe);
 
 	/*
 	Tabla* peliculas = malloc(sizeof(Tabla));
@@ -90,7 +85,8 @@ void iniciar_programa(void)
 	*/
 
 	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
-	obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
+	//obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
+	//establecerConexionPool(); 		/// ACA ME CONECTO CON TODAS LAS MEMORIAS DEL POOL ///
 }
 
 void terminar_programa()
@@ -132,7 +128,7 @@ int gestionarConexionAMemoria(Memoria* mem)
 	}
 	else
 	{
-		log_info(g_logger, "Se conecto a la memoria n°:%d, listo para enviar scripts.",mem->id);
+		log_info(g_logger, "Se conecto a la Memoria N°:%d, listo para enviar scripts.",mem->id);
 	}
 	freeaddrinfo(serverInfo); // Libero
 	return memoriaSocket;
@@ -233,7 +229,7 @@ void planificadorLargoPlazo(){
 	}
 }
 
-void ejecutador(){
+void ejecutador(){ // ACTUA COMO ESTADO EXEC
 	status e;
 	while(1){
 		sem_wait(&sListo);
@@ -290,13 +286,11 @@ void mandarAexit(Script *s){
 }
 
 ////////////////////////////////////////////////////
-
 //Agrego la memoria en la lista de memorias del criterio
 void add(Memoria *memoria,Criterio *cons)
 {
 	list_add(cons->memorias,memoria);
-	log_info(g_logger,"Agrege memoria n°:%d al criterio %d",memoria->id,cons->tipo);
-
+	log_info(g_logger,"Agrege memoria N°:%d al criterio %d",memoria->id,cons->tipo);
 }
 
 ////////////////////////////////////////////////////
@@ -305,8 +299,8 @@ void realizarDescribeGlobal()
 {
 	while(1)
 	{
-		sleep(metadataRefresh/1000); // Lo paso a ms
 		describe();
+		sleep(metadataRefresh/1000); // Lo paso a ms
 	}
 }
 
@@ -316,12 +310,15 @@ void describe()
 
 	int size;
 	resultado res;
+
 	resultadoParser* describe = malloc(sizeof(resultadoParser));
 	describe->accionEjecutar = DESCRIBE;
-	char* msg = serializarPaquete(describe,&size);
-	send(memoriaSocket, msg, size, 0);
+	describe->contenido = NULL;
 
-	int status = recibirYDeserializarRespuesta(memoriaSocket,&res);
+	char* msg = serializarPaquete(describe,&size);
+	send(memoriaSocket, msg, size, 0);								// Pido el describe a la memoria
+
+	int status = recibirYDeserializarRespuesta(memoriaSocket,&res); // Recibo la lista de tablas
 	if(status<0)
 	{
 		log_info(g_logger,"Describe fallido");
@@ -332,8 +329,29 @@ void describe()
 		TablaLFS = (t_list*)res.contenido;
 		list_add_all(tablas,TablaLFS);
 		log_info(g_logger,"Describe global realizado con éxito\n");
-		printf("Cantidad de tablas indexadas en Kernel posterior Describe: %d\n", tablas->elements_count);
+		log_info(g_logger,"Cantidad de tablas indexadas en Kernel posterior Describe: %d\n", tablas->elements_count);
 	}
 	free(describe);
+	free(msg);
 }
+
+void establecerConexionPool()
+{
+	// Tengo que ir estableciendo conexion con todas las memorias del pool, y agregar el socket a la lista
+
+	Memoria* mem;
+	int socket;
+	t_list* aux;
+
+	for(int i = 0; i<pool->elements_count; i++)
+	{
+		mem = list_get(pool,i);
+		socket = gestionarConexionAMemoria(mem);
+		mem->socket = socket;
+		list_add(aux,mem);
+	}
+
+	pool = aux;
+}
+
 

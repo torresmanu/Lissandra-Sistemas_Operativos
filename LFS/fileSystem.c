@@ -7,6 +7,33 @@
 
 #include "fileSystem.h"
 
+
+registro* obtenerRegistroDeArchivoPropio(fs_file* file, int key){
+
+	//Divido el size del archivo por el peso del registro
+	int cant = file->size/(sizeof(registro) + getIntConfig("TAMANIO_VALUE"));
+	registro* auxReg = malloc (sizeof(registro));
+	registro* reg = NULL;
+	//Leo los archivos
+	for(int i=0;i<cant;i++){
+		fs_fread(file,auxReg,i);
+		if(auxReg->key == key){
+			//Si el registro todavia no se habia seteado lo seteo
+			if(reg == NULL){
+				reg = malloc(sizeof(registro));
+				memcpy(reg,auxReg,sizeof(registro));
+			}
+			//Si ya tengo un registro comparo los timestamp
+			else if(auxReg->timestamp > reg->timestamp){
+				memcpy(reg,auxReg,sizeof(registro));
+			}
+		}
+	}
+
+	return reg;
+}
+
+
 int existeMetadata(char* nombreTabla){
 	char* metadataPath = obtenerMetadataPath(nombreTabla);
 	FILE* metadataFile = fopen(metadataPath,"r");
@@ -27,7 +54,7 @@ char* obtenerMetadataPath(char* nombreTabla){
 }
 
 char* obtenerTablePath(){
-	char* puntoMontura = config_get_string_value(g_config,"PUNTO_MONTAJE");
+	char* puntoMontura = getStringConfig("PUNTO_MONTAJE");
 	char* metadataPath= string_new();
 	string_append(&metadataPath, puntoMontura);
 	string_append(&metadataPath, "/tables/");
@@ -52,7 +79,7 @@ t_list* obtenerTodasMetadata(){
 	struct dirent* tablesde;
 	if(tablesdir == NULL){
 		log_info(g_logger,"Error al obtener el path a las tablas");
-		return NULL;
+		return metadataList;
 	}
 	while((tablesde=readdir(tablesdir))!= NULL){
 		if(!string_contains(tablesde->d_name,".")){
@@ -94,14 +121,24 @@ registro* fs_select_partition(char* nombreTabla, int key, int partition){
 	string_append(&partitionPath, "/");
 	string_append(&partitionPath, string_itoa(partition));
 	string_append(&partitionPath, ".bin");
-	FILE* partitionFile = fopen(partitionPath,"r");
-	free(partitionPath);
+	//Abro el archivo para el FS Ubuntu
+	//FILE* partitionFile = fopen(partitionPath,"r");
+	//Abro el archivo para el FS propio
+	fs_file* partitionFile = fs_fopen(partitionPath);
+  free(partitionPath);
 	//Si el file es null significa que no encuentro la particion
 	if(partitionFile == NULL){
 		return NULL;
 	}
-	registro* reg = obtenerRegistroDeArchivo(partitionFile,key);
-	fclose(partitionFile);
+	//Funcion obtener reg del FS Ubuntu
+	//registro* reg = obtenerRegistroDeArchivo(partitionFile,key);
+	//Funcion obtener reg del FS propio
+	registro* reg = obtenerRegistroDeArchivoPropio(partitionFile,key);
+
+	//Cierro el archivo para el FS Ubuntu
+	//fclose(partitionFile);
+	//Cierro el archivo para el FS propio
+	fs_fclose(partitionFile);
 	return reg;
 }
 
@@ -117,17 +154,27 @@ registro* fs_select_temporal(char* nombreTabla, int key){
 		return NULL;
 	}
 	while((tablesde=readdir(tabledir))!= NULL){
-		if(!string_contains(tablesde->d_name,".bin") && !string_contains(tablesde->d_name,"metadata")){
+		if(strcmp(tablesde->d_name,"..") != 0 &&strcmp(tablesde->d_name,".") != 0 &&!string_contains(tablesde->d_name,".bin") && !string_contains(tablesde->d_name,"metadata")){
 			char* temporalPath = string_duplicate(tablesPath);
 			string_append(&temporalPath, "/");
 			string_append(&temporalPath, tablesde->d_name);
-			FILE* temporalFile = fopen(temporalPath,"r");
-			free(temporalPath);
+
+			//Abro el archivo del FS Ubuntu
+			//FILE* temporalFile = fopen(temporalPath,"r");
+			//Abro el archivo del FS propio
+			fs_file* temporalFile = fs_fopen(temporalPath);
+      free(temporalPath);
 			//Si el file es null significa que no encuentro el archivo
 			if(temporalFile != NULL){
-				regAux = obtenerRegistroDeArchivo(temporalFile,key);
+				//Obtengo el registro para el FS Ubuntu
+				//regAux = obtenerRegistroDeArchivo(temporalFile,key);
+				//Obtengo el registro para el FS propio
+				regAux = obtenerRegistroDeArchivoPropio(temporalFile,key);
 			}
-			fclose(temporalFile);
+			//Cierro el archivo para el FS Ubuntu
+			//fclose(temporalFile);
+			//Cierro el archivo para el FS propio
+			fs_fclose(temporalFile);
 			if(reg == NULL && regAux != NULL){
 				reg = malloc(sizeof(registro));
 				memcpy(reg,regAux,sizeof(registro));
@@ -147,7 +194,7 @@ registro* obtenerRegistroDeArchivo(FILE* file, int key){
 
 	while(fgets(linea,1024,(FILE*)file)){
 		registro* auxReg = malloc (sizeof(registro));
-		parseRegistro(linea,auxReg,config_get_int_value(g_config,"TAMANIO_VALUE"));
+		parseRegistro(linea,auxReg,getIntConfig("TAMAÑO_VALUE"));
 		//Primero pregunto si el registro tiene el mismo value que yo quiero tomar
 		if(auxReg->key == key){
 			//Si el registro todavia no se habia seteado lo seteo
@@ -168,6 +215,7 @@ registro* obtenerRegistroDeArchivo(FILE* file, int key){
 	}
 	return reg;
 }
+
 
 int crear_tabla(char* tabla,char* t_cons,int cant_part,int tiempo_comp){
 	//Obtengo el path de la tabla a crear
@@ -197,7 +245,7 @@ int crear_tabla(char* tabla,char* t_cons,int cant_part,int tiempo_comp){
 	//Creo los archivos binarios necesarios
 	status = crearArchivosBinarios(tablesPath,metadata);
 
-	return 0;
+	return status;
 }
 
 int crearArchivoMetadata(char* tablesPath,metadataTabla metadata){
@@ -220,20 +268,35 @@ int crearArchivosBinarios(char* tablesPath,metadataTabla metadata){
 		FILE* binaryFile;
 		char* binaryPath= string_duplicate(tablesPath);
 		string_append_with_format(&binaryPath,"/%d.bin",i+1);
-		binaryFile = fopen(binaryPath,"w");
+		//Creo el archivo para FS ubuntuo
+		/*binaryFile = fopen(binaryPath,"w");
 		if(binaryFile == NULL){
 			perror("Error: ");
 			return -1;
 		}
-		fclose(binaryFile);
+		fclose(binaryFile);*/
+		//Creo el archivo para FS propio
+		int status = fs_fcreate(binaryPath);
+		if(status != 0){
+			return status;
+		}
 	}
+	return 0;
 }
 
 int dropTableFS(char * tabla){
 	//Obtengo el path de la tabla a dripear
 	char* tablesPath= obtenerTablePath();
 	string_append(&tablesPath,tabla);
-	//Borro los archivos que estan adento
+	//Borro primero el archivo metadata
+	char* metadataPath = string_duplicate(tablesPath);
+	string_append(&metadataPath,"/metadata");
+	int st = remove(metadataPath);
+	if(st != 0){
+		perror("Error: ");
+		return st;
+	}
+	//Borro los archivos binarios que estan adento
 	DIR* tablesdir = opendir(tablesPath);
 	struct dirent* tablesde;
 	while((tablesde=readdir(tablesdir))!= NULL){
@@ -241,11 +304,18 @@ int dropTableFS(char * tabla){
 			char* filePath = string_duplicate(tablesPath);
 			string_append(&filePath,"/");
 			string_append(&filePath,tablesde->d_name);
-			int status = remove(filePath);
+			//Borro el archivo para el FS Ubuntu
+			/*int status = remove(filePath);
 			if(status != 0){
 				perror("Error: ");
 				return status;
+			}*/
+			//Borro el archivo para el FS propio
+			fs_file* file = fs_fopen(filePath);
+			if(file == NULL){
+				return -1;
 			}
+			fs_fdelete(file);
 		}
 	}
 	//Borro el directorio
@@ -265,7 +335,7 @@ int fs_create_tmp(char* tabla,t_list* regList){
 	//Busco archivos tmp hasta que no encuentre
 	int i=1;
 	int ultimoTemp = 0;
-	char strUltimoTemp[20];
+	char strUltimoTemp[200];
 	while(ultimoTemp == 0){
 		sprintf(strUltimoTemp, "%s/%i.tmp",tablesPath, i);
 		FILE* f = fopen(strUltimoTemp,"r");
@@ -277,8 +347,19 @@ int fs_create_tmp(char* tabla,t_list* regList){
 		i++;
 	}
 
-	//Creo el archivo
-	FILE* file = fopen(strUltimoTemp,"w");
+	//Creo el archivo para el FS Ubuntu
+	/*FILE* file = fopen(strUltimoTemp,"w");
+	if(file == NULL){
+		return -1;
+	}*/
+
+	//Creo el archivo para el FS propio y lo abro
+	int st = fs_fcreate(strUltimoTemp);
+	if(st != 0){
+		return st;
+	}
+
+	fs_file* file = fs_fopen(strUltimoTemp);
 	if(file == NULL){
 		return -1;
 	}
@@ -286,13 +367,22 @@ int fs_create_tmp(char* tabla,t_list* regList){
 	//Guardo todos los registros
 	for(int n = 0; n < list_size(regList); n++){
 		registro* reg = ((registro*)list_get(regList,n));
-		char strReg[200];
+		//Escribo el archivo en el FS ubuntu
+		/*char strReg[200];
 		sprintf(strReg, "%ld;%i;%s\n",reg->timestamp,reg->key,reg->value);
-		fprintf(file, "%s",strReg);
+		fprintf(file, "%s",strReg);*/
+		//Escribo el archivo en el FS propio
+		int status = fs_fprint(file,reg);
+		if(status != 0){
+			fs_fclose(file);
+			return -1;
+		}
 	}
 
-	//Cierro el archivo
-	fclose(file);
+	//Cierro el archivo para el FS Ubuntu
+	//fclose(file);
+	//Cierro el archivo para el FS propio
+	fs_fclose(file);
 	return 0;
 }
 
@@ -302,6 +392,7 @@ void compactarTabla(char* tabla){
 	DIR* tabledir = opendir(tablesPath);
 	struct dirent* tablesde;
 	if(tabledir == NULL){
+		log_info(g_logger,"Error al compactar tabla %s al abrir directorio",tabla);
 		return;
 	}
 	int cantidadACompactar = 0;
@@ -326,6 +417,7 @@ void compactarTabla(char* tabla){
 
 	//Si son 0 a compactar entonces vuelvo porque no tiene sentido seguir
 	if(cantidadACompactar ==  0){
+		log_info(g_logger,"Tabla %s compactada exitosamente",tabla);
 		return;
 	}
 
@@ -334,6 +426,7 @@ void compactarTabla(char* tabla){
 
 	tabledir = opendir(tablesPath);
 	if(tabledir == NULL){
+		log_info(g_logger,"Error al compactar tabla %s al abrir directorio",tabla);
 		return;
 	}
 
@@ -350,24 +443,37 @@ void compactarTabla(char* tabla){
 			nodo->lista_registros = list_create();
 			list_add(list,nodo);
 
-			//Abro el archivo
-			FILE * file = fopen(binPath,"r");
-			char linea[1024];
-			//Itero entre los registros agregandolos a la lista
+			//Abro el archivo para FS Ubuntu
+			//FILE * file = fopen(binPath,"r");
+			//Abro el archivo para FS propio
+			fs_file* file = fs_fopen(binPath);
+
+			//Itero entre los registros agregandolos a la lista FS Ubuntu
+			/*char linea[1024];
 			while(fgets(linea,1024,(FILE*)file)){
 				registro * reg_aux = malloc(sizeof(registro));
-				parseRegistro(linea,reg_aux,config_get_int_value(g_config,"TAMANIO_VALUE"));
+				parseRegistro(linea,reg_aux,getIntConfig("TAMANIO_VALUE"));
 				list_add(nodo->lista_registros,reg_aux);
+			}*/
+			//Itero entre los registros agregandolos a la lsita FS propio
+			int cant = file->size/(sizeof(registro)+getIntConfig("TAMANIO_VALUE"));
+			for(int n = 0; n < cant; n++){
+				registro* auxReg = malloc (sizeof(registro));
+				fs_fread(file,auxReg,n);
+				list_add(nodo->lista_registros,auxReg);
 			}
 
-			//Cierro el archivo
-			fclose(file);
+			//Cierro el archivo FS Ubuntu
+			//fclose(file);
+			//Cierro el archivo FS propio
+			fs_fclose(file);
 		}
 	}
 
 	closedir(tabledir);
 	tabledir = opendir(tablesPath);
 	if(tabledir == NULL){
+		log_info(g_logger,"Error al compactar tabla %s al abrir directorio",tabla);
 		return;
 	}
 
@@ -378,15 +484,19 @@ void compactarTabla(char* tabla){
 			string_append(&tempcPath,"/");
 			string_append(&tempcPath,tablesde->d_name);
 
-			//Abro el archivo
-			FILE * file = fopen(tempcPath,"r");
-			char linea[1024];
-			registro* reg = NULL;
+			//Abro el archivo FS Ubuntu
+			//FILE * file = fopen(tempcPath,"r");
+			//Abro el archivo FS propio
+			fs_file* file = fs_fopen(tempcPath);
+			registro* auxReg = malloc (sizeof(registro));
+			int cant = file->size/(sizeof(registro)+getIntConfig("TAMANIO_VALUE"));
 
 			//Itero entre los registros agregandolos a la lista
-			while(fgets(linea,1024,(FILE*)file)){
+			char linea[1024];
+			//while(fgets(linea,1024,(FILE*)file)){
+			for(int i = 0; i < cant;i++){
 				registro * reg = malloc(sizeof(registro));
-				parseRegistro(linea,reg,config_get_int_value(g_config,"TAMANIO_VALUE"));
+				fs_fread(file,reg,i);
 
 				//Busco la particion correspondiente donde guardarlo
 				int particion = reg->key % list_size(list);
@@ -411,7 +521,7 @@ void compactarTabla(char* tabla){
 					registro* reg_aux = ((registro*)list_get(nodo->lista_registros,i));
 					if(reg_aux->key == reg->key){
 						if(reg_aux->timestamp < reg->timestamp){
-							reg_aux->value = reg->value;
+							strcpy(reg_aux->value,reg->value);
 							reg_aux->timestamp = reg->timestamp;
 						}
 						crear = 0;
@@ -425,9 +535,10 @@ void compactarTabla(char* tabla){
 					free(reg);
 				}
 			}
-			//Cierro el archivo
-			fclose(file);
-			remove(tempcPath);
+			//Borro archivo FS propio
+			fs_fclose(file);
+			//Borro archivo FS Ubuntu
+			//fclose(file);
 		}
 	}
 	closedir(tabledir);
@@ -435,31 +546,63 @@ void compactarTabla(char* tabla){
 	//Bloqueo la tabla
 	//TODO
 
+	//Borro los archivos temporales y los binarios
+	tabledir = opendir(tablesPath);
+	if(tabledir == NULL){
+		log_info(g_logger,"Error al compactar tabla %s al abrir directorio",tabla);
+		return;
+	}
+	while((tablesde=readdir(tabledir))!= NULL){
+		if(string_contains(tablesde->d_name,".bin") || string_contains(tablesde->d_name,".tmpc")){
+			char * binPath = string_duplicate(tablesPath);
+			string_append(&binPath,"/");
+			string_append(&binPath,tablesde->d_name);
+
+			//Abro el archivo para el FS propio
+			fs_file* file = fs_fopen(binPath);
+
+			//Borro el archivo para el FS propio
+			fs_fdelete(file);
+
+			//Cierro el archivo para el FS propio
+			fs_fclose(file);
+		}
+	}
+
+	closedir(tabledir);
+
+
 	//Borro los archivos de particiones y los vuelvo a crear con los nuevos valores
 	for(int i = 0; i < list_size(list);i ++){
 		nodo_tabla* nodo = list_get(list,i);
 
-		//Borro el archivo
-		int status = remove(nodo->nombre_tabla);
-		if(status != 0){
-			log_info(g_logger,"Error al borrar el archivo binario");
-		}
+		//Creo el archivo FS Ubuntu
+		//FILE* file = fopen(nodo->nombre_tabla,"w");
+		//Creo el archivo FS Propio
 
-		//Creo el archivo
-		FILE* file = fopen(nodo->nombre_tabla,"w");
+		int statusCreate = fs_fcreate(nodo->nombre_tabla);
+		if(statusCreate != 0){
+			log_info(g_logger,"Error al compactar tabla %s al crear archivo binario",tabla);
+		}
+		fs_file* file = fs_fopen(nodo->nombre_tabla);
 		if(file == NULL){
-			log_info(g_logger,"Error al crear el archivo binario");
+			log_info(g_logger,"Error al compactar tabla %s al crear archivo binario",tabla);
 		}
 
 		//Guardo todos los registros
 		for(int n = 0; n < list_size(nodo->lista_registros); n++){
 			registro* reg = ((registro*)list_get(nodo->lista_registros,n));
-			char strReg[200];
+			//Guardo el registro para el FS propio
+			/*char strReg[200];
 			sprintf(strReg, "%ld;%i;%s\n",reg->timestamp,reg->key,reg->value);
-			fprintf(file, "%s",strReg);
+			fprintf(file, "%s",strReg);*/
+			//Guardo el registro para el FS Ubuntu
+			fs_fprint(file,reg);
 		}
-		//Cierro el archivo
-		fclose(file);
+		//Cierro el archivo FS Ubuntu
+		//fclose(file);
+		//Cierro el archivo FS propio
+		fs_fclose(file);
 
 	}
 
@@ -468,6 +611,7 @@ void compactarTabla(char* tabla){
 
 	//Libero el bloqueo
 	//TODO
+	log_info(g_logger,"Tabla %s compactada exitosamente",tabla);
 }
 
 void compactar(){
