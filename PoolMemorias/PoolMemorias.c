@@ -100,7 +100,7 @@ void iniciarHiloMemoria(struct sockaddr_in *cliente, socklen_t *longc, int* cone
 	if(err != 0) {
 		log_info(g_logger,"[esperarClienteNuevo] Hubo un problema al crear el thread para escuchar la memoria:[%s]", strerror(err));
 	}
-//	pthread_attr_destroy(&attr);
+	pthread_attr_destroy(&attr);
 }
 
 void escucharMemoria(int *conexion_cliente){
@@ -108,7 +108,7 @@ void escucharMemoria(int *conexion_cliente){
 	int estado;
 	do{
 		estado = recibirYmandar(*conexion_cliente);
-	}while(estado);
+	}while(estado>0);
 }
 
 void iniciarHiloKernel(struct sockaddr_in *cliente, socklen_t *longc, int* conexion_cliente){

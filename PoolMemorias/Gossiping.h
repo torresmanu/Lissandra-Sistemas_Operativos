@@ -17,7 +17,7 @@ bool estaConectada(Memoria* mem);
 bool conectarMemoria(Memoria* mem);
 char* serializarTabla(t_list* memoriasConocidas,uint32_t *totalSize);
 void* sumarTamanios(void* seed,void* elem);
-void mandarYrecibir(Memoria* mem);
+int mandarYrecibir(Memoria* mem);
 int recibirYmandar(int socket);
 int mandarTabla(int socket);
 int recibirTablas(int socket);
