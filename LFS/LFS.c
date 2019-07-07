@@ -84,6 +84,8 @@ int iniciar_programa()
 		}
 		pthread_attr_destroy(&attr);
 	}
+
+	crearHiloCompactacion();
 	return 0;
 }
 
@@ -480,6 +482,28 @@ int iniciarServidor(char* configPuerto) {
 	log_info(g_logger,"A la escucha en el puerto %d", ntohs(servidor.sin_port));
 
 	return conexion_servidor;
+}
+
+void crearHiloCompactacion(void) {
+	pthread_attr_t attr;
+	pthread_t thread;
+
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	int err = pthread_create(&thread, &attr, compactacionPrueba, NULL);
+	if(err != 0) {
+		printf("[crearHiloCompactacion] Hubo un problema al crear el thread de compactación:[%s]\n", strerror(err));
+	}
+	pthread_attr_destroy(&attr);
+}
+
+void compactacionPrueba(void) {
+	//while(ejecutando){
+	while(1) {
+		sleep(30);
+		printf("Soy un hilo de compactación y me estoy ejecutando\n");
+	}
 }
 
 char* getStringConfig(char* key){

@@ -54,5 +54,8 @@ char* getStringConfig(char*);
 int getIntConfig(char*);
 int iniciarServidor(char*);
 
+void crearHiloCompactacion(void);
+void compactacionPrueba(void);
+
 
 #endif /* LFS_H_ */
