@@ -12,6 +12,15 @@
 #include "LFS.h"
 #include <dirent.h>
 #include <sys/types.h>
+#include <semaphore.h>
+
+t_list* listaBloqueos;
+
+typedef struct
+{
+	char* tabla;
+	int bloqueo;
+} nodo_bloqueo;
 
 
 metadataTabla obtenerMetadata(char* nombreTabla);
@@ -30,5 +39,12 @@ int dropTableFS(char * tabla);
 int fs_create_tmp(char* tabla,t_list* regList);
 void compactarTabla(char* tabla);
 void compactar();
+
+void setearBloqueo(char* tabla);
+void liberarBloqueo(char* tabla);
+int consultarBloqueo(char* tabla);
+void esperarBloqueo(char* tabla);
+int consultarAlgunBloqueo();
+void esperarAlgunBloqueo();
 
 #endif /* FILESYSTEM_H_ */

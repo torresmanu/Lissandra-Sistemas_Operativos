@@ -48,6 +48,7 @@ bool conectarMemoria(Memoria* mem){
 	freeaddrinfo(serverInfo);	// No lo necesitamos mas
 
 	if((mem->socket==-1) || (status ==-1)){
+		close(mem->socket);
 		mem->socket=-1;
 		return false;
 	}

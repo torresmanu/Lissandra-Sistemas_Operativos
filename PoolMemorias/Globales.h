@@ -72,6 +72,7 @@ t_list* tabla_paginas_global;
 
 
 int posLibres;
+char pathDirectorio[256];
 
 char* memoria;
 char* pathConfig;

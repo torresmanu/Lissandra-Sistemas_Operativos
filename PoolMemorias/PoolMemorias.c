@@ -55,7 +55,8 @@ void escucharConexiones(){
 
 		if(*conexion_cliente<0) {
 			log_info(g_logger,"Error al aceptar tráfico");
-			return;
+			free(conexion_cliente);
+			break;
 		} else {
 			list_add(conexiones,conexion_cliente);
 
@@ -71,7 +72,7 @@ void escucharConexiones(){
 				log_info(g_logger, "Nueva conexion del kernel");
 				iniciarHiloKernel(&cliente,&longc,conexion_cliente);
 			}
-			if(*tipoCliente==0){
+			else if(*tipoCliente==0){
 				log_info(g_logger, "Nueva conexion de una memoria");
 				iniciarHiloMemoria(&cliente,&longc,conexion_cliente);
 			}
@@ -127,14 +128,14 @@ void iniciarHiloKernel(struct sockaddr_in *cliente, socklen_t *longc, int* conex
 	pthread_attr_destroy(&attr);
 }
 
-void escucharKernel(int conexion_cliente){
+void escucharKernel(int* conexion_cliente){
 //	int conexion_servidor = iniciarServidor();
 //	int conexion_cliente = conectarAlKernel(conexion_servidor);
 	resultado res;
 	res.resultado = OK;
 
 	while(res.resultado!=SALIR){
-		resultadoParser resParser = recibirRequest(conexion_cliente);
+		resultadoParser resParser = recibirRequest(*conexion_cliente);
 		if(estaHaciendoJournal){
 			res.resultado=EnJOURNAL;
 			res.mensaje = NULL;
@@ -160,7 +161,7 @@ void escucharKernel(int conexion_cliente){
 			log_info(g_logger,"Se esta haciendo Journaling, ingrese la request mas tarde");
 		}
 
-		avisarResultado(res,conexion_cliente);
+		avisarResultado(res,*conexion_cliente);
 
 		if(res.mensaje!=NULL)
 			free(res.mensaje);
@@ -262,6 +263,8 @@ void gossipingConRetardo(){
 
 void actualizarRetardos(){
 
+	config_destroy(g_config);
+
 	g_config = config_create(pathConfig);
 
 	retardoJournaling = config_get_int_value(g_config,"RETARDO_JOURNAL");
@@ -283,8 +286,7 @@ void monitorearConfig() {
         perror("inotify_init");
     }
 
-    wd = inotify_add_watch(fd, "/home/utnso/workspace/tp-2019-1c-creativOS/PoolMemorias",
-        IN_MODIFY);
+    wd = inotify_add_watch(fd, pathDirectorio,IN_MODIFY);
 
     while(ejecutando){
     	i=0;
@@ -319,9 +321,11 @@ void monitorearConfig() {
 
 bool iniciar_programa()
 {
+
 	estaHaciendoJournal = false;
 	ejecutando = true;
 
+	getcwd(pathDirectorio, sizeof(pathDirectorio));
 
 	//Inicio el logger
 	g_logger = log_create("PoolMemorias.log", "MEM", 1, LOG_LEVEL_INFO);

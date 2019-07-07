@@ -67,6 +67,10 @@ int iniciar_programa()
 	iniciar_memtable();
 	log_info(g_logger,"Memtable inicializada correctamente");
 
+	//Inicio la lista tablas bloqueadas
+	listaBloqueos = list_create();
+	log_info(g_logger,"Lista bloqueos tablas iniciada correctamente");
+
 	server_fd = iniciarServidor(getStringConfig("PUERTO_SERVIDOR"));
 	if(server_fd < 0) {
 		log_error(g_logger, "[iniciar_programa] Ocurrió un error al intentar iniciar el servidor");
@@ -165,6 +169,9 @@ resultado parsear_mensaje(resultadoParser* resParser)
 
 resultado select_acc(char* tabla,int key)
 {
+	//Chequeo que no este bloqueada la tabla
+	esperarBloqueo(tabla);
+
 	resultado res;
 	res.accionEjecutar = SELECT;
 
@@ -254,6 +261,9 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 
 resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 {
+	//Chequeo que no este bloqueada la tabla
+	esperarBloqueo(tabla);
+
 	resultado res;
 	res.accionEjecutar = CREATE;
 	res.contenido = NULL;
@@ -320,6 +330,9 @@ resultado describe(char* tabla)
 
 resultado drop(char* tabla)
 {
+	//Chequeo que no este bloqueada la tabla
+	esperarBloqueo(tabla);
+
 	resultado res;
 	res.accionEjecutar = DROP;
 	res.contenido = NULL;
@@ -492,7 +505,7 @@ void crearHiloCompactacion(void) {
 
 	int err = pthread_create(&thread, &attr, compactacionPrueba, NULL);
 	if(err != 0) {
-		printf("[crearHiloCompactacion] Hubo un problema al crear el thread de compactación:[%s]\n", strerror(err));
+		log_info(g_logger,"[crearHiloCompactacion] Hubo un problema al crear el thread de compactación:[%s]", strerror(err));
 	}
 	pthread_attr_destroy(&attr);
 }
@@ -500,8 +513,8 @@ void crearHiloCompactacion(void) {
 void compactacionPrueba(void) {
 	//while(ejecutando){
 	while(1) {
-		sleep(30);
-		printf("Soy un hilo de compactación y me estoy ejecutando\n");
+		sleep(20);
+		log_info(g_logger,"Soy un hilo de compactación y me estoy ejecutando");
 	}
 }
 
