@@ -7,7 +7,7 @@
 #include "Gossiping.h"
 
 void gossiping(){
-
+	log_info(g_logger,"Comienza el gossiping");
 	list_iterate(memoriasSeeds,gossipear);
 
 }
@@ -16,12 +16,19 @@ void gossipear(void* elem){
 	Memoria* mem = (Memoria*)elem;
 
 	if(estaConectada(mem)){
-		intercambiarTablas(mem);
-		cerrarConexion(mem);
+		mandarYrecibir(mem);
+		//cerrarConexion(mem);
 	}
 }
 
 bool estaConectada(Memoria *mem){
+	if(mem->socket>0)
+		return true;
+	bool estado = conectarMemoria(mem);
+	return estado;
+}
+
+bool conectarMemoria(Memoria* mem){
 	struct addrinfo hints;
 	struct addrinfo *serverInfo;
 
@@ -29,22 +36,27 @@ bool estaConectada(Memoria *mem){
 	hints.ai_family = AF_UNSPEC;		// Permite que la maquina se encargue de verificar si usamos IPv4 o IPv6
 	hints.ai_socktype = SOCK_STREAM;	// Indica que usaremos el protocolo TCP
 
-	getaddrinfo(mem->ip, mem->puerto, &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
+	int estado = getaddrinfo(mem->ip, mem->puerto, &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
 
 
 	mem->socket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 
-	int status = connect(mem->socket, serverInfo->ai_addr, serverInfo->ai_addrlen);
+	int status = connect((int)mem->socket, serverInfo->ai_addr, serverInfo->ai_addrlen);
+	uint32_t codigo = 0;
+	if(status!=-1)
+		estado = send(mem->socket,&codigo,sizeof(uint32_t),0);
 	freeaddrinfo(serverInfo);	// No lo necesitamos mas
 
-	if((mem->socket==-1) || (status ==-1))
+	if((mem->socket==-1) || (status ==-1)){
+		mem->socket=-1;
 		return false;
+	}
 	return true;
 }
 
-void intercambiarTablas(Memoria* mem){
-	int status1 = mandarTabla(mem);
-	int status2 = recibirTablas(mem);
+void mandarYrecibir(Memoria* mem){
+	int status1 = mandarTabla(mem->socket);
+	int status2 = recibirTablas(mem->socket);
 
 	if(status1<0)
 		log_info(g_logger,"Fallo al mandar tabla");
@@ -53,16 +65,33 @@ void intercambiarTablas(Memoria* mem){
 		log_info(g_logger,"Fallo al recibir tabla");
 }
 
-int mandarTabla(Memoria* mem){
+int recibirYmandar(int socket){
+
+	int status2 = recibirTablas(socket);
+	int status1 = mandarTabla(socket);
+
+
+	if(status1<0)
+		log_info(g_logger,"Fallo al mandar tabla");
+
+	if(status2<0)
+		log_info(g_logger,"Fallo al recibir tabla");
+
+	return status2;
+}
+
+int mandarTabla(int socket){
 	uint32_t totalSize;
 
 	char *tablaSerializada = serializarTabla(memoriasConocidas,&totalSize);
 
-	int status = send(mem->socket,tablaSerializada,totalSize,0);
+	int status = send(socket,tablaSerializada,totalSize,0);
 
 	free(tablaSerializada);
 
 	if(status != totalSize) status = -2;
+
+	log_info(g_logger,"Mande tabla,tamaño del mensaje:%d",totalSize);
 
 	return status;
 }
@@ -96,64 +125,69 @@ char* serializarTabla(t_list* memoriasConocidas,uint32_t *totalSize){
 		uint32_t tamPuerto = strlen(elem->puerto);
 
 		size_to_send = sizeof(uint32_t);
-		memcpy(tablaSerializada,&tamIp,size_to_send);
+		memcpy(tablaSerializada+offset,&tamIp,size_to_send);
 		offset += size_to_send;
 
 		size_to_send = tamIp;
-		memcpy(tablaSerializada,elem->ip,size_to_send);
+		memcpy(tablaSerializada+offset,elem->ip,size_to_send);
 		offset += size_to_send;
 
 		size_to_send = sizeof(uint32_t);
-		memcpy(tablaSerializada,&tamPuerto,size_to_send);
+		memcpy(tablaSerializada+offset,&tamPuerto,size_to_send);
 		offset += size_to_send;
 
 		size_to_send = tamPuerto;
-		memcpy(tablaSerializada,elem->puerto,size_to_send);
+		memcpy(tablaSerializada+offset,elem->puerto,size_to_send);
 		offset += size_to_send;
 
 		size_to_send = sizeof(uint32_t);
-		memcpy(tablaSerializada,&elem->numero,size_to_send);
+		memcpy(tablaSerializada+offset,&elem->numero,size_to_send);
 		offset += size_to_send;
 	}
 
 	return tablaSerializada;
 }
 
-int recibirTablas(Memoria* mem){
+int recibirTablas(int socket){
 	int status=0;
 	uint32_t tamLeer;
 
 	char* buffer = malloc(sizeof(uint32_t));
-	status = recv(mem->socket,buffer,sizeof(uint32_t),0);
+	status = recv(socket,buffer,sizeof(uint32_t),0);
+	if(status==-1)
+		perror("Error recv");
 	if(status != sizeof(uint32_t)) return -2;
+	int cantElem = *(int*)buffer;
 
-	for(int i=0;i < *(int*)buffer;i++){
+	for(int i=0;i < cantElem;i++){
 		Memoria* memNueva = malloc(sizeof(Memoria));
 
-		status = recv(mem->socket,buffer,sizeof(uint32_t),0);
+		status = recv(socket,buffer,sizeof(uint32_t),0);
 		memcpy(&tamLeer,buffer,sizeof(uint32_t));
 		if(status != sizeof(uint32_t)) return -2;
 
 		memNueva->ip = malloc(tamLeer);
-		status = recv(mem->socket,memNueva->ip,tamLeer,0);
+		status = recv(socket,memNueva->ip,tamLeer,0);
 		if(status != tamLeer) return -2;
 
-		status = recv(mem->socket,buffer,sizeof(uint32_t),0);
+		status = recv(socket,buffer,sizeof(uint32_t),0);
 		memcpy(&tamLeer,buffer,sizeof(uint32_t));
 		if(status != sizeof(uint32_t)) return -2;
 
 		memNueva->puerto = malloc(tamLeer);
-		status = recv(mem->socket,memNueva->puerto,tamLeer,0);
+		status = recv(socket,memNueva->puerto,tamLeer,0);
 		if(status != tamLeer) return -2;
 
-		status = recv(mem->socket,&memNueva->numero,sizeof(uint32_t),0);
+		status = recv(socket,&memNueva->numero,sizeof(uint32_t),0);
 		if(status != sizeof(uint32_t)) return -2;
 
 		memNueva->socket=-1;
 
 		agregarMemoria(memNueva);
+		log_info(g_logger,"Recibi memoria numero:%d",memNueva->numero);
 	}
 	free(buffer);
+	log_info(g_logger,"Recibi tabla");
 	return status;
 }
 
@@ -172,4 +206,5 @@ void agregarMemoria(Memoria* mem){
 void cerrarConexion(Memoria* mem){
 	close(mem->socket);
 }
+
 

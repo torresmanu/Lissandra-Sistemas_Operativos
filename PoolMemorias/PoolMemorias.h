@@ -55,6 +55,11 @@ resultado insert(char *nombre_tabla,int key,char *value,long timestamp);
 void actualizarRegistro(Pagina *pagina,char *value,long timestamp);
 resultado parsear_mensaje(resultadoParser*);
 
+void escucharConexiones();
+void iniciarHiloKernel(struct sockaddr_in *cliente, socklen_t *longc, int* conexion_cliente);
+void iniciarHiloMemoria(struct sockaddr_in *cliente, socklen_t *longc, int* conexion_cliente);
+
+void escucharMemoria(int* conexion_cliente);
 void escucharKernel();
 resultadoParser recibirRequest(int conexion_cliente);
 int iniciarServidor();
@@ -71,3 +76,4 @@ void drop(char* nombre_tabla);
 
 
 #endif /* POOLMEMORIAS_H_ */
+

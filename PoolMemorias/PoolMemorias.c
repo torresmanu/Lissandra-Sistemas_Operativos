@@ -8,24 +8,26 @@ int main(int argc, char* argv[]) {
 	if(!estado)
 		return 0;
 
-	pthread_t journalAutomatico;
-	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
+//	pthread_t journalAutomatico;
+//	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
 
-//	pthread_t gossipingAutomatico;
-//	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
+	pthread_t gossipingAutomatico;
+	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
 
 
-	pthread_t conexionKernel;
-	pthread_create(&conexionKernel,NULL,(void*) escucharKernel,NULL);
+	pthread_t conexionesEntrantes;
+	pthread_create(&conexionesEntrantes,NULL,(void*) escucharConexiones,NULL);
 
 	pthread_t monitoreador;
 	pthread_create(&monitoreador,NULL,(void*) monitorearConfig,NULL);
+
+	gossiping();
 
 	consola();
 
 	//ver si esta bien que este aca
 	//van a hacer falta mutex para la memoria
-	pthread_join(journalAutomatico,NULL);
+//	pthread_join(journalAutomatico,NULL);
 	//pthread_join(gossipingAutomatico,NULL);
 //	pthread_join(conexionKernel,NULL);
 
@@ -37,9 +39,97 @@ int main(int argc, char* argv[]) {
 
 }
 
-void escucharKernel(){
+void escucharConexiones(){
 	int conexion_servidor = iniciarServidor();
-	int conexion_cliente = conectarAlKernel(conexion_servidor);
+
+	struct sockaddr_in cliente;
+	socklen_t longc = sizeof(cliente);
+
+	t_list* conexiones = list_create();
+
+	while(ejecutando){
+		int *conexion_cliente=malloc(sizeof(int));
+
+		*conexion_cliente= accept(conexion_servidor, (struct sockaddr *) &cliente, &longc);
+		log_info(g_logger,"Conectado con Socket:%d ",*conexion_cliente);
+
+		if(*conexion_cliente<0) {
+			log_info(g_logger,"Error al aceptar tráfico");
+			return;
+		} else {
+			list_add(conexiones,conexion_cliente);
+
+			int status = 0;
+			uint32_t* tipoCliente = malloc(sizeof(uint32_t));
+			status = recv(*conexion_cliente,tipoCliente,sizeof(uint32_t),0);
+
+			if(status != sizeof(uint32_t))
+				log_info(g_logger, "Error al recibir info del cliente");
+
+
+			if(*tipoCliente==1){
+				log_info(g_logger, "Nueva conexion del kernel");
+				iniciarHiloKernel(&cliente,&longc,conexion_cliente);
+			}
+			if(*tipoCliente==0){
+				log_info(g_logger, "Nueva conexion de una memoria");
+				iniciarHiloMemoria(&cliente,&longc,conexion_cliente);
+			}
+			else{
+				log_info(g_logger,"Error al reconocer cliente");
+			}
+			free(tipoCliente);
+		}
+
+	}
+	list_destroy_and_destroy_elements(conexiones,free);
+}
+
+void iniciarHiloMemoria(struct sockaddr_in *cliente, socklen_t *longc, int* conexion_cliente){
+	pthread_attr_t attr;
+	pthread_t thread;
+
+	*longc = sizeof(cliente);
+	log_info(g_logger,"Conectado con %s:%d", inet_ntoa(cliente->sin_addr),htons(cliente->sin_port));
+
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	int err = pthread_create(&thread, &attr, escucharMemoria, conexion_cliente);
+	if(err != 0) {
+		log_info(g_logger,"[esperarClienteNuevo] Hubo un problema al crear el thread para escuchar la memoria:[%s]", strerror(err));
+	}
+//	pthread_attr_destroy(&attr);
+}
+
+void escucharMemoria(int *conexion_cliente){
+	log_info(g_logger,"Conexion cliente: %d", *conexion_cliente);
+	int estado;
+	do{
+		estado = recibirYmandar(*conexion_cliente);
+	}while(estado);
+}
+
+void iniciarHiloKernel(struct sockaddr_in *cliente, socklen_t *longc, int* conexion_cliente){
+	pthread_attr_t attr;
+	pthread_t thread;
+
+	*longc = sizeof(cliente);
+	log_info(g_logger,"Conectado con %s:%d", inet_ntoa(cliente->sin_addr),htons(cliente->sin_port));
+
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	int err = pthread_create(&thread, &attr, escucharKernel, conexion_cliente);
+	if(err != 0) {
+		log_info(g_logger,"[esperarClienteNuevo] Hubo un problema al crear el thread para escuhcar al kernel:[%s]", strerror(err));
+	}
+	pthread_attr_destroy(&attr);
+}
+
+void escucharKernel(int conexion_cliente){
+//	int conexion_servidor = iniciarServidor();
+//	int conexion_cliente = conectarAlKernel(conexion_servidor);
 	resultado res;
 	res.resultado = OK;
 
@@ -127,13 +217,13 @@ int iniciarServidor() {
 	servidor.sin_addr.s_addr = INADDR_ANY;
 
 	if(bind(conexion_servidor, (struct sockaddr *)&servidor, sizeof(servidor)) < 0) {
-		printf("Error al asociar el puerto a la conexion. Posiblemente el puerto se encuentre ocupado\n");
+		log_info(g_logger,"Error al asociar el puerto a la conexion. Posiblemente el puerto se encuentre ocupado");
 	    close(conexion_servidor);
 	    return -1;
 	}
 
 	listen(conexion_servidor, 3);
-	printf("A la escucha en el puerto %d\n", ntohs(servidor.sin_port));
+	log_info(g_logger,"A la escucha en el puerto %d", ntohs(servidor.sin_port));
 
 	return conexion_servidor;
 }
@@ -248,6 +338,7 @@ bool iniciar_programa()
 		return false;
 	}
 
+
 	//hacer handshake con LFS y obtener tamaño de mem ppl y value
 	estado = handshake();
 	if(!estado)
@@ -302,22 +393,24 @@ void iniciarTablaSeeds(){
 	int i=0;
 
 	memoriasSeeds = list_create();
-	char** ips = config_get_array_value(g_logger,"IP_SEEDS");
-	char** puertos = config_get_array_value(g_logger,"PUERTO_SEEDS");
+	char** ips = config_get_array_value(g_config,"IP_SEEDS");
+	char** puertos = config_get_array_value(g_config,"PUERTO_SEEDS");
 
 	while(ips[i]!=NULL){
 		Memoria* mem = malloc(sizeof(Memoria));
-
 		mem->ip = ips[i];
 		mem->puerto = puertos[i];
 		mem->numero = -1;
 		mem->socket = -1;
+		conectarMemoria(mem);
 
 		list_add(memoriasSeeds,mem);
 
 		i++;
 	}
 }
+
+
 
 
 bool handshake(){
@@ -1048,3 +1141,4 @@ resultado parsear_mensaje(resultadoParser* resParser)
 	return res;
 
 }
+
