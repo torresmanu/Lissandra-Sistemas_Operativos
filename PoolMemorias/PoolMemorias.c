@@ -563,6 +563,14 @@ resultado select_t(char *nombre_tabla, int key){
 
 		registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
 
+		if(registro==NULL){
+			char* aux = "Fallo al recibir registro";
+			res.resultado=ERROR;
+			res.mensaje= string_duplicate(aux);
+			return res;
+		}
+
+
 		int posLibre= espacioLibre();
 		if(posLibre>=0){
 			almacenarRegistro(nombre_tabla,*registro,posLibre);
