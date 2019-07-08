@@ -13,7 +13,10 @@
 #include <commons/config.h>
 #include <commons/parser.h>
 #include <commons/serializacion.h>
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
 
 //las puse aca para que no me rompa, buscar un lugar mejor
 t_log* g_logger;

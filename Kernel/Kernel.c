@@ -44,6 +44,7 @@ int main(void) {
 
 	terminar_programa();
 
+
 	printf("Termine programa\n");
 	return 0;
 }
@@ -74,15 +75,9 @@ void iniciar_programa(void)
 	tablas = list_create();			// ESTRUCTURA QUE CONTIENE TODAS LAS TABLAS (METADATA)
 	socketsPool = list_create();	// SOCKETS DE TODO EL POOL
 
+	// Todoo para el describe
 	obtenerMemoriaDescribe();
 	gestionarConexionAMemoria(MemDescribe);
-
-	/*
-	Tabla* peliculas = malloc(sizeof(Tabla));
-	peliculas->criterio = &sc;
-	char *auxc = "PELICULAS";
-	peliculas->nombre = strdup(auxc);
-	*/
 
 	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
 	//obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
@@ -105,6 +100,8 @@ void terminar_programa()
 
 	//Libero las memorias de los criterios
 	liberarCriterios();
+
+
 }
 
 
@@ -124,13 +121,18 @@ int gestionarConexionAMemoria(Memoria* mem)
 
 	if(res == -1)
 	{
-		perror("No se pudo conectar: \n");
+		perror("No se pudo conectar: ");
 	}
 	else
 	{
 		log_info(g_logger, "Se conecto a la Memoria N°:%d, listo para enviar scripts.",mem->id);
 	}
 	freeaddrinfo(serverInfo); // Libero
+
+	// Envio un 1
+	uint32_t codigo = 1;
+	send(memoriaSocket,&codigo,sizeof(uint32_t),0);
+
 	return memoriaSocket;
 }
 
@@ -170,11 +172,13 @@ void agregarScriptAEstado(void* elem, nombreEstado estado)  // Aca hace las comp
 
 void leerConsola(){
 
+	resultado result;
+	result.resultado = OK;
+
 	printf("\nBienvenido! Welcome! Youkoso!\n");
-	while(1)
+	while(result.resultado != SALIR)
 	{
-		resultadoParser *res = malloc(sizeof(resultadoParser));
-		//Script* s = malloc(sizeof(Script));
+		resultadoParser* res = malloc(sizeof(resultadoParser));
 
 		char* linea = readline(">");					// Leo stdin
 		if(linea)
@@ -183,22 +187,24 @@ void leerConsola(){
 		resultadoParser aux = parseConsole(linea);
 		memcpy(res,&aux,sizeof(resultadoParser));
 
+		if(res->accionEjecutar==SALIR_CONSOLA){
+			result.resultado = SALIR;
+			printf("Entre en el if de salir_consola\n");
+			return;
+		}
+
 		pthread_mutex_lock(&mNew);
 		agregarScriptAEstado(res, NEW);
 		pthread_mutex_unlock(&mNew);
 
 		log_info(g_logger,"Agrego resParser con accion: %d a new\n",res->accionEjecutar);
-
-		sem_post(&sNuevo);
-		if(res->accionEjecutar==SALIR_CONSOLA){
-			log_info(g_logger,"Entre en el if de salir_consola");
-			break;
-		}
+		sem_post(&sNuevo);	// Habilito el estado NEW
 		log_info(g_logger,"Estoy abajo del if");
 
 		free(linea);
 	}
 
+	terminar_programa();
 }
 
 void planificadorLargoPlazo(){
@@ -286,14 +292,6 @@ void mandarAexit(Script *s){
 }
 
 ////////////////////////////////////////////////////
-//Agrego la memoria en la lista de memorias del criterio
-void add(Memoria *memoria,Criterio *cons)
-{
-	list_add(cons->memorias,memoria);
-	log_info(g_logger,"Agrege memoria N°:%d al criterio %d",memoria->id,cons->tipo);
-}
-
-////////////////////////////////////////////////////
 
 void realizarDescribeGlobal()
 {
@@ -307,32 +305,54 @@ void realizarDescribeGlobal()
 void describe()
 {
 	t_list* TablaLFS;
-
 	int size;
+	int status;
+	int valueResponse;
 	resultado res;
+	accion acc;
+
 
 	resultadoParser* describe = malloc(sizeof(resultadoParser));
 	describe->accionEjecutar = DESCRIBE;
-	describe->contenido = NULL;
+	contenidoDescribe* cd = malloc(sizeof(contenidoDescribe));
+	cd->nombreTabla = NULL;
+	describe->contenido = cd;
 
 	char* msg = serializarPaquete(describe,&size);
 	send(memoriaSocket, msg, size, 0);								// Pido el describe a la memoria
+	char* buffer = malloc(sizeof(char));
+	valueResponse = recv(memoriaSocket,buffer,sizeof(int),0);
+	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
 
-	int status = recibirYDeserializarRespuesta(memoriaSocket,&res); // Recibo la lista de tablas
-	if(status<0)
+	if(valueResponse < 0)
 	{
-		log_info(g_logger,"Describe fallido");
+		log_error(g_logger,strerror(errno));
+	}
+	else if(valueResponse == 0)
+	{
+		log_error(g_logger,"Posiblemente la memoria se desconectó.");
 	}
 	else
 	{
-		printf("Cantidad de tablas indexadas en Kernel: %d\n", tablas->elements_count);
-		TablaLFS = (t_list*)res.contenido;
-		list_add_all(tablas,TablaLFS);
-		log_info(g_logger,"Describe global realizado con éxito\n");
-		log_info(g_logger,"Cantidad de tablas indexadas en Kernel posterior Describe: %d\n", tablas->elements_count);
+		res.accionEjecutar=acc;
+		status = recibirYDeserializarRespuesta(memoriaSocket,&res); // Recibo la lista de tablas
+		if(status<0)
+			{
+				log_error(g_logger,"Describe fallido");
+			}
+			else
+			{
+				TablaLFS = (t_list*)res.contenido;
+				list_clean(tablas);						// Para no agregar repetidas
+				list_add_all(tablas,TablaLFS);
+				log_info(g_logger,"Describe global realizado con éxito");
+				log_info(g_logger,"Cantidad de tablas indexadas en Kernel posterior Describe: %d", tablas->elements_count);
+			}
 	}
+	free(buffer);
 	free(describe);
 	free(msg);
+	free(cd);
 }
 
 void establecerConexionPool()
@@ -343,6 +363,8 @@ void establecerConexionPool()
 	int socket;
 	t_list* aux;
 
+	aux = list_create();
+
 	for(int i = 0; i<pool->elements_count; i++)
 	{
 		mem = list_get(pool,i);
@@ -350,8 +372,7 @@ void establecerConexionPool()
 		mem->socket = socket;
 		list_add(aux,mem);
 	}
-
-	pool = aux;
+	pool = aux; // Y obtengo una lista con todos los sockets
 }
 
 

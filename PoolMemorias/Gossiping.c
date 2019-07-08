@@ -13,11 +13,14 @@ void gossiping(){
 }
 
 void gossipear(void* elem){
+	int estado;
 	Memoria* mem = (Memoria*)elem;
 
 	if(estaConectada(mem)){
-		mandarYrecibir(mem);
-		//cerrarConexion(mem);
+		estado = mandarYrecibir(mem);
+		if(estado<0){
+			mem->socket=-1;
+		}
 	}
 }
 
@@ -48,21 +51,24 @@ bool conectarMemoria(Memoria* mem){
 	freeaddrinfo(serverInfo);	// No lo necesitamos mas
 
 	if((mem->socket==-1) || (status ==-1)){
+		close(mem->socket);
 		mem->socket=-1;
 		return false;
 	}
 	return true;
 }
 
-void mandarYrecibir(Memoria* mem){
+int mandarYrecibir(Memoria* mem){
 	int status1 = mandarTabla(mem->socket);
-	int status2 = recibirTablas(mem->socket);
-
-	if(status1<0)
+	if(status1<0){
 		log_info(g_logger,"Fallo al mandar tabla");
+		return status1;
+	}
 
+	int status2 = recibirTablas(mem->socket);
 	if(status2<0)
 		log_info(g_logger,"Fallo al recibir tabla");
+	return status2;
 }
 
 int recibirYmandar(int socket){

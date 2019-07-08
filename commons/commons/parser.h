@@ -26,7 +26,8 @@ typedef enum
 	METRICS,
 	ADD,
 	ERROR_PARSER,
-	HANDSHAKE
+	HANDSHAKE,
+	GOSSIPING
 }accion;
 
 typedef enum
@@ -35,7 +36,8 @@ typedef enum
 	SALIR,
 	MENSAJE_MAL_FORMATEADO,
 	ERROR,
-	EnJOURNAL
+	EnJOURNAL,
+	ENVIADO
 }estado;
 
 typedef struct

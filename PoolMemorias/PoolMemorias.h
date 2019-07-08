@@ -9,6 +9,8 @@
 #define POOLMEMORIAS_H_
 
 #include "Globales.h"
+#include "Gossiping.h"
+
 
 
 #define EVENT_SIZE  (sizeof(struct inotify_event))

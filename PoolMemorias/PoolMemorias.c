@@ -55,7 +55,8 @@ void escucharConexiones(){
 
 		if(*conexion_cliente<0) {
 			log_info(g_logger,"Error al aceptar tráfico");
-			return;
+			free(conexion_cliente);
+			break;
 		} else {
 			list_add(conexiones,conexion_cliente);
 
@@ -71,7 +72,7 @@ void escucharConexiones(){
 				log_info(g_logger, "Nueva conexion del kernel");
 				iniciarHiloKernel(&cliente,&longc,conexion_cliente);
 			}
-			if(*tipoCliente==0){
+			else if(*tipoCliente==0){
 				log_info(g_logger, "Nueva conexion de una memoria");
 				iniciarHiloMemoria(&cliente,&longc,conexion_cliente);
 			}
@@ -99,7 +100,7 @@ void iniciarHiloMemoria(struct sockaddr_in *cliente, socklen_t *longc, int* cone
 	if(err != 0) {
 		log_info(g_logger,"[esperarClienteNuevo] Hubo un problema al crear el thread para escuchar la memoria:[%s]", strerror(err));
 	}
-//	pthread_attr_destroy(&attr);
+	pthread_attr_destroy(&attr);
 }
 
 void escucharMemoria(int *conexion_cliente){
@@ -107,7 +108,7 @@ void escucharMemoria(int *conexion_cliente){
 	int estado;
 	do{
 		estado = recibirYmandar(*conexion_cliente);
-	}while(estado);
+	}while(estado>0);
 }
 
 void iniciarHiloKernel(struct sockaddr_in *cliente, socklen_t *longc, int* conexion_cliente){
@@ -127,14 +128,14 @@ void iniciarHiloKernel(struct sockaddr_in *cliente, socklen_t *longc, int* conex
 	pthread_attr_destroy(&attr);
 }
 
-void escucharKernel(int conexion_cliente){
+void escucharKernel(int* conexion_cliente){
 //	int conexion_servidor = iniciarServidor();
 //	int conexion_cliente = conectarAlKernel(conexion_servidor);
 	resultado res;
 	res.resultado = OK;
 
 	while(res.resultado!=SALIR){
-		resultadoParser resParser = recibirRequest(conexion_cliente);
+		resultadoParser resParser = recibirRequest(*conexion_cliente);
 		if(estaHaciendoJournal){
 			res.resultado=EnJOURNAL;
 			res.mensaje = NULL;
@@ -160,7 +161,7 @@ void escucharKernel(int conexion_cliente){
 			log_info(g_logger,"Se esta haciendo Journaling, ingrese la request mas tarde");
 		}
 
-		avisarResultado(res,conexion_cliente);
+		avisarResultado(res,*conexion_cliente);
 
 		if(res.mensaje!=NULL)
 			free(res.mensaje);
@@ -169,6 +170,8 @@ void escucharKernel(int conexion_cliente){
 }
 
 void avisarResultado(resultado res, int conexion_cliente){
+	if(res.resultado==ENVIADO)
+		return;
 	int size_to_send;
 	char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
 	send(conexion_cliente, paqueteRespuesta, size_to_send, 0);
@@ -194,6 +197,16 @@ resultadoParser recibirRequest(int conexion_cliente){
 		rp.accionEjecutar = SALIR_CONSOLA;
 	} else {
 		rp.accionEjecutar = acc;
+
+		if(rp.accionEjecutar == GOSSIPING){
+			int socket = conexion_cliente;
+			rp.contenido = malloc(sizeof(int));
+			memcpy(rp.contenido,&socket,sizeof(int));
+
+			free(buffer2);
+			return rp;
+		}
+
 		status = recibirYDeserializarPaquete(conexion_cliente, &rp);
 		log_info(g_logger,"La accion es:%d", rp.accionEjecutar);
 		if(status<0)
@@ -262,6 +275,8 @@ void gossipingConRetardo(){
 
 void actualizarRetardos(){
 
+	config_destroy(g_config);
+
 	g_config = config_create(pathConfig);
 
 	retardoJournaling = config_get_int_value(g_config,"RETARDO_JOURNAL");
@@ -283,8 +298,7 @@ void monitorearConfig() {
         perror("inotify_init");
     }
 
-    wd = inotify_add_watch(fd, "/home/utnso/workspace/tp-2019-1c-creativOS/PoolMemorias",
-        IN_MODIFY);
+    wd = inotify_add_watch(fd, pathDirectorio,IN_MODIFY);
 
     while(ejecutando){
     	i=0;
@@ -319,9 +333,11 @@ void monitorearConfig() {
 
 bool iniciar_programa()
 {
+
 	estaHaciendoJournal = false;
 	ejecutando = true;
 
+	getcwd(pathDirectorio, sizeof(pathDirectorio));
 
 	//Inicio el logger
 	g_logger = log_create("PoolMemorias.log", "MEM", 1, LOG_LEVEL_INFO);
@@ -546,6 +562,14 @@ resultado select_t(char *nombre_tabla, int key){
 		log_info(g_logger,"No encontre el registro, voy a hablar con el LFS");	//Tengo que pedirselo al LFS y agregarlo en la pagina
 
 		registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
+
+		if(registro==NULL){
+			char* aux = "Fallo al recibir registro";
+			res.resultado=ERROR;
+			res.mensaje= string_duplicate(aux);
+			return res;
+		}
+
 
 		int posLibre= espacioLibre();
 		if(posLibre>=0){
@@ -1055,7 +1079,6 @@ void destroy_nodo_pagina_global(void * elem){
 resultado parsear_mensaje(resultadoParser* resParser)
 {
 	resultado res;
-	int size_to_send;
 	switch(resParser->accionEjecutar){
 		case SELECT:
 		{
@@ -1068,13 +1091,6 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		{
 			res = mandarALFS(*resParser);
 			log_info(g_logger,"Se envió al LFS");
-			printf("Accion: %i\n", res.accionEjecutar);
-			printf("Mensaje: %s\n", res.mensaje);
-			printf("Resultado: %i\n", res.resultado);
-
-			if(res.contenido != NULL) {
-				printf("Size lista= %i\n", list_size(res.contenido));
-			}
 			break;
 		}
 		case INSERT:
@@ -1114,6 +1130,14 @@ resultado parsear_mensaje(resultadoParser* resParser)
 			mandarALFS(*resParser);
 			log_info(g_logger,"Se envió al LFS");
 			res = recibir();
+			break;
+		}
+		case GOSSIPING:
+		{
+			mandarTabla(*((int*)(resParser->contenido)));
+			res.resultado = ENVIADO;
+			res.mensaje = NULL;
+			log_info(g_logger,"Se retorno tabla gossiping");
 			break;
 		}
 		case ERROR_PARSER:
