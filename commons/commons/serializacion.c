@@ -556,11 +556,17 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		offset = 0;
 		message_size = 0;
 
-		*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
-				+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size)
-				+ (strlen(reg->value) + 1) * sizeof(char) + sizeof(value_size)
-				+ sizeof(reg->key)
-				+ sizeof(reg->timestamp);
+		if(reg != NULL) {
+			*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
+					+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size)
+					+ (strlen(reg->value) + 1) * sizeof(char) + sizeof(value_size)
+					+ sizeof(reg->key)
+					+ sizeof(reg->timestamp);
+		} else {
+			*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
+					+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size);
+		}
+
 		char* paqueteSerializado = (char*) malloc(*total_size);
 
 		//Copio la accion SELECT
@@ -588,23 +594,25 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		memcpy(paqueteSerializado + offset, res->mensaje, size_to_send);
 		offset += size_to_send;
 
-		value_size = strlen(reg->value) + 1;
-		size_to_send = sizeof(value_size);
-		memcpy(paqueteSerializado + offset, &value_size, size_to_send);
-		offset += size_to_send;
+		if(reg != NULL) {
+			value_size = strlen(reg->value) + 1;
+			size_to_send = sizeof(value_size);
+			memcpy(paqueteSerializado + offset, &value_size, size_to_send);
+			offset += size_to_send;
 
 
-		size_to_send = value_size;
-		memcpy(paqueteSerializado + offset, reg->value, size_to_send);
-		offset += size_to_send;
+			size_to_send = value_size;
+			memcpy(paqueteSerializado + offset, reg->value, size_to_send);
+			offset += size_to_send;
 
-		size_to_send = sizeof(reg->key);
-		memcpy(paqueteSerializado + offset, &(reg->key), size_to_send);
-		offset += size_to_send;
+			size_to_send = sizeof(reg->key);
+			memcpy(paqueteSerializado + offset, &(reg->key), size_to_send);
+			offset += size_to_send;
 
 
-		size_to_send = sizeof(reg->timestamp);
-		memcpy(paqueteSerializado + offset, &(reg->timestamp), size_to_send);
+			size_to_send = sizeof(reg->timestamp);
+			memcpy(paqueteSerializado + offset, &(reg->timestamp), size_to_send);
+		}
 
 		return paqueteSerializado;
 
@@ -952,7 +960,6 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		break;
 	}
 	case(SELECT): {
-		registro* reg = malloc(sizeof(registro));
 		char* bufferTimestamp = malloc(sizeof(long));
 		int valueSize;
 
@@ -975,23 +982,30 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		status = recv(socketCliente, res->mensaje, message_size, 0);
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(int), 0);
-		memcpy(&valueSize, buffer, buffer_size);
-		if (!status) return -2;
+		int tamanioMinimoDelPaquete = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(total_size)
+				+ message_size + sizeof(message_size);
 
-		reg->value = malloc(valueSize);
-		status = recv(socketCliente, reg->value, valueSize, 0);
-		if (!status) return -2;
+		if(total_size > tamanioMinimoDelPaquete) {
+			registro* reg = malloc(sizeof(registro));
 
-		status = recv(socketCliente, buffer, sizeof(int), 0);
-		memcpy(&(reg->key), buffer, sizeof(int));
-		if (!status) return -2;
+			status = recv(socketCliente, buffer, sizeof(int), 0);
+			memcpy(&valueSize, buffer, buffer_size);
+			if (!status) return -2;
 
-		status = recv(socketCliente, bufferTimestamp, sizeof(long), 0);
-		memcpy(&(reg->timestamp), bufferTimestamp, sizeof(long));
-		if (!status) return -2;
+			reg->value = malloc(valueSize);
+			status = recv(socketCliente, reg->value, valueSize, 0);
+			if (!status) return -2;
 
-		res->contenido = reg;
+			status = recv(socketCliente, buffer, sizeof(int), 0);
+			memcpy(&(reg->key), buffer, sizeof(int));
+			if (!status) return -2;
+
+			status = recv(socketCliente, bufferTimestamp, sizeof(long), 0);
+			memcpy(&(reg->timestamp), bufferTimestamp, sizeof(long));
+			if (!status) return -2;
+
+			res->contenido = reg;
+		}
 
 		break;
 	}
