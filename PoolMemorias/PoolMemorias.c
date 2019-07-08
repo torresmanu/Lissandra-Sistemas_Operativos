@@ -1079,7 +1079,6 @@ void destroy_nodo_pagina_global(void * elem){
 resultado parsear_mensaje(resultadoParser* resParser)
 {
 	resultado res;
-	int size_to_send;
 	switch(resParser->accionEjecutar){
 		case SELECT:
 		{
@@ -1092,10 +1091,6 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		{
 			res = mandarALFS(*resParser);
 			log_info(g_logger,"Se envió al LFS");
-
-			if(res.contenido != NULL) {
-				printf("Size lista= %i\n", list_size(res.contenido));
-			}
 			break;
 		}
 		case INSERT:
@@ -1139,7 +1134,7 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		}
 		case GOSSIPING:
 		{
-			mandarTabla(*(resParser->contenido));
+			mandarTabla(*((int*)(resParser->contenido)));
 			res.resultado = ENVIADO;
 			res.mensaje = NULL;
 			log_info(g_logger,"Se retorno tabla gossiping");
