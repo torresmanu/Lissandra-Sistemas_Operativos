@@ -64,3 +64,10 @@ Memoria* masApropiada(Criterio* c){
 	return mem;
 }
 
+////////////////////////////////////////////////////////
+//Agrego la memoria en la lista de memorias del criterio
+void add(Memoria *memoria,Criterio *cons)
+{
+	list_add(cons->memorias,memoria);
+	log_info(g_logger,"Agrege memoria N°:%d al criterio %d",memoria->id,cons->tipo);
+}

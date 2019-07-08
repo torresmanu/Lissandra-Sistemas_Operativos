@@ -12,13 +12,11 @@
 #include <commons/parser.h>
 #include <commons/serializacion.h>
 #include <commons/log.h>
-#include <commons/sockets.h>
+//#include <commons/sockets.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <semaphore.h>
 #include <pthread.h>
-#include <errno.h>
-#include "Criterio.h"
 #include "Estados.h"
 #include "Request.h"
 
@@ -47,9 +45,6 @@ void mandarAexit(Script *s);
 bool deboSalir(Script *s);
 
 // JOURNAL
-
-// ADD
-void add(Memoria*, Criterio*);
 
 // DESCRIBE GLOBAL
 void realizarDescribeGlobal();

@@ -202,12 +202,6 @@ status ejecutarRequest(resultadoParser *r){
 
 void finalizarScript()	// Debe hacer un free y sacarlo de la cola
 {
-	/*
-	resultadoParser* res;
-	res = queue_pop(exi);
-	free(res);
-	*/
-
 	free(queue_pop(exi));
 }
 
@@ -254,7 +248,7 @@ Tabla* buscarTabla(char* nom)
 		return strcmp(nom,((Tabla*)element)->nombre) == 0;
 	}
 
-	log_info(g_logger,"Entre a buscarTabla");
-
+	printf("Entro a buscarTabla y me dispongo a buscarla\n");
 	return (Tabla*)list_find(tablas,coincideNombre);
+	printf("AAAAA\n");
 }

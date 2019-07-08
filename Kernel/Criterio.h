@@ -28,6 +28,7 @@ void liberarCriterios();
 void destroy_nodo_memoria(void * elem);
 Criterio* toConsistencia(char*);
 Memoria* masApropiada(Criterio*);
+void add(Memoria*,Criterio*);
 
 
 #endif /* CRITERIO_H_ */
