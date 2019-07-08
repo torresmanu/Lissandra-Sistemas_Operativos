@@ -170,6 +170,8 @@ void escucharKernel(int* conexion_cliente){
 }
 
 void avisarResultado(resultado res, int conexion_cliente){
+	if(res.resultado==ENVIADO)
+		return;
 	int size_to_send;
 	char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
 	send(conexion_cliente, paqueteRespuesta, size_to_send, 0);
@@ -195,6 +197,16 @@ resultadoParser recibirRequest(int conexion_cliente){
 		rp.accionEjecutar = SALIR_CONSOLA;
 	} else {
 		rp.accionEjecutar = acc;
+
+		if(rp.accionEjecutar == GOSSIPING){
+			int socket = conexion_cliente;
+			rp.contenido = malloc(sizeof(int));
+			memcpy(rp.contenido,&socket,sizeof(int));
+
+			free(buffer2);
+			return rp;
+		}
+
 		status = recibirYDeserializarPaquete(conexion_cliente, &rp);
 		log_info(g_logger,"La accion es:%d", rp.accionEjecutar);
 		if(status<0)
@@ -1072,9 +1084,6 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		{
 			res = mandarALFS(*resParser);
 			log_info(g_logger,"Se envió al LFS");
-			printf("Accion: %i\n", res.accionEjecutar);
-			printf("Mensaje: %s\n", res.mensaje);
-			printf("Resultado: %i\n", res.resultado);
 
 			if(res.contenido != NULL) {
 				printf("Size lista= %i\n", list_size(res.contenido));
@@ -1118,6 +1127,14 @@ resultado parsear_mensaje(resultadoParser* resParser)
 			mandarALFS(*resParser);
 			log_info(g_logger,"Se envió al LFS");
 			res = recibir();
+			break;
+		}
+		case GOSSIPING:
+		{
+			mandarTabla(*(resParser->contenido));
+			res.resultado = ENVIADO;
+			res.mensaje = NULL;
+			log_info(g_logger,"Se retorno tabla gossiping");
 			break;
 		}
 		case ERROR_PARSER:
