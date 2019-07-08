@@ -10,6 +10,7 @@
 
 #include "string.h"
 #include <stddef.h>
+#include <time.h>
 
 typedef enum
 {

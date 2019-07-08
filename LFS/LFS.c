@@ -514,7 +514,7 @@ void compactacionPrueba(void) {
 	//while(ejecutando){
 	while(1) {
 		sleep(20);
-		log_info(g_logger,"Soy un hilo de compactación y me estoy ejecutando");
+		//log_info(g_logger,"Soy un hilo de compactación y me estoy ejecutando");
 	}
 }
 

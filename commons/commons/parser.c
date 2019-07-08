@@ -25,9 +25,39 @@ resultadoParser parseConsole(char* mensaje){
 		cont->nombreTabla = strsep(&mensaje," ");
 		char * str_key = strsep(&mensaje," ");
 		cont->key = atoi(str_key);
-		cont->value = strsep(&mensaje," ");
+		if(mensaje[0] == '\"'){
+			strsep(&mensaje,"\"");
+			cont->value = strsep(&mensaje,"\"");
+			strsep(&mensaje," ");
+		}else{
+			cont->value = strsep(&mensaje," ");
+		}
+
 		char * timestamp = strsep(&mensaje," ");
-		cont->timestamp = atol(timestamp);
+		if(timestamp == '\0') {
+			cont->timestamp = (long)time(NULL);
+		} else {
+			cont->timestamp = atol(timestamp);
+		}
+		/*
+		resParser.accionEjecutar=INSERT;
+		contenidoInsert* cont = malloc(sizeof(contenidoInsert));
+		cont->nombreTabla = strsep(&mensaje," ");
+		char * str_key = strsep(&mensaje," ");
+		cont->key = atoi(str_key);
+		if(string_contains(mensaje,"\"")){
+			strsep(&mensaje,"\"");
+			cont->value = strsep(&mensaje,"\"");
+			strsep(&mensaje," ");
+		}else{
+			cont->value = strsep(&mensaje," ");
+		}
+		char * timestamp = strsep(&mensaje," ");
+		if(timestamp == '\0') {
+			cont->timestamp = (long)time(NULL);
+		} else {
+			cont->timestamp = atol(timestamp);
+		}*/
 		resParser.contenido=cont;
 	}
 	else if(strcmp(accion,"CREATE") == 0)
