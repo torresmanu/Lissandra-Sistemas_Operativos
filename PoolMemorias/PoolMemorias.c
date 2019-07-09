@@ -799,7 +799,7 @@ void enviarInsert(void *element){ //ver los casos de error
 		pthread_mutex_lock(&mMemPrincipal);
 		memcpy(&cont->key,&(memoria[(indice*offset)+tamValue]),sizeof(uint16_t));
 		cont->value = strdup(&memoria[indice*offset]);
-		memcpy(&cont->timestamp,&(memoria[(indice*offset)+tamValue+sizeof(uint16_t)]),sizeof(long));
+		memcpy(&cont->timestamp,&(memoria[(indice*offset)+tamValue+sizeof(uint16_t)]),sizeof(cont->timestamp));
 		pthread_mutex_unlock(&mMemPrincipal);
 
 		resParser.contenido=cont;
