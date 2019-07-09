@@ -27,8 +27,8 @@ void iniciarCriterios();
 void liberarCriterios();
 void destroy_nodo_memoria(void * elem);
 Criterio* toConsistencia(char*);
-Memoria* masApropiada(Criterio*);
+Memoria* masApropiada(Criterio*, resultadoParser*);
 void add(Memoria*,Criterio*);
-
+int hash(char* nom);
 
 #endif /* CRITERIO_H_ */

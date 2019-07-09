@@ -55,8 +55,8 @@ status ejecutarScript(Script*);
 status ejecutar(Criterio*, resultadoParser*);
 status enviarRequest(Memoria*,resultadoParser*);
 
-Tabla* buscarTabla(char*);
-Tabla* obtenerTabla(resultadoParser*);
+metadataTabla* buscarTabla(char*);
+metadataTabla* obtenerTabla(resultadoParser*);
 bool usaTabla(resultadoParser*);
 
 

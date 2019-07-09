@@ -79,14 +79,15 @@ void iniciar_programa(void)
 	obtenerMemoriaDescribe();
 	int socketM = gestionarConexionAMemoria(MemDescribe);
 
-
 	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
+
+	add(MemDescribe,&sc);
+
 //	obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
-	int status = recibirTablas(socketM);
+	int status = obtenerMemorias(socketM);
 
 	establecerConexionPool(); 		/// ACA ME CONECTO CON TODAS LAS MEMORIAS DEL POOL ///
 }
-
 void terminar_programa()
 {
 	//Destruyo el logger
@@ -104,9 +105,7 @@ void terminar_programa()
 	//Libero las memorias de los criterios
 	liberarCriterios();
 
-
 }
-
 
 int gestionarConexionAMemoria(Memoria* mem)
 {
@@ -124,11 +123,11 @@ int gestionarConexionAMemoria(Memoria* mem)
 
 	if(res == -1)
 	{
-		perror("No se pudo conectar: ");
+		log_error(g_logger, "Memoria innacesible: %s", strerror(errno));
 	}
 	else
 	{
-		log_info(g_logger, "Se conecto a la Memoria N°:%d, listo para enviar scripts.",mem->id);
+		log_info(g_logger, "Se conecto a la memoria N°:%d, listo para enviar scripts.",mem->id);
 	}
 	freeaddrinfo(serverInfo); // Libero
 
@@ -136,6 +135,7 @@ int gestionarConexionAMemoria(Memoria* mem)
 	uint32_t codigo = 1;
 	send(memoriaSocket,&codigo,sizeof(uint32_t),0);
 
+	MemDescribe->socket = memoriaSocket;
 	return memoriaSocket;
 }
 
@@ -202,7 +202,6 @@ void leerConsola(){
 
 		log_info(g_logger,"Agrego resParser con accion: %d a new\n",res->accionEjecutar);
 		sem_post(&sNuevo);	// Habilito el estado NEW
-		log_info(g_logger,"Estoy abajo del if");
 
 		//free(linea); HAY QUE VOLVER A PONERLO
 	}
@@ -215,8 +214,6 @@ void planificadorLargoPlazo(){
 
 	while(1){
 		sem_wait(&sNuevo);
-
-		log_info(g_logger,"Entre al plp");
 
 		pthread_mutex_lock(&mNew);
 		r = queue_pop(new);
@@ -242,7 +239,6 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 	status e;
 	while(1){
 		sem_wait(&sListo);
-		log_info(g_logger,"Entro a ejecutar");
 
 		pthread_mutex_lock(&mReady);
 		Script *s = queue_pop(ready);
@@ -314,17 +310,18 @@ void describe()
 	resultado res;
 	accion acc;
 
-
 	resultadoParser* describe = malloc(sizeof(resultadoParser));
 	describe->accionEjecutar = DESCRIBE;
 	contenidoDescribe* cd = malloc(sizeof(contenidoDescribe));
 	cd->nombreTabla = NULL;
 	describe->contenido = cd;
 
+
 	char* msg = serializarPaquete(describe,&size);
-	send(memoriaSocket, msg, size, 0);								// Pido el describe a la memoria
-	char* buffer = malloc(sizeof(acc));
-	valueResponse = recv(memoriaSocket,buffer,sizeof(acc),0);
+	send(memoriaSocket, msg, size, 0);
+	// Pido el describe a la memoria
+	char* buffer = malloc(sizeof(int));
+	valueResponse = recv(memoriaSocket,buffer,sizeof(int),0);
 	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
 
 	if(valueResponse < 0)
@@ -346,10 +343,18 @@ void describe()
 			else
 			{
 				TablaLFS = (t_list*)res.contenido;
+				for(int i=0;i<list_size(TablaLFS);i++){
+					metadataTabla* tabla = list_get(TablaLFS,i);
+				}
 				list_clean(tablas);						// Para no agregar repetidas
 				list_add_all(tablas,TablaLFS);
-				log_info(g_logger,"Describe global realizado con éxito");
-				log_info(g_logger,"Cantidad de tablas indexadas en Kernel posterior Describe: %d", tablas->elements_count);
+				/*log_info(g_logger,"Describe global realizado con éxito");
+				log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
+
+				for(int i = 0; i<tablas->elements_count; i++)
+				{
+					printf("Tablas indexada n°:%d -> %s\n", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
+				}*/
 			}
 	}
 	free(buffer);
