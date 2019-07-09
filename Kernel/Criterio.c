@@ -45,12 +45,14 @@ Criterio* toConsistencia(char* cadena)
 
 Memoria* masApropiada(Criterio* c){
 	Memoria* mem;
+	int indice;
 	switch(c->tipo)
 	{
 		case SC:
 			mem = (Memoria*)list_get(sc.memorias,0);		// LOGICA DE CRITERIO STRONG CONSISTENCY
 			break;
-		case SHC:											// Necesito aplicar Hash
+		case SHC:											// LOGICA DE CRITERIO STRONG HASH CONSISTENCY
+			indice;
 			break;
 		case EC:
 		{
@@ -68,6 +70,7 @@ Memoria* masApropiada(Criterio* c){
 //Agrego la memoria en la lista de memorias del criterio
 void add(Memoria *memoria,Criterio *cons)
 {
+	log_info(g_logger,"Entre a agregar la memoria");
 	list_add(cons->memorias,memoria);
 	log_info(g_logger,"Agrege memoria N°:%d al criterio %d",memoria->id,cons->tipo);
 }

@@ -343,17 +343,16 @@ void describe()
 				TablaLFS = (t_list*)res.contenido;
 				for(int i=0;i<list_size(TablaLFS);i++){
 					metadataTabla* tabla = list_get(TablaLFS,i);
-					printf("TABLA: %s;%s;%i\n",tabla->nombreTabla,tabla->consistency,tabla->partitions);
 				}
 				list_clean(tablas);						// Para no agregar repetidas
 				list_add_all(tablas,TablaLFS);
-				log_info(g_logger,"Describe global realizado con éxito");
+				/*log_info(g_logger,"Describe global realizado con éxito");
 				log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
 
 				for(int i = 0; i<tablas->elements_count; i++)
 				{
 					printf("Tablas indexada n°:%d -> %s\n", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
-				}
+				}*/
 			}
 	}
 	free(buffer);

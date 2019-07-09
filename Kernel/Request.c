@@ -68,7 +68,6 @@ Script* crearScript(resultadoParser* r){
 	else
 	{
 		s = malloc(sizeof(Script));
-
 		s->instrucciones = list_create();
 		s->pc = 0;
 		list_add(s->instrucciones,r);
@@ -81,17 +80,31 @@ bool terminoScript(Script *s){
 	return s->pc == list_size(s->instrucciones);
 }
 
+status ejecutar(Criterio* criterio, resultadoParser* request){
+	Memoria* mem = masApropiada(criterio);
+	log_info(g_logger,"Elegi memoria: %d",mem->id);
+	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
+	return resultado;										// la memoria. enviarRequest está sin implementar, usa sockets.
+}
+
 resultado recibir(){
 
 	resultado res;
 	accion acc;
 	char* buffer = malloc(sizeof(int));
-	int valueResponse = recv(memoriaSocket, buffer, sizeof(int), 0);
+	int valueResponse;
+
+	valueResponse = recv(memoriaSocket, buffer, sizeof(int), 0);
 	memcpy(&acc, buffer, sizeof(int));
+
 	if(valueResponse < 0)
 	{
 		res.resultado=ERROR;
-		log_info(g_logger,"Error al recibir los datos");
+		log_error(g_logger,"Error al recibir los datos.");
+	}
+	else if(valueResponse == 0)
+	{
+		log_error(g_logger, "Posible desconexión de memoria.");
 	}
 	else
 	{
@@ -99,20 +112,16 @@ resultado recibir(){
 		int status = recibirYDeserializarRespuesta(memoriaSocket, &res);
 
 		if(status<0)
-			log_info(g_logger,"Error!!");
+			log_error(g_logger,"No hubo respuesta de la memoria.");
 		else if(res.resultado != OK)
 			log_info(g_logger,res.mensaje);
+		else
+			log_info(g_logger,"Acción ejecutada con éxito.");
 
 	}
+
 	free(buffer);
 	return res;
-}
-
-status ejecutar(Criterio* criterio, resultadoParser* request){
-	Memoria* mem = masApropiada(criterio);
-	log_info(g_logger,"Elegi memoria: %d",mem->id);
-	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
-	return resultado;										// la memoria. enviarRequest está sin implementar, usa sockets.
 }
 
 status enviarRequest(Memoria* mem, resultadoParser* request)
@@ -121,17 +130,14 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	resultado res;
 	int size;
 
-	log_info(g_logger,"Entro en enviarRequest");
-
-	//memoriaSocket = gestionarConexionAMemoria(mem);
-
 	char* msg = serializarPaquete(request,&size);
 	send(mem->socket, msg, size, 0);
 	res = recibir();
 
-	log_info(g_logger,"Recibi respuesta de accion: %d",res.accionEjecutar);
 	if(res.accionEjecutar==SELECT)
 		log_info(g_logger,"Value: %s",((registro*)(res.contenido))->value);
+	if(res.accionEjecutar==DROP)
+		log_info(g_logger,"Tabla %s eliminada con exito", ((contenidoDrop*)res.contenido)->nombreTabla);
 
 	if(res.resultado == ERROR || res.resultado == MENSAJE_MAL_FORMATEADO)
 		result = REQUEST_ERROR;
@@ -141,9 +147,7 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	return result;
 }
 
-
 status ejecutarScript(Script *s){
-	log_info(g_logger,"Entro a ejecutarScript");
 
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
 	log_info(g_logger,"PC:%d",s->pc);
@@ -158,13 +162,14 @@ status ejecutarScript(Script *s){
 status ejecutarRequest(resultadoParser *r){
 
 	if(usaTabla(r)){
-		Tabla* tabla = obtenerTabla(r);
-		log_info(g_logger,"UsoTabla %s",tabla->nombre);
+		metadataTabla* tabla = obtenerTabla(r);
+		log_info(g_logger,"UsoTabla %s",tabla->nombreTabla);
+
 
 		if(tabla != NULL){
 			log_info(g_logger,"Voy a ejecutar");
-			log_info(g_logger,"Criterio:%d",(tabla->criterio)->tipo);
-			return ejecutar(tabla->criterio,r);
+			log_info(g_logger,"Criterio: %d",toConsistencia(tabla->consistency)->tipo);
+			return ejecutar(toConsistencia(tabla->consistency),r);
 		}
 		else
 			return REQUEST_ERROR; 											// HACER UN ENUM
@@ -187,7 +192,6 @@ status ejecutarRequest(resultadoParser *r){
 					return REQUEST_ERROR;
 
 				printf("Criterio: %s\n",contenido->criterio);//OJO CRITERIO
-
 				Criterio* cons = toConsistencia(contenido->criterio);
 				add(mem,cons);
 
@@ -208,7 +212,7 @@ void finalizarScript()	// Debe hacer un free y sacarlo de la cola
 bool usaTabla(resultadoParser* r){
 	return r->accionEjecutar == SELECT || r->accionEjecutar == INSERT || r->accionEjecutar == DROP || r->accionEjecutar == DESCRIBE || r->accionEjecutar == CREATE;
 }
-Tabla* obtenerTabla(resultadoParser* r){
+metadataTabla* obtenerTabla(resultadoParser* r){
 	switch(r->accionEjecutar)
 	{
 		case SELECT:
@@ -241,30 +245,13 @@ Tabla* obtenerTabla(resultadoParser* r){
 	}
 }
 
-Tabla* buscarTabla(char* nom)
+metadataTabla* buscarTabla(char* nom)
 {
-	printf("La tabla es: %s\n", nom);
 
-	/*bool coincideNombre(void* element)					//Subfunción de busqueda
+	bool coincideNombre(void* element)					//Subfunción de busqueda
 	{
-		printf("PRUEBA\n");
-		printf("%s\n",((metadataTabla*)element)->nombreTabla);
 		return strcmp(nom,((metadataTabla*)element)->nombreTabla) == 0;
-	}*/
-
-	printf("Entro a buscarTabla y me dispongo a buscarla\n");
-	//return (Tabla*)list_find(tablas,coincideNombre);
-	printf("%i\n",list_size(tablas));
-	for(int i= 0;i<list_size(tablas);i++){
-		metadataTabla* tabla = list_get(tablas,i);
-		printf("%s\n",tabla->nombreTabla);
-		if(strcmp(tabla->nombreTabla,nom) == 0){
-			Tabla* ttabla = malloc(sizeof(Tabla));
-			ttabla->criterio = string_duplicate(tabla->consistency);
-			ttabla->nombre = string_duplicate(tabla->nombreTabla);
-			return ttabla;
-		}
 	}
-	printf("AAAAA\n");
-	return NULL;
+
+	return list_find(tablas,coincideNombre);
 }
