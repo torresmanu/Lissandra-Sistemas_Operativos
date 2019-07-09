@@ -81,7 +81,7 @@ bool terminoScript(Script *s){
 }
 
 status ejecutar(Criterio* criterio, resultadoParser* request){
-	Memoria* mem = masApropiada(criterio);
+	Memoria* mem = masApropiada(criterio, request);
 	log_info(g_logger,"Elegi memoria: %d",mem->id);
 	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
 	return resultado;										// la memoria. enviarRequest está sin implementar, usa sockets.
