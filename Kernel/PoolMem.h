@@ -28,7 +28,7 @@ t_list* socketsPool;
 typedef struct{
 	char* ipMemoria;
 	char* puerto;
-	int id;
+	uint32_t id;
 	int socket;
 }Memoria;
 
@@ -37,7 +37,7 @@ t_list* pool;
 Memoria* MemDescribe;
 
 // MANEJO DE MEMORIAS
-void obtenerMemorias();
+int obtenerMemorias(int socket);
 void gossiping(Memoria *mem);
 Memoria obtenerMemoria(t_config* config);
 Memoria *buscarMemoria(int numero);

@@ -7,53 +7,50 @@
 
 #include "PoolMem.h"
 
-void obtenerMemorias(){
-	// ACA LE PIDO GOSSIPING A LA MEMORIA DEL CONFIG
+int obtenerMemorias(int socket){
+	int status=0;
+	uint32_t tamLeer;
 
-	t_list* memorias;
-	int size;
-	int valueResponse;
-	accion acc;
-	char* buffer = malloc(sizeof(char));
-	resultadoParser* gossip = malloc(sizeof(resultadoParser));
-	resultado res;
+	accion pedido = GOSSIPING;
+	send(socket,&pedido,sizeof(int),0);
+	log_info(g_logger,"Mando solicitud de gossiping");
 
-	//gossip->accionEjecutar = GOSSIPING;			// NO ESTA CONTEMPLADO EN EL PARSER
-	char* msg = serializarPaquete(gossip,&size);
-	send(memoriaSocket, msg, size, 0);
-	valueResponse = recv(memoriaSocket,buffer,sizeof(int),0);
-	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
+	char* buffer = malloc(sizeof(uint32_t));
+	status = recv(socket,buffer,sizeof(uint32_t),0);
+	if(status==-1)
+		perror("Error recv");
+	if(status != sizeof(uint32_t)) return -2;
+	int cantElem = *(int*)buffer;
 
-	res.accionEjecutar = acc;
-	int status = recibirYDeserializarRespuesta(memoriaSocket,&res);
-	if(status<0)
-	{
-		log_error(g_logger, "Gossiping fallando");
+	for(int i=0;i < cantElem;i++){
+		Memoria* memNueva = malloc(sizeof(Memoria));
+
+		status = recv(socket,buffer,sizeof(uint32_t),0);
+		memcpy(&tamLeer,buffer,sizeof(uint32_t));
+		if(status != sizeof(uint32_t)) return -2;
+
+		memNueva->ipMemoria = malloc(tamLeer);
+		status = recv(socket,memNueva->ipMemoria,tamLeer,0);
+		if(status != tamLeer) return -2;
+
+		status = recv(socket,buffer,sizeof(uint32_t),0);
+		memcpy(&tamLeer,buffer,sizeof(uint32_t));
+		if(status != sizeof(uint32_t)) return -2;
+
+		memNueva->puerto = malloc(tamLeer);
+		status = recv(socket,memNueva->puerto,tamLeer,0);
+		if(status != tamLeer) return -2;
+
+		status = recv(socket,&memNueva->id,sizeof(uint32_t),0);
+		if(status != sizeof(uint32_t)) return -2;
+
+		list_add(pool,memNueva);
+		log_info(g_logger,"Recibi memoria numero:%d",memNueva->id);
 	}
-	else
-	{
-		if(valueResponse < 0)
-		{
-			log_error(g_logger,strerror(errno));
-		}
-		else if(valueResponse == 0)
-		{
-			log_error(g_logger,"Posiblemente se desconectó la memoria");
-		}
-		else
-		{
-			printf("Cantidad de memorias en el Pool: %i\n", pool->elements_count);
-			memorias = (t_list*)res.contenido;										// CONTENIDO TIENE QUE MODIFICARSE EN CASO GOSSIP
-			list_add_all(pool,memorias);
-			log_info(g_logger,"Gossiping realizado con éxito y pool actualizado\n");
-			log_info(g_logger,"Cantidad de memorias en el Pool: %d\n", pool->elements_count);
-		}
-	}
-	free(msg);
-	free(gossip);
 	free(buffer);
+	log_info(g_logger,"Recibi tabla completa");
+	return status;
 }
-
 
 void obtenerMemoriaDescribe()
 {
