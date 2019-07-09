@@ -9,7 +9,7 @@
 
 // EJECUTAR ARCHIVO LQL
 Script* run(char* path){
-	FILE* arch = fopen(path, "r+b");
+	FILE* arch = fopen(path, "r");
 	if(arch == NULL)
 		perror("\nError:");
 	else
@@ -22,16 +22,16 @@ Script* run(char* path){
 }
 
 resultadoParser leerRequest(FILE* fd){
-	char* linea=malloc(1); //VER BIEN ESTO IMPORTANTE
+	char linea[1024];
 	size_t tamanioLeido;
 
 	resultadoParser r;
-	getline(&linea,&tamanioLeido,fd);//realoca linea y pone el tamaño leido
-	log_info(g_logger,"Tamaño linea Rrequest: %d",tamanioLeido);
+	getline(&linea,&tamanioLeido,fd); //realoca linea y pone el tamaño leido
+	log_info(g_logger,"Request: %s",linea);
 
 	r = parseConsole(linea);
 
-	free(linea);
+	//free(linea); Este tambien rompe
 	return r;
 }
 
@@ -40,17 +40,20 @@ Script* parsearScript(FILE* fd){
 	script->instrucciones = list_create();
 	script->pc=0;
 
-	while(!feof(fd)){
+	char linea[1024];
+
+	while(fgets(linea,1024,fd)){
 		resultadoParser* req = malloc(sizeof(resultadoParser));
+		resultadoParser aux;
+		aux = parseConsole(linea);
 
-		resultadoParser aux = leerRequest(fd);
+		//req->accionEjecutar = aux.accionEjecutar;
+		//req->contenido = aux.contenido;
 
-		req->accionEjecutar = aux.accionEjecutar;
-		req->contenido = aux.contenido;
-
+		memcpy(req,&aux,sizeof(resultadoParser));
 		list_add(script->instrucciones,req);
 	}
-	log_info(g_logger,"Script preparado. Cantidad de instrucciones: %d",script->instrucciones->elements_count);
+	log_info(g_logger,"Script preparado. Cantidad de instrucciones: %d",list_size(script->instrucciones));
 	return script;
 }
 
@@ -60,10 +63,10 @@ Script* crearScript(resultadoParser* r){
 	if(r->accionEjecutar==RUN)
 	{
 		char* path;
-		path = ((contenidoRun*) r->contenido)->path;
+		path = string_duplicate(((contenidoRun*) r->contenido)->path);
 		s = run(path);
-		free(path);
-		free(r->contenido);
+		//free(path);
+		//free(r->contenido);
 	}
 	else
 	{
@@ -250,7 +253,8 @@ metadataTabla* buscarTabla(char* nom)
 
 	bool coincideNombre(void* element)					//Subfunción de busqueda
 	{
-		return strcmp(nom,((metadataTabla*)element)->nombreTabla) == 0;
+		bool e = strcmp(nom,((metadataTabla*)element)->nombreTabla) == 0;
+		return e;
 	}
 
 	return list_find(tablas,coincideNombre);

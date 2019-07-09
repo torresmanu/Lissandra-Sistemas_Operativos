@@ -80,11 +80,10 @@ void iniciar_programa(void)
 	int socketM = gestionarConexionAMemoria(MemDescribe);
 
 	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
-
 	add(MemDescribe,&sc);
 
-//	obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
-	int status = obtenerMemorias(socketM);
+	//	obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
+	// int status = obtenerMemorias(socketM);
 
 	establecerConexionPool(); 		/// ACA ME CONECTO CON TODAS LAS MEMORIAS DEL POOL ///
 }

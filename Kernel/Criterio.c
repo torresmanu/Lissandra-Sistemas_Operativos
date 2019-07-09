@@ -52,7 +52,7 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 			mem = (Memoria*)list_get(sc.memorias,0);		// LOGICA DE CRITERIO STRONG CONSISTENCY
 			break;
 		case SHC:											// LOGICA DE CRITERIO STRONG HASH CONSISTENCY
-			indice;
+
 			break;
 		case EC:
 		{
