@@ -11,6 +11,7 @@
 
 typedef struct
 {
+	char* nombreTabla;
 	char* consistency;
 	int partitions;
 	int compaction_time;

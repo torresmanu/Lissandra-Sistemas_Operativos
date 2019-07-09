@@ -76,10 +76,10 @@ resultadoParser parseConsole(char* mensaje){
 	{
 		resParser.accionEjecutar=DESCRIBE;
 		contenidoDescribe* cont = malloc(sizeof(contenidoDescribe));
-		if(strsep(&mensaje, " ") == '\0') {
+		if(mensaje == NULL) {
 			cont->nombreTabla = NULL;
 		} else {
-			cont->nombreTabla = strsep(&mensaje," ");
+			cont->nombreTabla = mensaje;
 		}
 		resParser.contenido = cont;
 	}
