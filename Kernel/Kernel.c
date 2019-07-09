@@ -79,6 +79,7 @@ void iniciar_programa(void)
 	obtenerMemoriaDescribe();
 	gestionarConexionAMemoria(MemDescribe);
 
+
 	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
 	//obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
 	//establecerConexionPool(); 		/// ACA ME CONECTO CON TODAS LAS MEMORIAS DEL POOL ///
