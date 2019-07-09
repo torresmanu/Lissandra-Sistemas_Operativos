@@ -320,7 +320,7 @@ void describe()
 
 	char* msg = serializarPaquete(describe,&size);
 	send(memoriaSocket, msg, size, 0);								// Pido el describe a la memoria
-	char* buffer = malloc(sizeof(char));
+	char* buffer = malloc(sizeof(int));
 	valueResponse = recv(memoriaSocket,buffer,sizeof(int),0);
 	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
 

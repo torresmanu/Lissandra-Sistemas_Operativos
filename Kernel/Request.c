@@ -243,6 +243,8 @@ Tabla* obtenerTabla(resultadoParser* r){
 
 Tabla* buscarTabla(char* nom)
 {
+	printf("La tabla es: %s\n", nom);
+
 	bool coincideNombre(void* element)					//Subfunción de busqueda
 	{
 		return strcmp(nom,((Tabla*)element)->nombre) == 0;
