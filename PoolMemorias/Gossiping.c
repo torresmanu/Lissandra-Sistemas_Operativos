@@ -109,7 +109,7 @@ void* sumarTamanios(void* seed,void* elem){
 	uint32_t* valor = (uint32_t*) seed;
 	Memoria* memoria = (Memoria*) elem;
 
-	*valor = *valor + strlen(memoria->ip) + strlen(memoria->puerto) + sizeof(uint32_t)*3;
+	*valor = *valor + strlen(memoria->ip)+1 + strlen(memoria->puerto)+1 + sizeof(uint32_t)*3;
 	return valor;
 }
 
@@ -129,8 +129,8 @@ char* serializarTabla(t_list* memoriasConocidas,uint32_t *totalSize){
 	for(uint32_t i=0;i<cantElementos;i++){
 		Memoria* elem = list_get(memoriasConocidas,i);
 
-		uint32_t tamIp = strlen(elem->ip);
-		uint32_t tamPuerto = strlen(elem->puerto);
+		uint32_t tamIp = strlen(elem->ip)+1;
+		uint32_t tamPuerto = strlen(elem->puerto)+1;
 
 		size_to_send = sizeof(uint32_t);
 		memcpy(tablaSerializada+offset,&tamIp,size_to_send);

@@ -44,6 +44,8 @@ int obtenerMemorias(int socket){
 		status = recv(socket,&memNueva->id,sizeof(uint32_t),0);
 		if(status != sizeof(uint32_t)) return -2;
 
+		memNueva->socket=-1;
+
 		list_add(pool,memNueva);
 		log_info(g_logger,"Recibi memoria numero:%d",memNueva->id);
 	}
