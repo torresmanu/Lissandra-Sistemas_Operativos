@@ -22,6 +22,7 @@ bool iniciar_programa();
 void actualizarRetardos();
 
 void terminar_programa(void);
+void destruirMutexs();
 bool gestionarConexionALFS(void);
 void destroy_nodo_pagina(void *);
 void destroy_nodo_segmento(void *);
@@ -30,10 +31,10 @@ void destroy_nodo_memoria(void * elem);
 void iniciar_tablas();
 
 resultado select_t(char *nombre_tabla,int key);
-int contieneRegistro(char *nombre_tabla,int key, Pagina** pagina);
+int contieneRegistro(char *nombre_tabla,uint16_t key, Pagina** pagina);
 bool encuentraSegmento(char *ntabla,Segmento **segmento);
-bool encuentraPagina(Segmento* segmento,int key, Pagina** pagina);
-Registro* pedirAlLFS(char* nombre_tabla, int key);
+bool encuentraPagina(Segmento* segmento,uint16_t key, Pagina** pagina);
+Registro* pedirAlLFS(char* nombre_tabla, uint16_t key);
 resultado mandarALFS(resultadoParser resParser);
 resultado recibir();
 int espacioLibre();
@@ -53,7 +54,7 @@ void journalConRetardo();
 void gossipingConRetardo();
 void consola();
 void enviarInsert(void *element);
-resultado insert(char *nombre_tabla,int key,char *value,long timestamp);
+resultado insert(char *nombre_tabla,uint16_t key,char *value,long timestamp);
 void actualizarRegistro(Pagina *pagina,char *value,long timestamp);
 resultado parsear_mensaje(resultadoParser*);
 

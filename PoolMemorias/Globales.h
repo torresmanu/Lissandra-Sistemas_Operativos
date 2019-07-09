@@ -29,7 +29,7 @@
 typedef struct
 {
 	char* value;
-	int key;
+	uint16_t key;
 	long timestamp;
 } Registro;
 
@@ -95,5 +95,12 @@ char* IP_M;
 Memoria* yo;
 t_list* memoriasSeeds;
 t_list* memoriasConocidas;
+
+pthread_mutex_t mMemPrincipal;
+pthread_mutex_t mTabSeg;
+pthread_mutex_t mTabPagGlobal;
+pthread_mutex_t mMemoriasConocidas;
+
+
 
 #endif /* GLOBALES_H_ */

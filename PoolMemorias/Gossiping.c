@@ -89,7 +89,9 @@ int recibirYmandar(int socket){
 int mandarTabla(int socket){
 	uint32_t totalSize;
 
+	pthread_mutex_lock(&mMemoriasConocidas);
 	char *tablaSerializada = serializarTabla(memoriasConocidas,&totalSize);
+	pthread_mutex_unlock(&mMemoriasConocidas);
 
 	int status = send(socket,tablaSerializada,totalSize,0);
 

@@ -8,8 +8,8 @@ int main(int argc, char* argv[]) {
 	if(!estado)
 		return 0;
 
-//	pthread_t journalAutomatico;
-//	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
+	pthread_t journalAutomatico;
+	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
 
 	pthread_t gossipingAutomatico;
 	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
@@ -160,6 +160,10 @@ void escucharKernel(int* conexion_cliente){
 		{
 			log_info(g_logger,"Se esta haciendo Journaling, ingrese la request mas tarde");
 		}
+		else if(res.resultado == SALIR)
+		{
+			log_info(g_logger,"El kernel se desconecto");
+		}
 
 		avisarResultado(res,*conexion_cliente);
 
@@ -170,7 +174,7 @@ void escucharKernel(int* conexion_cliente){
 }
 
 void avisarResultado(resultado res, int conexion_cliente){
-	if(res.resultado==ENVIADO)
+	if(res.resultado==ENVIADO || res.resultado==SALIR)
 		return;
 	int size_to_send;
 	char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
@@ -189,11 +193,9 @@ resultadoParser recibirRequest(int conexion_cliente){
 	memcpy(&acc, buffer2, sizeof(int));
 
 	if(valueResponse < 0) { //Comenzamos a recibir datos del cliente
-		//Si recv() recibe 0 el cliente ha cerrado la conexion. Si es menor que 0 ha habido algún error.
-		printf("Error al recibir los datos\n");
+		log_info(g_logger,"Error al recibir los datos");
 		rp.accionEjecutar = SALIR_CONSOLA;
 	} else if(valueResponse == 0) {
-		printf("El cliente se desconectó\n");
 		rp.accionEjecutar = SALIR_CONSOLA;
 	} else {
 		rp.accionEjecutar = acc;
@@ -334,6 +336,12 @@ void monitorearConfig() {
 bool iniciar_programa()
 {
 
+	pthread_mutex_init(&mMemPrincipal,NULL);
+	pthread_mutex_init(&mTabSeg,NULL);
+	pthread_mutex_init(&mTabPagGlobal,NULL);
+	pthread_mutex_init(&mMemoriasConocidas,NULL);
+
+
 	estaHaciendoJournal = false;
 	ejecutando = true;
 
@@ -375,9 +383,7 @@ bool iniciar_programa()
 		return false;
 	}
 
-	memset(memoria,'0',TAM_MEMORIA_PRINCIPAL);
-
-	offset = sizeof(int)+sizeof(long)+tamValue;
+	offset = sizeof(uint16_t)+sizeof(long)+tamValue;
 
 	cantidadFrames = TAM_MEMORIA_PRINCIPAL / offset;
 
@@ -472,11 +478,14 @@ void actualizarTablaGlobal(int nPagina){
 		return ((NodoTablaPaginas* )elem)->pagina->numero_pagina == nPagina;
 	}
 
+	pthread_mutex_lock(&mTabPagGlobal);
 	NodoTablaPaginas* nodo = list_remove_by_condition(tabla_paginas_global,mismoNumero);
+	pthread_mutex_unlock(&mTabPagGlobal);
+
 	list_add(tabla_paginas_global,nodo);
 }
 
-Registro* pedirAlLFS(char* nombre_tabla, int key){
+Registro* pedirAlLFS(char* nombre_tabla, uint16_t key){
 
 	Registro* registro;
 
@@ -548,13 +557,16 @@ resultado select_t(char *nombre_tabla, int key){
 
 		sleep(retardoMemoria/1000);
 
-		res.mensaje= strdup(&memoria[posicion]);
-		res.resultado=OK;
-
 		registro = malloc(sizeof(Registro));
+
+		pthread_mutex_lock(&mMemPrincipal);
 		registro->value = strdup(&memoria[posicion]);
-		memcpy(&registro->key,(&memoria[posicion+tamValue]),sizeof(int));
-		memcpy(&registro->timestamp,(&memoria[posicion+tamValue+sizeof(int)]),sizeof(long));
+		memcpy(&registro->key,(&memoria[posicion+tamValue]),sizeof(uint16_t));
+		memcpy(&registro->timestamp,(&memoria[posicion+tamValue+sizeof(uint16_t)]),sizeof(long));
+		pthread_mutex_unlock(&mMemPrincipal);
+
+		res.mensaje= strdup(registro->value);
+		res.resultado=OK;
 
 		actualizarTablaGlobal(pagina->numero_pagina);
 	}
@@ -613,24 +625,33 @@ Segmento *agregarSegmento(char *nombre_tabla){
 	Segmento* segmento=(Segmento *)malloc(sizeof(Segmento));
 	segmento->nombre_tabla = malloc(strlen(nombre_tabla)+1);
 
+	pthread_mutex_lock(&mTabSeg);
 	segmento->numero_segmento=tabla_segmentos->elements_count;
+	pthread_mutex_unlock(&mTabSeg);
+
 	segmento->puntero_tpaginas=list_create();
 
 //	segmento->nombre_tabla=nombre_tabla;
 	strcpy(segmento->nombre_tabla,nombre_tabla);
 
-
+	pthread_mutex_lock(&mTabSeg);
 	list_add(tabla_segmentos,segmento);
+	pthread_mutex_unlock(&mTabSeg);
+
 	return segmento;
 }
 
-//void agregarPagina(Registro registro, Segmento *segmento, int posLibre){
+
 void agregarPagina(Registro registro, Segmento *segmento, int posLibre, int valorFlag){
 	Pagina* pagina=malloc(sizeof(Pagina));
 	guardarEnMemoria(registro, posLibre);
 
 	pagina->indice_registro=posLibre;
+
+	pthread_mutex_lock(&mTabPagGlobal);
 	pagina->numero_pagina=tabla_paginas_global->elements_count;
+	pthread_mutex_unlock(&mTabPagGlobal);
+
 	pagina->flag_modificado=valorFlag;
 
 	list_add(segmento->puntero_tpaginas, pagina);
@@ -638,7 +659,11 @@ void agregarPagina(Registro registro, Segmento *segmento, int posLibre, int valo
 	NodoTablaPaginas* nodo=malloc(sizeof(NodoTablaPaginas));
 	nodo->pagina=pagina;
 	nodo->segmento=segmento;
+
+	pthread_mutex_lock(&mTabPagGlobal);
 	list_add(tabla_paginas_global,nodo);
+	pthread_mutex_unlock(&mTabPagGlobal);
+
 }
 
 resultado iniciarReemplazo(char *nombre_tabla,Registro registro, int flagModificado){
@@ -661,7 +686,10 @@ resultado iniciarReemplazo(char *nombre_tabla,Registro registro, int flagModific
 
 		list_add(segmento->puntero_tpaginas,nodoPagina->pagina);
 		nodoPagina->segmento=segmento;
+
+		pthread_mutex_lock(&mTabPagGlobal);
 		list_add(tabla_paginas_global,nodoPagina);
+		pthread_mutex_unlock(&mTabPagGlobal);
 
 		nodoPagina->pagina->flag_modificado=flagModificado;
 		int indice = nodoPagina->pagina->indice_registro;
@@ -743,8 +771,10 @@ void journal(){
 	log_info(g_logger,"Journaling, por favor espere");
 	estaHaciendoJournal=true;
 	list_iterate(tabla_paginas_global,enviarInsert);
+
+	pthread_mutex_lock(&mTabSeg);
 	list_clean_and_destroy_elements(tabla_segmentos,liberarSegmento);
-	log_info(g_logger,"Cantidad de segmentos:%d, cantidad de paginas:%d.",tabla_segmentos->elements_count,tabla_paginas_global->elements_count);
+	pthread_mutex_unlock(&mTabSeg);
 
 	estaHaciendoJournal=false;
 	log_info(g_logger,"Termino el journal, puede ingresar sus request");
@@ -766,9 +796,12 @@ void enviarInsert(void *element){ //ver los casos de error
 
 		sleep(retardoMemoria/1000);
 
-		memcpy(&cont->key,&(memoria[(indice*offset)+tamValue]),sizeof(int));
+		pthread_mutex_lock(&mMemPrincipal);
+		memcpy(&cont->key,&(memoria[(indice*offset)+tamValue]),sizeof(uint16_t));
 		cont->value = strdup(&memoria[indice*offset]);
-		memcpy(&cont->timestamp,&(memoria[(indice*offset)+tamValue+sizeof(int)]),sizeof(long));
+		memcpy(&cont->timestamp,&(memoria[(indice*offset)+tamValue+sizeof(uint16_t)]),sizeof(long));
+		pthread_mutex_unlock(&mMemPrincipal);
+
 		resParser.contenido=cont;
 
 		char* pi = serializarPaquete(&resParser, &size_to_send);
@@ -804,13 +837,16 @@ void guardarEnMemoria(Registro registro, int posLibre){
 
 	sleep(retardoMemoria/1000);
 
+	pthread_mutex_lock(&mMemPrincipal);
 	memcpy(&memoria[(posLibre*offset)],registro.value,tamValue);
-	memcpy(&memoria[(posLibre*offset)+tamValue],&(registro.key),sizeof(int));
-	memcpy(&memoria[(posLibre*offset)+tamValue+sizeof(int)],&(registro.timestamp),sizeof(long));
+	memcpy(&memoria[(posLibre*offset)+tamValue],&(registro.key),sizeof(uint16_t));
+	memcpy(&memoria[(posLibre*offset)+tamValue+sizeof(uint16_t)],&(registro.timestamp),sizeof(long));
+	pthread_mutex_unlock(&mMemPrincipal);
+
 	bitmap[posLibre]=1;
 }
 
-int contieneRegistro(char *nombre_tabla,int key, Pagina** pagina){
+int contieneRegistro(char *nombre_tabla,uint16_t key, Pagina** pagina){
 	Segmento* segmento;
 
 	if(encuentraSegmento(nombre_tabla,&segmento)){
@@ -826,15 +862,21 @@ bool encuentraSegmento(char *ntabla,Segmento **segmento){ 	//Me dice si ya exist
 	}
 
 	Segmento* s;
+
+	pthread_mutex_lock(&mTabSeg);
 	if (list_is_empty(tabla_segmentos)){
-	//free(s);
-	return false;
+		pthread_mutex_unlock(&mTabSeg);
+		return false;
 	}
+
 	else{
+		pthread_mutex_unlock(&mTabSeg);
+
+		pthread_mutex_lock(&mTabSeg);
 		s=list_find(tabla_segmentos,tieneTabla);
+		pthread_mutex_unlock(&mTabSeg);
 
 		if(s==NULL){
-			//free(s);
 			return false;
 		}
 		else{
@@ -846,7 +888,7 @@ bool encuentraSegmento(char *ntabla,Segmento **segmento){ 	//Me dice si ya exist
 
 }
 
-bool encuentraPagina(Segmento* segmento,int key, Pagina** pagina){
+bool encuentraPagina(Segmento* segmento,uint16_t key, Pagina** pagina){
 
 	bool tieneKey(void *elemento){
 
@@ -854,7 +896,10 @@ bool encuentraPagina(Segmento* segmento,int key, Pagina** pagina){
 		int i=0;
 		sleep(retardoMemoria/1000);
 
-		memcpy(&i,&(memoria[posicion+tamValue]),sizeof(int));
+		pthread_mutex_lock(&mMemPrincipal);
+		memcpy(&i,&(memoria[posicion+tamValue]),sizeof(uint16_t));
+		pthread_mutex_unlock(&mMemPrincipal);
+
 		return i==key;
 	}
 
@@ -870,7 +915,7 @@ bool encuentraPagina(Segmento* segmento,int key, Pagina** pagina){
 	return true;
 }
 
-resultado insert(char *nombre_tabla,int key,char *value,long timestamp){
+resultado insert(char *nombre_tabla,uint16_t key,char *value,long timestamp){
 	Segmento* segmento;
 
 	Pagina* pagina;
@@ -946,12 +991,15 @@ void liberarPagina(void* elemento){
 }
 
 void corregirIndicesTablaSegmentos(){
+	pthread_mutex_lock(&mTabSeg);
 	for(int i=0;i<tabla_segmentos->elements_count;i++){
 
 		Segmento *aux = list_get(tabla_segmentos,i);
 		aux->numero_segmento = i;
 
 	}
+	pthread_mutex_unlock(&mTabSeg);
+
 }
 
 void corregirIndicesPaginasGlobal(){
@@ -969,7 +1017,10 @@ void drop(char* nombre_tabla){
 
 	if(encuentraSegmento(nombre_tabla,&segmento)){
 
+		pthread_mutex_lock(&mTabSeg);
 		list_remove_and_destroy_element(tabla_segmentos,segmento->numero_segmento,liberarSegmento);
+		pthread_mutex_unlock(&mTabSeg);
+
 		corregirIndicesTablaSegmentos();
 		corregirIndicesPaginasGlobal();
 		log_info(g_logger, "Se libero el segmento de la tabla %s en memoria",nombre_tabla);
@@ -986,11 +1037,17 @@ void actualizarRegistro(Pagina *pagina,char *value,long timestamp){
 	sleep(retardoMemoria/1000);
 
 	long ts;
-	memcpy(&ts,&(memoria[posicion+tamValue+sizeof(int)]),sizeof(long));
+
+	pthread_mutex_lock(&mMemPrincipal);
+	memcpy(&ts,&(memoria[posicion+tamValue+sizeof(uint16_t)]),sizeof(long));
+	pthread_mutex_unlock(&mMemPrincipal);
 
 	if(timestamp>=ts){
+		pthread_mutex_lock(&mMemPrincipal);
 		memcpy(&(memoria[posicion]),value,tamValue);
-		memcpy(&(memoria[posicion+tamValue+sizeof(int)]),&timestamp,sizeof(long));
+		memcpy(&(memoria[posicion+tamValue+sizeof(uint16_t)]),&timestamp,sizeof(long));
+		pthread_mutex_unlock(&mMemPrincipal);
+
 		pagina->flag_modificado=1;
 	}
 }
@@ -1004,10 +1061,15 @@ void terminar_programa()
 	config_destroy(g_config);
 
 	//Destruyo la tabla de segmentos
+	pthread_mutex_lock(&mTabSeg);
 	list_destroy_and_destroy_elements(tabla_segmentos, destroy_nodo_segmento);
+	pthread_mutex_unlock(&mTabSeg);
+
 
 	//Liberar memoria
+	pthread_mutex_lock(&mMemPrincipal);
 	free(memoria);
+	pthread_mutex_unlock(&mMemPrincipal);
 
 	//Liberar bitmap
 	free(bitmap);
@@ -1022,7 +1084,19 @@ void terminar_programa()
 	list_destroy_and_destroy_elements(memoriasSeeds, destroy_nodo_memoria);
 
 	//Destruyo la lista de memorias conocidas
+	pthread_mutex_lock(&mMemoriasConocidas);
 	list_destroy_and_destroy_elements(memoriasConocidas, destroy_nodo_memoria);
+	pthread_mutex_unlock(&mMemoriasConocidas);
+
+	destruirMutexs();
+}
+
+void destruirMutexs(){
+	pthread_mutex_destroy(&mMemPrincipal);
+	pthread_mutex_destroy(&mTabSeg);
+	pthread_mutex_destroy(&mTabPagGlobal);
+	pthread_mutex_destroy(&mMemoriasConocidas);
+
 }
 
 bool gestionarConexionALFS()
@@ -1048,14 +1122,16 @@ bool gestionarConexionALFS()
 }
 
 void iniciar_tablas(){
+	pthread_mutex_lock(&mTabSeg);
 	tabla_segmentos = list_create();
+	pthread_mutex_unlock(&mTabSeg);
 	tabla_paginas_global = list_create();
 }
 
 void destroy_nodo_memoria(void* elem){
 	Memoria* mem = (Memoria*) elem;
-	free(mem->ip);
-	free(mem->puerto);
+//	free(mem->ip);
+//	free(mem->puerto);
 	free(mem);
 }
 
