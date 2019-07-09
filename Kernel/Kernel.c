@@ -79,8 +79,9 @@ void iniciar_programa(void)
 	obtenerMemoriaDescribe();
 	gestionarConexionAMemoria(MemDescribe);
 
-
 	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
+	add(MemDescribe,&sc);
+
 	//obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
 	//establecerConexionPool(); 		/// ACA ME CONECTO CON TODAS LAS MEMORIAS DEL POOL ///
 }
@@ -102,9 +103,7 @@ void terminar_programa()
 	//Libero las memorias de los criterios
 	liberarCriterios();
 
-
 }
-
 
 int gestionarConexionAMemoria(Memoria* mem)
 {
@@ -122,11 +121,11 @@ int gestionarConexionAMemoria(Memoria* mem)
 
 	if(res == -1)
 	{
-		perror("No se pudo conectar: ");
+		log_error(g_logger, "Memoria innacesible: %s", strerror(errno));
 	}
 	else
 	{
-		log_info(g_logger, "Se conecto a la Memoria N°:%d, listo para enviar scripts.",mem->id);
+		log_info(g_logger, "Se conecto a la memoria N°:%d, listo para enviar scripts.",mem->id);
 	}
 	freeaddrinfo(serverInfo); // Libero
 
@@ -134,6 +133,7 @@ int gestionarConexionAMemoria(Memoria* mem)
 	uint32_t codigo = 1;
 	send(memoriaSocket,&codigo,sizeof(uint32_t),0);
 
+	MemDescribe->socket = memoriaSocket;
 	return memoriaSocket;
 }
 
@@ -200,7 +200,6 @@ void leerConsola(){
 
 		log_info(g_logger,"Agrego resParser con accion: %d a new\n",res->accionEjecutar);
 		sem_post(&sNuevo);	// Habilito el estado NEW
-		log_info(g_logger,"Estoy abajo del if");
 
 		//free(linea); HAY QUE VOLVER A PONERLO
 	}
@@ -213,8 +212,6 @@ void planificadorLargoPlazo(){
 
 	while(1){
 		sem_wait(&sNuevo);
-
-		log_info(g_logger,"Entre al plp");
 
 		pthread_mutex_lock(&mNew);
 		r = queue_pop(new);
@@ -240,7 +237,6 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 	status e;
 	while(1){
 		sem_wait(&sListo);
-		log_info(g_logger,"Entro a ejecutar");
 
 		pthread_mutex_lock(&mReady);
 		Script *s = queue_pop(ready);
@@ -312,7 +308,6 @@ void describe()
 	resultado res;
 	accion acc;
 
-
 	resultadoParser* describe = malloc(sizeof(resultadoParser));
 	describe->accionEjecutar = DESCRIBE;
 	contenidoDescribe* cd = malloc(sizeof(contenidoDescribe));
@@ -353,7 +348,12 @@ void describe()
 				list_clean(tablas);						// Para no agregar repetidas
 				list_add_all(tablas,TablaLFS);
 				log_info(g_logger,"Describe global realizado con éxito");
-				log_info(g_logger,"Cantidad de tablas indexadas en Kernel posterior Describe: %d", tablas->elements_count);
+				log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
+
+				for(int i = 0; i<tablas->elements_count; i++)
+				{
+					printf("Tablas indexada n°:%d -> %s\n", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
+				}
 			}
 	}
 	free(buffer);
