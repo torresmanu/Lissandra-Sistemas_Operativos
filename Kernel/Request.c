@@ -131,11 +131,9 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	int size;
 
 	char* msg = serializarPaquete(request,&size);
-	printf("Socket del MemDescribe: %d\n", mem->socket);
 	send(mem->socket, msg, size, 0);
 	res = recibir();
 
-	log_info(g_logger,"Recibi respuesta de accion: %d",res.accionEjecutar);
 	if(res.accionEjecutar==SELECT)
 		log_info(g_logger,"Value: %s",((registro*)(res.contenido))->value);
 	if(res.accionEjecutar==DROP)
@@ -252,7 +250,6 @@ metadataTabla* buscarTabla(char* nom)
 
 	bool coincideNombre(void* element)					//Subfunción de busqueda
 	{
-		log_info(g_logger,"Busco la tabla: %s",nom);
 		return strcmp(nom,((metadataTabla*)element)->nombreTabla) == 0;
 	}
 

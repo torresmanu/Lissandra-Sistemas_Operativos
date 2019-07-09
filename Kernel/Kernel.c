@@ -314,8 +314,10 @@ void describe()
 	cd->nombreTabla = NULL;
 	describe->contenido = cd;
 
+
 	char* msg = serializarPaquete(describe,&size);
-	send(memoriaSocket, msg, size, 0);								// Pido el describe a la memoria
+	send(memoriaSocket, msg, size, 0);
+	// Pido el describe a la memoria
 	char* buffer = malloc(sizeof(int));
 	valueResponse = recv(memoriaSocket,buffer,sizeof(int),0);
 	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
@@ -339,15 +341,18 @@ void describe()
 			else
 			{
 				TablaLFS = (t_list*)res.contenido;
+				for(int i=0;i<list_size(TablaLFS);i++){
+					metadataTabla* tabla = list_get(TablaLFS,i);
+				}
 				list_clean(tablas);						// Para no agregar repetidas
 				list_add_all(tablas,TablaLFS);
-				log_info(g_logger,"Describe global realizado con éxito");
+				/*log_info(g_logger,"Describe global realizado con éxito");
 				log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
 
 				for(int i = 0; i<tablas->elements_count; i++)
 				{
 					printf("Tablas indexada n°:%d -> %s\n", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
-				}
+				}*/
 			}
 	}
 	free(buffer);
