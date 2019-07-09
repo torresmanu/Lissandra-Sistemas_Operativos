@@ -168,7 +168,6 @@ status ejecutarRequest(resultadoParser *r){
 		metadataTabla* tabla = obtenerTabla(r);
 		log_info(g_logger,"UsoTabla %s",tabla->nombreTabla);
 
-
 		if(tabla != NULL){
 			log_info(g_logger,"Voy a ejecutar");
 			log_info(g_logger,"Criterio: %d",toConsistencia(tabla->consistency)->tipo);
