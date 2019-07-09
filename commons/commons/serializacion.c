@@ -597,20 +597,24 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		if(reg != NULL) {
 			value_size = strlen(reg->value) + 1;
 			size_to_send = sizeof(value_size);
+			printf("[serializarRespuesta] Value size: %i\n", &value_size);
 			memcpy(paqueteSerializado + offset, &value_size, size_to_send);
 			offset += size_to_send;
 
 
 			size_to_send = value_size;
+			printf("[serializarRespuesta] Value: %s\n", reg->value);
 			memcpy(paqueteSerializado + offset, reg->value, size_to_send);
 			offset += size_to_send;
 
 			size_to_send = sizeof(reg->key);
+			printf("[serializarRespuesta] Key: %i\n", reg->key);
 			memcpy(paqueteSerializado + offset, &(reg->key), size_to_send);
 			offset += size_to_send;
 
 
 			size_to_send = sizeof(reg->timestamp);
+			printf("[serializarRespuesta] Timestamp: %dl\n", reg->timestamp);
 			memcpy(paqueteSerializado + offset, &(reg->timestamp), size_to_send);
 		}
 
@@ -655,6 +659,7 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		break;
 	}
 	case(DESCRIBE): {
+		int nombreTabla_size;
 		int consistency_size;
 		t_list* metadataList = (t_list*) (res->contenido);
 		message_size = 0;
@@ -669,9 +674,10 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 
 			*total_size = sizeof(res->accionEjecutar) + sizeof(res->resultado) + sizeof(*total_size)
 					+ (strlen(res->mensaje) + 1) * sizeof(char) + sizeof(message_size)
-					+ ((strlen(mt->consistency) + 1) * sizeof(char) + sizeof(consistency_size)
+					+ ((strlen(mt->nombreTabla) + 1) * sizeof(char) + sizeof(nombreTabla_size)
+					+ (strlen(mt->consistency) + 1) * sizeof(char) + sizeof(consistency_size)
 					+ sizeof(mt->compaction_time)
-					+ sizeof(mt->partitions)) * list_size(metadataList)
+					+ sizeof(mt->partitions) * list_size(metadataList)) * cantidadMetadatas
 					+ sizeof(cantidadMetadatas);
 
 			paqueteSerializado = (char*) malloc(*total_size);
@@ -708,6 +714,15 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 
 			for(int i=0; i < list_size(metadataList); i++) {
 				mt = (metadataTabla*) list_get(metadataList, i);
+
+				nombreTabla_size = strlen(mt->nombreTabla) + 1;
+				size_to_send = sizeof(nombreTabla_size);
+				memcpy(paqueteSerializado + offset, &nombreTabla_size, size_to_send);
+				offset += size_to_send;
+
+				size_to_send = nombreTabla_size;
+				memcpy(paqueteSerializado + offset, mt->nombreTabla, size_to_send);
+				offset += size_to_send;
 
 				consistency_size = strlen(mt->consistency) + 1;
 				size_to_send = sizeof(consistency_size);
@@ -1002,6 +1017,7 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 
 			status = recv(socketCliente, bufferTimestamp, sizeof(long), 0);
 			memcpy(&(reg->timestamp), bufferTimestamp, sizeof(long));
+			printf("[recibirYDeserializarRespuesta] Timestamp: %dl\n", reg->timestamp);
 			if (!status) return -2;
 
 			res->contenido = reg;
@@ -1039,6 +1055,7 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 	}
 	case(DESCRIBE): {
 		//metadataTabla* metadata = malloc(sizeof(metadataTabla));
+		int nombreTablaSize;
 		int consistencySize;
 		int cantidadMetadatas;
 
@@ -1072,6 +1089,14 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 			metadataTabla* metadata = malloc(sizeof(metadataTabla));
 
 			for(int i=0; i < cantidadMetadatas; i++) {
+				status = recv(socketCliente, buffer, sizeof(int), 0);
+				memcpy(&nombreTablaSize, buffer, buffer_size);
+				if (!status) return -2;
+
+				metadata->nombreTabla = malloc(nombreTablaSize);
+				status = recv(socketCliente, metadata->nombreTabla, nombreTablaSize, 0);
+				if (!status) return -2;
+
 				status = recv(socketCliente, buffer, sizeof(int), 0);
 				memcpy(&consistencySize, buffer, buffer_size);
 				if (!status) return -2;

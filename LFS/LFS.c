@@ -306,7 +306,10 @@ resultado describe(char* tabla)
 			res.contenido = listaMetadata;
 			res.mensaje = "Ok.";
 			res.resultado = OK;
-			log_info(g_logger,metadata.consistency);
+			log_info(g_logger,"Nombre de la tabla: %s", metadata.nombreTabla);
+			log_info(g_logger,"Consistency = %s", metadata.consistency);
+			log_info(g_logger,"Cantidad de particiones = %i", metadata.partitions);
+			log_info(g_logger,"Tiempo de compactacion = %i\n", metadata.compaction_time);
 		}else{
 			res.contenido = NULL;
 			res.mensaje = "No se encontró la tabla o la metadata.";
@@ -318,7 +321,10 @@ resultado describe(char* tabla)
 
 		for(int i=0;i<list_size(listaMetadata);i++){
 			metadataTabla* metadata = (metadataTabla*) list_get(listaMetadata,i);
-			log_info(g_logger,metadata->consistency);
+			log_info(g_logger,"Nombre de la tabla: %s", metadata->nombreTabla);
+			log_info(g_logger,"Consistency = %s", metadata->consistency);
+			log_info(g_logger,"Cantidad de particiones = %i", metadata->partitions);
+			log_info(g_logger,"Tiempo de compactacion = %i\n", metadata->compaction_time);
 		}
 		res.contenido = listaMetadata;
 		res.mensaje = "Ok.";

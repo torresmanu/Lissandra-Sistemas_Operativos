@@ -66,6 +66,7 @@ metadataTabla obtenerMetadata(char* nombreTabla){
 	char* metadataPath=obtenerMetadataPath(nombreTabla);
 	t_config* config = config_create(metadataPath);
 	free(metadataPath);
+	metadata.nombreTabla = string_duplicate(nombreTabla);
 	metadata.compaction_time = config_get_int_value(config,"COMPACTION_TIME");
 	metadata.partitions = config_get_int_value(config,"PARTITIONS");
 	metadata.consistency = string_duplicate(config_get_string_value(config,"CONSISTENCY"));

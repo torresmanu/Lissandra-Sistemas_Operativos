@@ -79,6 +79,7 @@ void iniciar_programa(void)
 	obtenerMemoriaDescribe();
 	gestionarConexionAMemoria(MemDescribe);
 
+
 	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
 	//obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
 	//establecerConexionPool(); 		/// ACA ME CONECTO CON TODAS LAS MEMORIAS DEL POOL ///
@@ -201,7 +202,7 @@ void leerConsola(){
 		sem_post(&sNuevo);	// Habilito el estado NEW
 		log_info(g_logger,"Estoy abajo del if");
 
-		free(linea);
+		//free(linea); HAY QUE VOLVER A PONERLO
 	}
 
 	terminar_programa();
@@ -304,7 +305,7 @@ void realizarDescribeGlobal()
 
 void describe()
 {
-	t_list* TablaLFS;
+	t_list* TablaLFS = list_create();
 	int size;
 	int status;
 	int valueResponse;
@@ -320,8 +321,8 @@ void describe()
 
 	char* msg = serializarPaquete(describe,&size);
 	send(memoriaSocket, msg, size, 0);								// Pido el describe a la memoria
-	char* buffer = malloc(sizeof(char));
-	valueResponse = recv(memoriaSocket,buffer,sizeof(int),0);
+	char* buffer = malloc(sizeof(acc));
+	valueResponse = recv(memoriaSocket,buffer,sizeof(acc),0);
 	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
 
 	if(valueResponse < 0)
@@ -353,6 +354,7 @@ void describe()
 	free(describe);
 	free(msg);
 	free(cd);
+	list_destroy(TablaLFS);
 }
 
 void establecerConexionPool()
