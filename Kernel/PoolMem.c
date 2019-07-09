@@ -58,7 +58,7 @@ void obtenerMemorias(){
 void obtenerMemoriaDescribe()
 {
 	MemDescribe = malloc(sizeof(Memoria));
-	MemDescribe->id = 0;
+	MemDescribe->id = 22;
 	MemDescribe->ipMemoria = config_get_string_value(g_config,"IP_MEMORIA");
 	MemDescribe->puerto = config_get_string_value(g_config, "PUERTO_MEMORIA");
 }
