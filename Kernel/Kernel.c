@@ -319,10 +319,12 @@ void describe()
 	cd->nombreTabla = NULL;
 	describe->contenido = cd;
 
+
 	char* msg = serializarPaquete(describe,&size);
-	send(memoriaSocket, msg, size, 0);								// Pido el describe a la memoria
-	char* buffer = malloc(sizeof(acc));
-	valueResponse = recv(memoriaSocket,buffer,sizeof(acc),0);
+	send(memoriaSocket, msg, size, 0);
+	// Pido el describe a la memoria
+	char* buffer = malloc(sizeof(int));
+	valueResponse = recv(memoriaSocket,buffer,sizeof(int),0);
 	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
 
 	if(valueResponse < 0)
@@ -344,6 +346,10 @@ void describe()
 			else
 			{
 				TablaLFS = (t_list*)res.contenido;
+				for(int i=0;i<list_size(TablaLFS);i++){
+					metadataTabla* tabla = list_get(TablaLFS,i);
+					printf("TABLA: %s;%s;%i\n",tabla->nombreTabla,tabla->consistency,tabla->partitions);
+				}
 				list_clean(tablas);						// Para no agregar repetidas
 				list_add_all(tablas,TablaLFS);
 				log_info(g_logger,"Describe global realizado con éxito");

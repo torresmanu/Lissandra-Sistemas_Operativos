@@ -245,14 +245,26 @@ Tabla* buscarTabla(char* nom)
 {
 	printf("La tabla es: %s\n", nom);
 
-	bool coincideNombre(void* element)					//Subfunción de busqueda
+	/*bool coincideNombre(void* element)					//Subfunción de busqueda
 	{
 		printf("PRUEBA\n");
 		printf("%s\n",((metadataTabla*)element)->nombreTabla);
 		return strcmp(nom,((metadataTabla*)element)->nombreTabla) == 0;
-	}
+	}*/
 
 	printf("Entro a buscarTabla y me dispongo a buscarla\n");
-	return (Tabla*)list_find(tablas,coincideNombre);
+	//return (Tabla*)list_find(tablas,coincideNombre);
+	printf("%i\n",list_size(tablas));
+	for(int i= 0;i<list_size(tablas);i++){
+		metadataTabla* tabla = list_get(tablas,i);
+		printf("%s\n",tabla->nombreTabla);
+		if(strcmp(tabla->nombreTabla,nom) == 0){
+			Tabla* ttabla = malloc(sizeof(Tabla));
+			ttabla->criterio = string_duplicate(tabla->consistency);
+			ttabla->nombre = string_duplicate(tabla->nombreTabla);
+			return ttabla;
+		}
+	}
 	printf("AAAAA\n");
+	return NULL;
 }
