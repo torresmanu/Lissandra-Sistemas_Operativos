@@ -258,26 +258,25 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 
 		for(int i=0; i <= quantum ;i++){ //ver caso en que falla, ejecutarS podria retornar un estado
 
-			if(!terminoScript(s)){
-				log_info(g_logger,"Voy a ejecutar un script con %d request",s->instrucciones->elements_count);
-				e = ejecutarScript(s);
+			log_info(g_logger,"Voy a ejecutar un script con %d request",s->instrucciones->elements_count);
+			e = ejecutarScript(s);
 
-				if(e == REQUEST_ERROR)
-				{
-					log_error(g_logger,"Error en request n°: %d",s->pc);
-					mandarAexit(s);
-					return;
-				}
-			} else {
+			if(e == REQUEST_ERROR)
+			{
+				log_error(g_logger,"Error en request n°: %d",s->pc);
+				mandarAexit(s);
 				break;
 			}
-
+			if(terminoScript(s)){
+				log_info(g_logger,"Termino script");
+				mandarAexit(s);
+				break;
+			}
 		}
-
-		if(!terminoScript(s))
+		if(e == REQUEST_OK && !terminoScript(s)){
+			log_info(g_logger,"Fin de quantum, vuelvo a ready");
 			mandarAready(s);
-		else
-			mandarAexit(s);
+		}
 	}
 }
 

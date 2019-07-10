@@ -441,7 +441,7 @@ void gestionarConexion(int conexion_cliente) {
 			}
 		}
 	}
-	//aca creo que se podria liberar la memoria de buffer2 Atte Manu1
+	free(buffer2);
 	log_info(g_logger,"Cierro la conexion normalmente");
 }
 

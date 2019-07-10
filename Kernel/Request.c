@@ -172,13 +172,13 @@ status ejecutarRequest(resultadoParser *r){
 
 	if(usaTabla(r)){
 		metadataTabla* tabla = obtenerTabla(r);
-		log_info(g_logger,"Tabla: %s",tabla->nombreTabla);
 
 		if(tabla != NULL){
 			log_info(g_logger,"UsoTabla %s",tabla->nombreTabla);
 			log_info(g_logger,"Voy a ejecutar");
 			log_info(g_logger,"Criterio: %d",toConsistencia(tabla->consistency)->tipo);
-			return ejecutar(toConsistencia(tabla->consistency),r);
+			Criterio* cons = toConsistencia(tabla->consistency);
+			return ejecutar(cons,r);
 		}
 		else
 			return REQUEST_ERROR; 											// HACER UN ENUM
