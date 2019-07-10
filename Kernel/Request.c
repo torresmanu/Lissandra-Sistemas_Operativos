@@ -87,7 +87,7 @@ status ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio, request);
 	log_info(g_logger,"Elegi memoria: %d",mem->id);
 	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
-	return resultado;										// la memoria. enviarRequest está sin implementar, usa sockets.
+	return resultado;										// la memoria.
 }
 
 resultado recibir(){
@@ -123,7 +123,7 @@ resultado recibir(){
 
 	}
 
-	free(buffer);
+	//free(buffer);
 	return res;
 }
 
@@ -172,7 +172,7 @@ status ejecutarRequest(resultadoParser *r){
 
 	if(usaTabla(r)){
 		metadataTabla* tabla = obtenerTabla(r);
-		log_info(g_logger,"UsoTabla %s",tabla->nombreTabla);
+		log_info(g_logger,"Tabla: %s",tabla->nombreTabla);
 
 		if(tabla != NULL){
 			log_info(g_logger,"Voy a ejecutar");
@@ -183,7 +183,29 @@ status ejecutarRequest(resultadoParser *r){
 			return REQUEST_ERROR; 											// HACER UN ENUM
 	}
 	else{
-		switch (r->accionEjecutar){
+		switch (r->accionEjecutar)
+		{
+
+			case CREATE:
+			{
+				contenidoCreate* cont = (contenidoCreate*) (r->contenido);
+				ejecutar(toConsistencia(cont->consistencia), r);
+				break;
+			}
+			case DESCRIBE:
+			{
+				contenidoDescribe* cont = (contenidoDescribe*)(r->contenido);
+				if(cont->nombreTabla == NULL)
+				{
+					describe();
+					//ejecutar(&sc,r);
+				}
+				else
+				{
+
+				}
+				break;
+			}
 			case JOURNAL:
 				//journal();
 				break;
@@ -193,32 +215,18 @@ status ejecutarRequest(resultadoParser *r){
 			case ADD:
 			{
 				contenidoAdd* contenido = (contenidoAdd *)(r->contenido);
-
 				Memoria *mem = buscarMemoria(contenido->numMem);
-
 				if(mem==NULL)
 					return REQUEST_ERROR;
-
 				printf("Criterio: %s\n",contenido->criterio);//OJO CRITERIO
 				Criterio* cons = toConsistencia(contenido->criterio);
 				add(mem,cons);
-
-				break;
-			}
-			case CREATE:
-			{
-				contenidoCreate* cont = (contenidoCreate*)(r->contenido);
-				ejecutar(toConsistencia(cont->consistencia),r);
-				break;
-			}
-			case DESCRIBE:
-			{
 				break;
 			}
 			default:
 				break;
 		}
-	return REQUEST_OK;
+		return REQUEST_OK;
 	}
 }
 
