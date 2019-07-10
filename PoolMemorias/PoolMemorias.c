@@ -769,7 +769,6 @@ void consola(){
 		else if(res.resultado == SALIR)
 		{
 			ejecutando = false;
-			log_info(g_logger,"Voy a salir");
 		}
 		if(res.mensaje!=NULL)
 			free(res.mensaje);
@@ -1235,24 +1234,21 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		}
 		case CREATE:
 		{
-			mandarALFS(*resParser);
+			res = mandarALFS(*resParser);
 			log_info(g_logger,"Se envió al LFS");
-			res = recibir();
 			break;
 		}
 		case DROP:
 		{
 			contenidoDrop* contDrop = resParser->contenido;
 			drop(contDrop->nombreTabla);
-			mandarALFS(*resParser);
-			res = recibir();
+			res = mandarALFS(*resParser);
 			break;
 		}
 		case DUMP:
 		{
-			mandarALFS(*resParser);
+			res = mandarALFS(*resParser);
 			log_info(g_logger,"Se envió al LFS");
-			res = recibir();
 			break;
 		}
 		case GOSSIPING:
