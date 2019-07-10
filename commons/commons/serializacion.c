@@ -333,15 +333,15 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		int valueSize;
 		int nombreTablaSize;
 
-		status = recv(socketCliente, buffer, sizeof(int), 0);
+		status = recv(socketCliente, buffer, sizeof(total_size), 0);
 		memcpy(&total_size, buffer, buffer_size);
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(int), 0);
-		memcpy(&(ci->key), buffer, buffer_size);
+		status = recv(socketCliente, buffer, sizeof(ci->key), 0);
+		memcpy(&(ci->key), buffer, sizeof(ci->key));
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(int), 0);
+		status = recv(socketCliente, buffer, sizeof(valueSize), 0);
 		memcpy(&valueSize, buffer, buffer_size);
 		if (!status) return -2;
 
@@ -349,7 +349,7 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		status = recv(socketCliente, ci->value, valueSize, 0);
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(int), 0);
+		status = recv(socketCliente, buffer, sizeof(nombreTablaSize), 0);
 		memcpy(&nombreTablaSize, buffer, buffer_size);
 		if (!status) return -2;
 
@@ -357,8 +357,8 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		status = recv(socketCliente, ci->nombreTabla, nombreTablaSize, 0);
 		if (!status) return -2;
 
-		status = recv(socketCliente, bufferTimestamp, sizeof(long), 0);
-		memcpy(&(ci->timestamp), bufferTimestamp, sizeof(long));
+		status = recv(socketCliente, bufferTimestamp, sizeof(ci->timestamp), 0);
+		memcpy(&(ci->timestamp), bufferTimestamp, sizeof(ci->timestamp));
 		if (!status) return -2;
 
 		rp->contenido = ci;
@@ -381,8 +381,8 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		status = recv(socketCliente, cs->nombreTabla, nombreTablaSize, 0);
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(int), 0);
-		memcpy(&(cs->key), buffer, sizeof(int));
+		status = recv(socketCliente, buffer, sizeof(cs->key), 0);
+		memcpy(&(cs->key), buffer, sizeof(cs->key));
 		if (!status) return -2;
 
 		rp->contenido = cs;
@@ -597,24 +597,20 @@ char* serializarRespuesta(resultado* res, int* total_size) {
 		if(reg != NULL) {
 			value_size = strlen(reg->value) + 1;
 			size_to_send = sizeof(value_size);
-			printf("[serializarRespuesta] Value size: %i\n", &value_size);
 			memcpy(paqueteSerializado + offset, &value_size, size_to_send);
 			offset += size_to_send;
 
 
 			size_to_send = value_size;
-			printf("[serializarRespuesta] Value: %s\n", reg->value);
 			memcpy(paqueteSerializado + offset, reg->value, size_to_send);
 			offset += size_to_send;
 
 			size_to_send = sizeof(reg->key);
-			printf("[serializarRespuesta] Key: %i\n", reg->key);
 			memcpy(paqueteSerializado + offset, &(reg->key), size_to_send);
 			offset += size_to_send;
 
 
 			size_to_send = sizeof(reg->timestamp);
-			printf("[serializarRespuesta] Timestamp: %dl\n", reg->timestamp);
 			memcpy(paqueteSerializado + offset, &(reg->timestamp), size_to_send);
 		}
 
@@ -1011,13 +1007,12 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 			status = recv(socketCliente, reg->value, valueSize, 0);
 			if (!status) return -2;
 
-			status = recv(socketCliente, buffer, sizeof(int), 0);
-			memcpy(&(reg->key), buffer, sizeof(int));
+			status = recv(socketCliente, buffer, sizeof(reg->key), 0);
+			memcpy(&(reg->key), buffer, sizeof(reg->key));
 			if (!status) return -2;
 
-			status = recv(socketCliente, bufferTimestamp, sizeof(long), 0);
-			memcpy(&(reg->timestamp), bufferTimestamp, sizeof(long));
-			printf("[recibirYDeserializarRespuesta] Timestamp: %dl\n", reg->timestamp);
+			status = recv(socketCliente, bufferTimestamp, sizeof(reg->timestamp), 0);
+			memcpy(&(reg->timestamp), bufferTimestamp, sizeof(reg->timestamp));
 			if (!status) return -2;
 
 			res->contenido = reg;

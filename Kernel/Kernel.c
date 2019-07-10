@@ -78,16 +78,16 @@ void iniciar_programa(void)
 
 	// Todoo para el describe
 	obtenerMemoriaDescribe();
-	int socketM = gestionarConexionAMemoria(MemDescribe);
+	gestionarConexionAMemoria(MemDescribe);
 
 	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
 	add(MemDescribe,&sc);
 
-	//	obtenerMemorias();				/// GENERO EL POOL DE MEMORIAS CON EL GOSSIPING DE LA MEMORIA EN EL .CONFIG ///
-	// int status = obtenerMemorias(socketM);
+	int status = obtenerMemorias(MemDescribe->socket);
 
 	establecerConexionPool(); 		/// ACA ME CONECTO CON TODAS LAS MEMORIAS DEL POOL ///
 }
+
 void terminar_programa()
 {
 	//Destruyo el logger
@@ -107,8 +107,9 @@ void terminar_programa()
 
 }
 
-int gestionarConexionAMemoria(Memoria* mem)
+void gestionarConexionAMemoria(Memoria* mem)
 {
+
 	struct addrinfo hints;
 	struct addrinfo* serverInfo;
 
@@ -118,12 +119,12 @@ int gestionarConexionAMemoria(Memoria* mem)
 
 	getaddrinfo(mem->ipMemoria,mem->puerto, &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
 
-	memoriaSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
-	int res =	connect(memoriaSocket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
+	mem->socket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+	int res =connect(mem->socket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
 
 	if(res == -1)
 	{
-		log_error(g_logger, "Memoria innacesible: %s", strerror(errno));
+		log_error(g_logger, "Memoria inaccesible: %s", strerror(errno));
 	}
 	else
 	{
@@ -133,10 +134,12 @@ int gestionarConexionAMemoria(Memoria* mem)
 
 	// Envio un 1
 	uint32_t codigo = 1;
-	send(memoriaSocket,&codigo,sizeof(uint32_t),0);
-
-	MemDescribe->socket = memoriaSocket;
-	return memoriaSocket;
+	send(mem->socket,&codigo,sizeof(uint32_t),0);
+	int status = 0;
+	status = recv(mem->socket,&(mem->id),sizeof(mem->id),0);
+	if(status != sizeof(uint32_t))
+		log_info(g_logger, "Error al recibir id de memoria");
+	printf("mem id: %i\n", mem->id);
 }
 
 
@@ -369,22 +372,15 @@ void describe()
 
 void establecerConexionPool()
 {
-	// Tengo que ir estableciendo conexion con todas las memorias del pool, y agregar el socket a la lista
-
 	Memoria* mem;
-	int socket;
-	t_list* aux;
-
-	aux = list_create();
 
 	for(int i = 0; i<pool->elements_count; i++)
 	{
 		mem = list_get(pool,i);
-		socket = gestionarConexionAMemoria(mem);
-		mem->socket = socket;
-		list_add(aux,mem);
+		if(mem->socket==MemDescribe->socket)
+			break;
+		gestionarConexionAMemoria(mem);
 	}
-	pool = aux; // Y obtengo una lista con todos los sockets
 }
 
 
