@@ -65,4 +65,6 @@ metadataTabla* obtenerTabla(resultadoParser*);
 bool usaTabla(resultadoParser*);
 
 
+resultado recibir(int conexion);
+
 #endif /* REQUEST_H_ */

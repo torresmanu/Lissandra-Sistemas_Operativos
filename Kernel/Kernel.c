@@ -30,13 +30,13 @@ int main(void) {
 	pthread_t plp; // Planificador a largo plazo
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
 
-	pthread_t describeGlobal;
-	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
+//	pthread_t describeGlobal;
+//	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
 	pthread_join(plp,NULL);
-	pthread_join(describeGlobal,NULL);
+//	pthread_join(describeGlobal,NULL);
 
 	for(int i=0; i<nivelMultiprocesamiento; i++)
 	{
@@ -74,7 +74,8 @@ void iniciar_programa(void)
 
 	pool = list_create();			// POOL DE MEMORIAS
 	tablas = list_create();			// ESTRUCTURA QUE CONTIENE TODAS LAS TABLAS (METADATA)
-	socketsPool = list_create();	// SOCKETS DE TODOO EL POOL
+
+//	socketsPool = list_create();	// SOCKETS DE TODO EL POOL
 
 	// Todoo para el describe
 	obtenerMemoriaDescribe();
@@ -263,6 +264,7 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 
 				if(e == REQUEST_ERROR)
 				{
+					log_error(g_logger,"Error en request n°: %d",s->pc);
 					mandarAexit(s);
 					return;
 				}

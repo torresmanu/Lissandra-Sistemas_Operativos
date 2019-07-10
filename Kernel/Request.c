@@ -90,14 +90,14 @@ status ejecutar(Criterio* criterio, resultadoParser* request){
 	return resultado;										// la memoria.
 }
 
-resultado recibir(){
+resultado recibir(int conexion){
 
 	resultado res;
 	accion acc;
 	char* buffer = malloc(sizeof(int));
 	int valueResponse;
 
-	valueResponse = recv(memoriaSocket, buffer, sizeof(int), 0);
+	valueResponse = recv(conexion, buffer, sizeof(int), 0);
 	memcpy(&acc, buffer, sizeof(int));
 
 	if(valueResponse < 0)
@@ -112,7 +112,7 @@ resultado recibir(){
 	else
 	{
 		res.accionEjecutar = acc;
-		int status = recibirYDeserializarRespuesta(memoriaSocket, &res);
+		int status = recibirYDeserializarRespuesta(conexion, &res);
 
 		if(status<0)
 			log_error(g_logger,"No hubo respuesta de la memoria.");
@@ -136,7 +136,7 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	char* msg = serializarPaquete(request,&size);
 	pthread_mutex_lock(&mConexion);
 	send(mem->socket, msg, size, 0);
-	res = recibir();
+	res = recibir(mem->socket);
 	pthread_mutex_unlock(&mConexion);
 
 	if(res.accionEjecutar==SELECT)
@@ -144,7 +144,7 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	if(res.accionEjecutar==DROP)
 		log_info(g_logger,"Tabla %s eliminada con éxito", ((contenidoDrop*)res.contenido)->nombreTabla);
 	if(res.accionEjecutar==CREATE)
-		log_info(g_logger,"Tabla %s creada con éxito",((contenidoCreate*)res.contenido)->nombreTabla);
+		log_info(g_logger,"Tabla creada con éxito");
 	if(res.accionEjecutar==INSERT)
 		log_info(g_logger,"Value %s insertado con éxito", ((contenidoInsert*)res.contenido)->value);
 
@@ -175,6 +175,7 @@ status ejecutarRequest(resultadoParser *r){
 		log_info(g_logger,"Tabla: %s",tabla->nombreTabla);
 
 		if(tabla != NULL){
+			log_info(g_logger,"UsoTabla %s",tabla->nombreTabla);
 			log_info(g_logger,"Voy a ejecutar");
 			log_info(g_logger,"Criterio: %d",toConsistencia(tabla->consistency)->tipo);
 			return ejecutar(toConsistencia(tabla->consistency),r);
@@ -185,27 +186,6 @@ status ejecutarRequest(resultadoParser *r){
 	else{
 		switch (r->accionEjecutar)
 		{
-
-			case CREATE:
-			{
-				contenidoCreate* cont = (contenidoCreate*) (r->contenido);
-				ejecutar(toConsistencia(cont->consistencia), r);
-				break;
-			}
-			case DESCRIBE:
-			{
-				contenidoDescribe* cont = (contenidoDescribe*)(r->contenido);
-				if(cont->nombreTabla == NULL)
-				{
-					describe();
-					//ejecutar(&sc,r);
-				}
-				else
-				{
-
-				}
-				break;
-			}
 			case JOURNAL:
 				//journal();
 				break;
@@ -221,6 +201,17 @@ status ejecutarRequest(resultadoParser *r){
 				printf("Criterio: %s\n",contenido->criterio);//OJO CRITERIO
 				Criterio* cons = toConsistencia(contenido->criterio);
 				add(mem,cons);
+				break;
+			}
+			case CREATE:
+			{
+				contenidoCreate* cont = (contenidoCreate*)(r->contenido);
+				Criterio* cons = toConsistencia(cont->consistencia);
+				ejecutar(cons,r);
+				break;
+			}
+			case DESCRIBE:
+			{
 				break;
 			}
 			default:
