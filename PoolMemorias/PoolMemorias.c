@@ -70,6 +70,8 @@ void escucharConexiones(){
 
 			if(*tipoCliente==1){
 				log_info(g_logger, "Nueva conexion del kernel");
+				int memoryNumber = config_get_int_value(g_config, "MEMORY_NUMBER");
+				send(*conexion_cliente,&memoryNumber,sizeof(memoryNumber),0);
 				iniciarHiloKernel(&cliente,&longc,conexion_cliente);
 			}
 			else if(*tipoCliente==0){

@@ -123,7 +123,7 @@ void gestionarConexionAMemoria(Memoria* mem)
 
 	if(res == -1)
 	{
-		log_error(g_logger, "Memoria innacesible: %s", strerror(errno));
+		log_error(g_logger, "Memoria inaccesible: %s", strerror(errno));
 	}
 	else
 	{
@@ -134,6 +134,11 @@ void gestionarConexionAMemoria(Memoria* mem)
 	// Envio un 1
 	uint32_t codigo = 1;
 	send(mem->socket,&codigo,sizeof(uint32_t),0);
+	int status = 0;
+	status = recv(mem->socket,&(mem->id),sizeof(mem->id),0);
+	if(status != sizeof(uint32_t))
+		log_info(g_logger, "Error al recibir id de memoria");
+	printf("mem id: %i\n", mem->id);
 }
 
 
