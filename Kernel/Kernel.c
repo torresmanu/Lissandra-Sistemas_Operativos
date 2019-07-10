@@ -27,16 +27,13 @@ int main(void) {
 	    pthread_create(&executer[i], NULL, (void*)ejecutador, NULL);
 	}
 
-	pthread_t plp; // Planificador a largo plazo
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
-
-//	pthread_t describeGlobal;
-//	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
+	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
 	pthread_join(plp,NULL);
-//	pthread_join(describeGlobal,NULL);
+	pthread_join(describeGlobal,NULL);
 
 	for(int i=0; i<nivelMultiprocesamiento; i++)
 	{
@@ -105,7 +102,6 @@ void terminar_programa()
 
 	//Libero las memorias de los criterios
 	liberarCriterios();
-
 }
 
 void gestionarConexionAMemoria(Memoria* mem)
@@ -130,7 +126,6 @@ void gestionarConexionAMemoria(Memoria* mem)
 	else
 	{
 		log_info(g_logger, "Conectado con IP: %s:%s",MemDescribe->ipMemoria, MemDescribe->puerto);
-		log_info(g_logger, "Memory ID: %d", mem->id);
 
 	}
 	freeaddrinfo(serverInfo); // Libero
@@ -142,7 +137,7 @@ void gestionarConexionAMemoria(Memoria* mem)
 	status = recv(mem->socket,&(mem->id),sizeof(mem->id),0);
 	if(status != sizeof(uint32_t))
 		log_info(g_logger, "Error al recibir id de memoria");
-	//("mem id: %i\n", mem->id);
+	log_info(g_logger, "ID Memoria: %i", mem->id);
 }
 
 
@@ -185,7 +180,7 @@ void leerConsola(){
 	result.resultado = OK;
 
 	printf("\nBienvenido! Welcome! Youkoso!\n");
-	while(result.resultado != SALIR)
+	while(1)
 	{
 		resultadoParser* res = malloc(sizeof(resultadoParser));
 
@@ -197,9 +192,7 @@ void leerConsola(){
 		memcpy(res,&aux,sizeof(resultadoParser));
 
 		if(res->accionEjecutar==SALIR_CONSOLA){
-			result.resultado = SALIR;
-			printf("Entre en el if de salir_consola\n");
-			return;
+			break;
 		}
 
 		pthread_mutex_lock(&mNew);
@@ -254,10 +247,8 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 		if(deboSalir(s)) // ACA PUEDE ESTAR ROMPIENDO
 			return;
 
-		printf("Entro a ejecutar\n");
-
-		for(int i=0; i <= quantum ;i++){ //ver caso en que falla, ejecutarS podria retornar un estado
-
+		for(int i=0; i <= quantum ;i++) //ver caso en que falla, ejecutarS podria retornar un estado
+		{
 			log_info(g_logger,"Voy a ejecutar un script con %d request",s->instrucciones->elements_count);
 			e = ejecutarScript(s);
 
@@ -277,6 +268,7 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 			log_info(g_logger,"Fin de quantum, vuelvo a ready");
 			mandarAready(s);
 		}
+
 	}
 }
 

@@ -80,7 +80,8 @@ Script* crearScript(resultadoParser* r){
 
 
 bool terminoScript(Script *s){
-	return s->pc == list_size(s->instrucciones);
+	//return s->pc == list_size(s->instrucciones);
+	return list_size(s->instrucciones) == 0;
 }
 
 status ejecutar(Criterio* criterio, resultadoParser* request){
@@ -152,6 +153,7 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 		result = REQUEST_ERROR;
 	else
 		result = REQUEST_OK;
+
 
 	return result;
 }
