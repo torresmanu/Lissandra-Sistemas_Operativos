@@ -31,6 +31,13 @@
 int server_fd;
 char* IP_FS;
 char* PUERTO_FS;
+t_list* listaHilosCompactacion;
+int tiempoDump;
+
+typedef struct {
+	char* nombreTabla;
+	pthread_t threadId;
+} estructuraHiloCompactacion;
 
 t_log* g_logger;
 
@@ -54,8 +61,9 @@ char* getStringConfig(char*);
 int getIntConfig(char*);
 int iniciarServidor(char*);
 
-void crearHiloCompactacion(void);
-void compactacionPrueba(void);
-
+void crearHiloCompactacion(char*);
+void hiloCompactacion(char*);
+void crearHiloDump(void);
+void hiloDump(void);
 
 #endif /* LFS_H_ */

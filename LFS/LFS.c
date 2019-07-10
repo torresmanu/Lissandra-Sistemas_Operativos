@@ -89,7 +89,17 @@ int iniciar_programa()
 		pthread_attr_destroy(&attr);
 	}
 
-	crearHiloCompactacion();
+	listaHilosCompactacion = list_create();
+
+	t_list* metadatas = obtenerTodasMetadata();
+	for(int i = 0; i < list_size(metadatas); i++) {
+		metadataTabla* mt = list_get(metadatas, i);
+		crearHiloCompactacion(mt->nombreTabla);
+	}
+
+	tiempoDump = getIntConfig("TIEMPO_DUMP");
+	crearHiloDump();
+
 	return 0;
 }
 
@@ -398,8 +408,14 @@ resultado handshake() {
 	return res;
 }
 
-void terminar_programa()
+void terminar_programa(void)
 {
+	estructuraHiloCompactacion* ehc;
+	for(int i=0; i < list_size(listaHilosCompactacion); i++) {
+		ehc = list_get(listaHilosCompactacion, i);
+		pthread_cancel(ehc->threadId);
+	}
+
 	//Destruyo el logger
 	log_destroy(g_logger);
 
@@ -502,25 +518,50 @@ int iniciarServidor(char* configPuerto) {
 	return conexion_servidor;
 }
 
-void crearHiloCompactacion(void) {
+void crearHiloCompactacion(char* tabla) {
+	pthread_t thread;
+
+	int err = pthread_create(&thread, NULL, hiloCompactacion, tabla);
+	if(err != 0) {
+		log_info(g_logger,"[crearHiloCompactacion] Hubo un problema al crear el thread de compactación:[%s]", strerror(err));
+	}
+
+	estructuraHiloCompactacion* ehc = malloc(sizeof(hiloCompactacion));
+	ehc->nombreTabla = strdup(tabla);
+	ehc->threadId = thread;
+
+	list_add(listaHilosCompactacion, ehc);
+}
+
+void hiloCompactacion(char* tabla) {
+	metadataTabla mt = obtenerMetadata(tabla);
+
+	while(1) {
+		sleep(mt.compaction_time);
+		compactarTabla(tabla);
+	}
+}
+
+void crearHiloDump(void) {
 	pthread_attr_t attr;
 	pthread_t thread;
 
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-	int err = pthread_create(&thread, &attr, compactacionPrueba, NULL);
+	int err = pthread_create(&thread, &attr, hiloDump, NULL);
 	if(err != 0) {
-		log_info(g_logger,"[crearHiloCompactacion] Hubo un problema al crear el thread de compactación:[%s]", strerror(err));
+		log_info(g_logger,"[crearHiloDump] Hubo un problema al crear el thread hiloDump:[%s]", strerror(err));
+	} else {
+		log_info(g_logger, "[hiloDump] Hilo de dump creado exitosamente");
 	}
 	pthread_attr_destroy(&attr);
 }
 
-void compactacionPrueba(void) {
-	//while(ejecutando){
-	while(1) {
-		sleep(20);
-		//log_info(g_logger,"Soy un hilo de compactación y me estoy ejecutando");
+void hiloDump(void) {
+	while(1){
+		sleep(tiempoDump/1000);
+		dump();
 	}
 }
 

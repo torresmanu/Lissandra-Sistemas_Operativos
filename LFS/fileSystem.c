@@ -246,6 +246,9 @@ int crear_tabla(char* tabla,char* t_cons,int cant_part,int tiempo_comp){
 	//Creo los archivos binarios necesarios
 	status = crearArchivosBinarios(tablesPath,metadata);
 
+	//Creo el hilo de compactacion
+	crearHiloCompactacion(tabla);
+
 	return status;
 }
 
@@ -324,6 +327,16 @@ int dropTableFS(char * tabla){
 	if(status != 0){
 		perror("Error: ");
 	}
+
+	//Borro el hilo de compactacion de la tabla
+	estructuraHiloCompactacion* ehc;
+	for(int i=0; i < list_size(listaHilosCompactacion); i++) {
+		ehc = list_get(listaHilosCompactacion, i);
+		if(strcmp(ehc->nombreTabla, tabla) == 0) {
+			pthread_cancel(ehc->threadId);
+		}
+	}
+
 	return status;
 }
 
