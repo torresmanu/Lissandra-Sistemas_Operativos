@@ -48,6 +48,5 @@ bool deboSalir(Script *s);
 
 // DESCRIBE GLOBAL
 void realizarDescribeGlobal();
-void describe();
 
 #endif /* KERNEL_H_ */

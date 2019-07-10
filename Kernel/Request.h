@@ -64,5 +64,7 @@ bool usaTabla(resultadoParser*);
 
 
 resultado recibir(int conexion);
+void describe();
+
 
 #endif /* REQUEST_H_ */
