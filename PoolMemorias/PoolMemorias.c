@@ -8,11 +8,35 @@ int main(int argc, char* argv[]) {
 	if(!estado)
 		return 0;
 
-	pthread_t journalAutomatico;
+	/*pthread_t journalAutomatico;
 	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
 
 	pthread_t gossipingAutomatico;
-	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);
+	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);*/
+
+	pthread_attr_t attr;
+	pthread_t threadJournal;
+
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	int errThreadJournal = pthread_create(&threadJournal, &attr, journalConRetardo, NULL);
+	if(errThreadJournal != 0) {
+		log_info(g_logger,"Hubo un problema al crear el thread journalConRetardo:[%s]", strerror(errThreadJournal));
+	}
+	//pthread_attr_destroy(&attr);
+
+	//pthread_attr_t attr;
+	pthread_t threadGossiping;
+
+	//pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	int errThreadGossiping = pthread_create(&threadGossiping, &attr, gossipingConRetardo, NULL);
+	if(errThreadGossiping != 0) {
+		log_info(g_logger,"Hubo un problema al crear el thread gossipingConRetardo:[%s]", strerror(errThreadGossiping));
+	}
+	pthread_attr_destroy(&attr);
 
 
 	pthread_t conexionesEntrantes;
@@ -738,6 +762,11 @@ void consola(){
 		{
 			log_info(g_logger,"Se esta haciendo Journaling, ingrese la request mas tarde");
 		}
+		else if(res.resultado == SALIR)
+		{
+			ejecutando = false;
+			log_info(g_logger,"Voy a salir");
+		}
 		if(res.mensaje!=NULL)
 			free(res.mensaje);
 		free(mensaje);
@@ -1229,7 +1258,6 @@ resultado parsear_mensaje(resultadoParser* resParser)
 			resParser->contenido = malloc(0);
 			res.resultado = SALIR;
 			res.mensaje = NULL;
-			ejecutando = false;
 			break;
 		}
 		default:
