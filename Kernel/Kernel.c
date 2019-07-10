@@ -323,15 +323,17 @@ void describe()
 	cd->nombreTabla = NULL;
 	describe->contenido = cd;
 
+	Memoria* mem = list_get(pool,0);
 
 	char* msg = serializarPaquete(describe,&size);
 
 	pthread_mutex_lock(&mConexion);
 
-	send(MemDescribe->socket, msg, size, 0);
+	send(mem->socket, msg, size, 0);
 	// Pido el describe a la memoria
 	char* buffer = malloc(sizeof(int));
-	valueResponse = recv(MemDescribe->socket,buffer,sizeof(int),0);
+	valueResponse = recv(mem->socket,buffer,sizeof(int),0);
+
 	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
 
 	if(valueResponse < 0)
@@ -346,8 +348,9 @@ void describe()
 	}
 	else
 	{
-		res.accionEjecutar = acc;
-		status = recibirYDeserializarRespuesta(MemDescribe->socket,&res); // Recibo la lista de tablas
+		res.accionEjecutar=acc;
+		status = recibirYDeserializarRespuesta(mem->socket,&res); // Recibo la lista de tablas
+
 		pthread_mutex_unlock(&mConexion);
 
 		printf("Resultado accion: %d\n", res.accionEjecutar);

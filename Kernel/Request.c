@@ -214,6 +214,7 @@ status ejecutarRequest(resultadoParser *r){
 			}
 			case DESCRIBE:
 			{
+				describe();
 				break;
 			}
 			default:
