@@ -40,6 +40,8 @@ typedef struct{
 typedef enum {REQUEST_OK, REQUEST_ERROR} status;
 t_list* tablas;
 
+t_list* tablaTemporal;
+
 #define MAX_BUFFER 100
 
 // EJECUTAR ARCHIVOS LQL //

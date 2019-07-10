@@ -74,6 +74,7 @@ void iniciar_programa(void)
 
 	pool = list_create();			// POOL DE MEMORIAS
 	tablas = list_create();			// ESTRUCTURA QUE CONTIENE TODAS LAS TABLAS (METADATA)
+
 //	socketsPool = list_create();	// SOCKETS DE TODO EL POOL
 
 	// Todoo para el describe
@@ -128,7 +129,9 @@ void gestionarConexionAMemoria(Memoria* mem)
 	}
 	else
 	{
-		log_info(g_logger, "Se conecto a la memoria N°:%d, listo para enviar scripts.",mem->id);
+		log_info(g_logger, "Conectado con IP: %s:%s",MemDescribe->ipMemoria, MemDescribe->puerto);
+		log_info(g_logger, "Memory ID: %d", mem->id);
+
 	}
 	freeaddrinfo(serverInfo); // Libero
 
@@ -139,7 +142,7 @@ void gestionarConexionAMemoria(Memoria* mem)
 	status = recv(mem->socket,&(mem->id),sizeof(mem->id),0);
 	if(status != sizeof(uint32_t))
 		log_info(g_logger, "Error al recibir id de memoria");
-	printf("mem id: %i\n", mem->id);
+	//("mem id: %i\n", mem->id);
 }
 
 
@@ -203,7 +206,7 @@ void leerConsola(){
 		agregarScriptAEstado(res, NEW);
 		pthread_mutex_unlock(&mNew);
 
-		log_info(g_logger,"Agrego resParser con accion: %d a new\n",res->accionEjecutar);
+		log_info(g_logger,"Nueva accion: %d a NEW",res->accionEjecutar);
 		sem_post(&sNuevo);	// Habilito el estado NEW
 
 		//free(linea); HAY QUE VOLVER A PONERLO
@@ -241,15 +244,17 @@ void planificadorLargoPlazo(){
 void ejecutador(){ // ACTUA COMO ESTADO EXEC
 	status e;
 	while(1){
+
 		sem_wait(&sListo);
 
 		pthread_mutex_lock(&mReady);
 		Script *s = queue_pop(ready);
 		pthread_mutex_unlock(&mReady);
 
-		if(deboSalir(s))//hay que ver cuando termina, buscar una mejor forma
+		if(deboSalir(s)) // ACA PUEDE ESTAR ROMPIENDO
 			return;
 
+		printf("Entro a ejecutar\n");
 
 		for(int i=0; i <= quantum ;i++){ //ver caso en que falla, ejecutarS podria retornar un estado
 
@@ -277,7 +282,8 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 }
 
 bool deboSalir(Script *s){
-	return ((resultadoParser *)list_get(s->instrucciones,0))-> accionEjecutar == SALIR_CONSOLA;
+	//return ((resultadoParser *)list_get(s->instrucciones,0))-> accionEjecutar == SALIR_CONSOLA;
+	return s->pc == list_size(s->instrucciones);
 }
 
 void mandarAready(Script *s){
@@ -330,6 +336,7 @@ void describe()
 	// Pido el describe a la memoria
 	char* buffer = malloc(sizeof(int));
 	valueResponse = recv(mem->socket,buffer,sizeof(int),0);
+
 	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
 
 	if(valueResponse < 0)
@@ -346,7 +353,14 @@ void describe()
 	{
 		res.accionEjecutar=acc;
 		status = recibirYDeserializarRespuesta(mem->socket,&res); // Recibo la lista de tablas
+
 		pthread_mutex_unlock(&mConexion);
+
+		printf("Resultado accion: %d\n", res.accionEjecutar);
+		printf("Resultado mensaje: %s\n", res.mensaje);
+		printf("Resultado estado: %d\n", res.resultado);
+
+
 		if(status<0)
 			{
 				log_error(g_logger,"Describe fallido");
