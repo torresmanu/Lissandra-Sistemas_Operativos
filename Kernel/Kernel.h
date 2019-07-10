@@ -12,7 +12,6 @@
 #include <commons/parser.h>
 #include <commons/serializacion.h>
 #include <commons/log.h>
-//#include <commons/sockets.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <semaphore.h>
@@ -27,6 +26,10 @@ int quantum; 					// Cantidad de Scripts en el estado EXEC
 int nivelMultiprocesamiento;    // Cuantos procesos (hilos) voy a ejecutar
 int nivelActual;
 int metadataRefresh;
+
+pthread_t plp; // Planificador a largo plazo
+pthread_t describeGlobal;
+
 
 //////////// SOCKETS ////////////
 void iniciar_programa(void);
