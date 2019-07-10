@@ -134,13 +134,19 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	int size;
 
 	char* msg = serializarPaquete(request,&size);
+	pthread_mutex_lock(&mConexion);
 	send(mem->socket, msg, size, 0);
 	res = recibir();
+	pthread_mutex_unlock(&mConexion);
 
 	if(res.accionEjecutar==SELECT)
 		log_info(g_logger,"Value: %s",((registro*)(res.contenido))->value);
 	if(res.accionEjecutar==DROP)
-		log_info(g_logger,"Tabla %s eliminada con exito", ((contenidoDrop*)res.contenido)->nombreTabla);
+		log_info(g_logger,"Tabla %s eliminada con éxito", ((contenidoDrop*)res.contenido)->nombreTabla);
+	if(res.accionEjecutar==CREATE)
+		log_info(g_logger,"Tabla %s creada con éxito",((contenidoCreate*)res.contenido)->nombreTabla);
+	if(res.accionEjecutar==INSERT)
+		log_info(g_logger,"Value %s insertado con éxito", ((contenidoInsert*)res.contenido)->value);
 
 	if(res.resultado == ERROR || res.resultado == MENSAJE_MAL_FORMATEADO)
 		result = REQUEST_ERROR;
@@ -199,6 +205,16 @@ status ejecutarRequest(resultadoParser *r){
 
 				break;
 			}
+			case CREATE:
+			{
+				contenidoCreate* cont = (contenidoCreate*)(r->contenido);
+				ejecutar(toConsistencia(cont->consistencia),r);
+				break;
+			}
+			case DESCRIBE:
+			{
+				break;
+			}
 			default:
 				break;
 		}
@@ -212,7 +228,7 @@ void finalizarScript()	// Debe hacer un free y sacarlo de la cola
 }
 
 bool usaTabla(resultadoParser* r){
-	return r->accionEjecutar == SELECT || r->accionEjecutar == INSERT || r->accionEjecutar == DROP || r->accionEjecutar == DESCRIBE || r->accionEjecutar == CREATE;
+	return r->accionEjecutar == SELECT || r->accionEjecutar == INSERT || r->accionEjecutar == DROP; // Describe ira en el futuro?
 }
 metadataTabla* obtenerTabla(resultadoParser* r){
 	switch(r->accionEjecutar)

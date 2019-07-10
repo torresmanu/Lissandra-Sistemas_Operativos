@@ -16,6 +16,7 @@ int main(void) {
 	pthread_mutex_init(&mNew,NULL);
 	pthread_mutex_init(&mReady,NULL);
 	pthread_mutex_init(&mExit,NULL);
+	pthread_mutex_init(&mConexion,NULL);
 
 	iniciar_programa();
 
@@ -317,6 +318,9 @@ void describe()
 
 
 	char* msg = serializarPaquete(describe,&size);
+
+	pthread_mutex_lock(&mConexion);
+
 	send(memoriaSocket, msg, size, 0);
 	// Pido el describe a la memoria
 	char* buffer = malloc(sizeof(int));
@@ -326,15 +330,18 @@ void describe()
 	if(valueResponse < 0)
 	{
 		log_error(g_logger,strerror(errno));
+		pthread_mutex_unlock(&mConexion);
 	}
 	else if(valueResponse == 0)
 	{
 		log_error(g_logger,"Posiblemente la memoria se desconectó.");
+		pthread_mutex_unlock(&mConexion);
 	}
 	else
 	{
 		res.accionEjecutar=acc;
 		status = recibirYDeserializarRespuesta(memoriaSocket,&res); // Recibo la lista de tablas
+		pthread_mutex_unlock(&mConexion);
 		if(status<0)
 			{
 				log_error(g_logger,"Describe fallido");
@@ -342,18 +349,15 @@ void describe()
 			else
 			{
 				TablaLFS = (t_list*)res.contenido;
-				for(int i=0;i<list_size(TablaLFS);i++){
-					metadataTabla* tabla = list_get(TablaLFS,i);
-				}
 				list_clean(tablas);						// Para no agregar repetidas
 				list_add_all(tablas,TablaLFS);
-				/*log_info(g_logger,"Describe global realizado con éxito");
+				log_info(g_logger,"Describe global realizado con éxito");
 				log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
 
 				for(int i = 0; i<tablas->elements_count; i++)
 				{
 					printf("Tablas indexada n°:%d -> %s\n", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
-				}*/
+				}
 			}
 	}
 	free(buffer);
