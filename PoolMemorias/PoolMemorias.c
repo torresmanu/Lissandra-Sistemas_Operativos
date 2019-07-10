@@ -366,6 +366,8 @@ bool iniciar_programa()
 	pthread_mutex_init(&mTabSeg,NULL);
 	pthread_mutex_init(&mTabPagGlobal,NULL);
 	pthread_mutex_init(&mMemoriasConocidas,NULL);
+	pthread_mutex_init(&mBitmap,NULL);
+
 
 
 	estaHaciendoJournal = false;
@@ -608,8 +610,10 @@ resultado select_t(char *nombre_tabla, int key){
 			return res;
 		}
 
-
+		pthread_mutex_lock(&mBitmap);
 		int posLibre= espacioLibre();
+		pthread_mutex_unlock(&mBitmap);
+
 		if(posLibre>=0){
 			almacenarRegistro(nombre_tabla,*registro,posLibre);
 			res.resultado=OK;
@@ -874,7 +878,9 @@ void guardarEnMemoria(Registro registro, int posLibre){
 	memcpy(&memoria[(posLibre*offset)+tamValue+sizeof(uint16_t)],&(registro.timestamp),sizeof(long));
 	pthread_mutex_unlock(&mMemPrincipal);
 
+	pthread_mutex_lock(&mBitmap);
 	bitmap[posLibre]=1;
+	pthread_mutex_unlock(&mBitmap);
 }
 
 int contieneRegistro(char *nombre_tabla,uint16_t key, Pagina** pagina){
@@ -956,7 +962,9 @@ resultado insert(char *nombre_tabla,uint16_t key,char *value,long timestamp){
 	registro.key=key;
 	registro.value=value;
 
+	pthread_mutex_lock(&mBitmap);
 	int posLibre=espacioLibre();
+	pthread_mutex_unlock(&mBitmap);
 
 	resultado res;
 
@@ -1014,9 +1022,13 @@ void liberarPagina(void* elemento){
 		return ((NodoTablaPaginas* )elem)->pagina == pagina;
 	}
 
+	pthread_mutex_lock(&mTabPagGlobal);
 	list_remove_and_destroy_by_condition(tabla_paginas_global,mismaPagina,destroy_nodo_pagina_global); //remuevo de la global
+	pthread_mutex_unlock(&mTabPagGlobal);
 
+	pthread_mutex_lock(&mBitmap);
 	bitmap[pagina->indice_registro]=0;
+	pthread_mutex_unlock(&mBitmap);
 
 	free(pagina);
 }
@@ -1103,7 +1115,9 @@ void terminar_programa()
 	pthread_mutex_unlock(&mMemPrincipal);
 
 	//Liberar bitmap
+	pthread_mutex_lock(&mBitmap);
 	free(bitmap);
+	pthread_mutex_unlock(&mBitmap);
 
 	//cierro el servidor
 	close(serverSocket);
@@ -1127,6 +1141,8 @@ void destruirMutexs(){
 	pthread_mutex_destroy(&mTabSeg);
 	pthread_mutex_destroy(&mTabPagGlobal);
 	pthread_mutex_destroy(&mMemoriasConocidas);
+	pthread_mutex_destroy(&mBitmap);
+
 
 }
 
