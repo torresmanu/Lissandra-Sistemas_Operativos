@@ -28,12 +28,12 @@ int main(void) {
 	}
 
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
-//	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
+	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
 	pthread_join(plp,NULL);
-//	pthread_join(describeGlobal,NULL);
+	pthread_join(describeGlobal,NULL);
 
 	for(int i=0; i<nivelMultiprocesamiento; i++)
 	{
@@ -246,6 +246,8 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 		for(int i=0; i < quantum ;i++) //ver caso en que falla, ejecutarS podria retornar un estado
 		{
 			e = ejecutarScript(s);
+
+			//Logueo el resultado
 			if (e.resultado == OK){
 				log_info(g_logger,"%s", e.mensaje);
 			}
@@ -270,8 +272,7 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 }
 
 bool deboSalir(Script *s){
-	//return ((resultadoParser *)list_get(s->instrucciones,0))-> accionEjecutar == SALIR_CONSOLA;
-	return s->pc == list_size(s->instrucciones);
+	return ((resultadoParser *)list_get(s->instrucciones,0))-> accionEjecutar == SALIR_CONSOLA;
 }
 
 void mandarAready(Script *s){
@@ -386,5 +387,3 @@ void establecerConexionPool()
 		gestionarConexionAMemoria(mem);
 	}
 }
-
-

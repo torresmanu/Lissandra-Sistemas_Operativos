@@ -76,8 +76,8 @@ bool terminoScript(Script *s){
 resultado ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio, request);
 	log_info(g_logger,"Elegi memoria: %d",mem->id);
-	resultado resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
-	return resultado;										// la memoria.
+	resultado resultado = enviarRequest(mem, request);
+	return resultado;
 }
 
 resultado recibir(int conexion){
@@ -227,16 +227,6 @@ metadataTabla* obtenerTabla(resultadoParser* r){
 			contenidoDrop* c = (contenidoDrop*)r->contenido;
 			return buscarTabla(c->nombreTabla);
 		}
-		case CREATE:
-		{
-			contenidoCreate* c = (contenidoCreate*)r->contenido;
-			return buscarTabla(c->nombreTabla);
-		}
-		case DESCRIBE:
-		{
-			contenidoDescribe* c = (contenidoDescribe*)r->contenido;
-			return buscarTabla(c->nombreTabla);
-		}
 		default:
 			return NULL;
 	}
@@ -253,6 +243,7 @@ metadataTabla* buscarTabla(char* nom)
 
 	return list_find(tablas,coincideNombre);
 }
+
 
 void enviarJournal(void* element){
 
@@ -290,5 +281,4 @@ resultado journal(){
 	res.resultado=OK;
 	res.mensaje="Se realiza JOURNAL en los 3 criterios";
 	return res;
-
 }
