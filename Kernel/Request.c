@@ -76,8 +76,8 @@ bool terminoScript(Script *s){
 resultado ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio, request);
 	log_info(g_logger,"Elegi memoria: %d",mem->id);
-	resultado resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
-	return resultado;										// la memoria.
+	resultado resultado = enviarRequest(mem, request);
+	return resultado;
 }
 
 resultado recibir(int conexion){
@@ -160,7 +160,7 @@ resultado ejecutarRequest(resultadoParser *r)
 		switch (r->accionEjecutar)
 		{
 			case JOURNAL:
-				//journal();
+				estado = journal();
 				break;
 			case METRICS:
 				//metrics();
@@ -227,16 +227,6 @@ metadataTabla* obtenerTabla(resultadoParser* r){
 			contenidoDrop* c = (contenidoDrop*)r->contenido;
 			return buscarTabla(c->nombreTabla);
 		}
-		case CREATE:
-		{
-			contenidoCreate* c = (contenidoCreate*)r->contenido;
-			return buscarTabla(c->nombreTabla);
-		}
-		case DESCRIBE:
-		{
-			contenidoDescribe* c = (contenidoDescribe*)r->contenido;
-			return buscarTabla(c->nombreTabla);
-		}
 		default:
 			return NULL;
 	}
@@ -252,4 +242,60 @@ metadataTabla* buscarTabla(char* nom)
 	}
 
 	return list_find(tablas,coincideNombre);
+}
+
+resultado journal()
+{
+	resultadoParser* j = malloc(sizeof(resultadoParser));
+	char* msg;
+	char* buffer = malloc(sizeof(int));
+	int size;
+	int statusRespuesta;
+	int valueResponse;
+	resultado res;
+	accion acc;
+	j->accionEjecutar = JOURNAL;
+
+	msg = serializarPaquete(j,&size);
+
+	pthread_mutex_lock(&mConexion);
+	for(int i = 0; i<list_size(pool);i++)
+	{
+		Memoria* mem = list_get(pool,i);
+		send(mem->socket,msg,size,0);
+		valueResponse = recv(mem->socket,buffer,sizeof(int),0);
+		memcpy(&acc,buffer,sizeof(int));
+
+		if(valueResponse < 0)
+		{
+			log_error(g_logger,strerror(errno));
+			pthread_mutex_unlock(&mConexion);
+			res.resultado = ERROR;
+		}
+		else if(valueResponse == 0)
+		{
+			log_error(g_logger,"Posiblemente la memoria se desconectó.");
+			pthread_mutex_unlock(&mConexion);
+			res.resultado = ERROR;
+		}
+		else
+		{
+			res.accionEjecutar = acc;
+			statusRespuesta = recibirYDeserializarRespuesta(mem->socket, &res); // Recibo la lista de tablas
+
+			pthread_mutex_unlock(&mConexion);
+
+			if (statusRespuesta < 0)
+			{
+				log_error(g_logger, "Journal fallido");
+				res.resultado = ERROR;
+			}
+			else
+			{
+				log_info(g_logger, "Journal realizado con exito en la memoria ID: %d", mem->id);
+				res.resultado = OK;
+			}
+		}
+	}
+	return res;
 }

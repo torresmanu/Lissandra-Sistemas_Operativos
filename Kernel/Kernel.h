@@ -47,8 +47,6 @@ void mandarAready(Script *s);
 void mandarAexit(Script *s);
 bool deboSalir(Script *s);
 
-// JOURNAL
-
 // DESCRIBE GLOBAL
 void realizarDescribeGlobal();
 
