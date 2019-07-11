@@ -84,4 +84,7 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp);
 char* serializarRespuesta(resultado* res, int* size_to_send);
 int recibirYDeserializarRespuesta(int socketCliente, resultado* res);
 
+int tamanioNombreTablas(t_list* metadataList);
+int tamanioConsistencys(t_list* metadataList);
+
 #endif /* SERIALIZACION_H_ */
