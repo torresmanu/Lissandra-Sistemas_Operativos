@@ -1012,6 +1012,8 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 			if (!status) return -2;
 
 			res->contenido = reg;
+		} else {
+			res->contenido = NULL;
 		}
 
 		break;

@@ -191,6 +191,7 @@ resultado select_acc(char* tabla,int key)
 		metadata = obtenerMetadata(tabla);
 	}else{
 		log_info(g_logger,"No existe la tabla %s",tabla);
+		res.contenido = NULL;
 		res.mensaje="La tabla no existe.";
 		res.resultado=ERROR;
 		return res;
