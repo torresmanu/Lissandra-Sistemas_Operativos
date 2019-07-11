@@ -21,7 +21,7 @@ int main(void) {
 	iniciar_programa();
 
 	//Lanzamos tantos hilos como nivelMultiprocesamiento haya
-	pthread_t *executer = malloc(nivelMultiprocesamiento * sizeof(pthread_t));
+	executer = malloc(nivelMultiprocesamiento * sizeof(pthread_t));
 	for(int i=0; i<nivelMultiprocesamiento; i++ )
 	{
 	    pthread_create(&executer[i], NULL, (void*)ejecutador, NULL);
@@ -32,18 +32,18 @@ int main(void) {
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
-	pthread_join(plp,NULL);
-	pthread_join(describeGlobal,NULL);
-
-	for(int i=0; i<nivelMultiprocesamiento; i++)
+	while(finalizar.resultado != SALIR)
 	{
-		pthread_join(executer[i], NULL);
+		pthread_join(plp,NULL);
+		pthread_join(describeGlobal,NULL);
+
+		for(int i=0; i<nivelMultiprocesamiento; i++)
+		{
+			pthread_join(executer[i], NULL);
+		}
 	}
 
 	terminar_programa();
-
-
-	printf("Termine programa\n");
 	return 0;
 }
 
@@ -87,20 +87,32 @@ void iniciar_programa(void)
 
 void terminar_programa()
 {
+	log_info(g_logger,"Finalizando programa..");
+
 	//Destruyo el logger
 	log_destroy(g_logger);
 
 	//Destruyo las configs
 	config_destroy(g_config);
 
+	//Libero hilos
+	pthread_cancel(plp);
+	pthread_cancel(describeGlobal);
+
+	for(int i=0; i<nivelMultiprocesamiento; i++)
+	{
+		pthread_cancel(executer[i]);
+	}
+
 	//Libero los estados y elimino sus elementos
 	finalizarEstados();
 
-	//Libero el pool de memorias
-	list_destroy_and_destroy_elements(pool,destroy_nodo_memoria);
-
 	//Libero las memorias de los criterios
 	liberarCriterios();
+
+	//Libero el pool de memorias
+	liberarMemorias();
+
 }
 
 void gestionarConexionAMemoria(Memoria* mem)
@@ -191,6 +203,7 @@ void leerConsola(){
 		memcpy(res,&aux,sizeof(resultadoParser));
 
 		if(res->accionEjecutar==SALIR_CONSOLA){
+			finalizar.resultado = SALIR;
 			break;
 		}
 
@@ -203,7 +216,6 @@ void leerConsola(){
 		//free(linea); HAY QUE VOLVER A PONERLO
 	}
 
-	terminar_programa();
 }
 
 void planificadorLargoPlazo(){

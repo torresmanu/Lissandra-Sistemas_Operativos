@@ -276,13 +276,13 @@ void enviarJournal(void* element){
 	resParser.accionEjecutar=JOURNAL;
 	resParser.contenido=NULL;
 	int size_to_send;
-
 	char* pi = serializarPaquete(&resParser, &size_to_send);
-	//aca habria que meter un mutex de conexion
-	send(mem->socket, pi, size_to_send, 0);
 
+	pthread_mutex_lock(&mConexion);
+	send(mem->socket, pi, size_to_send, 0);
 	resultado res = recibir(mem->socket);
-	//liberar el mutex
+	pthread_mutex_unlock(&mConexion);
+
 	free(res.mensaje);
 	if(res.contenido!=NULL)
 		free(res.contenido);
