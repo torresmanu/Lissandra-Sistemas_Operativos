@@ -28,6 +28,9 @@ resultadoParser leerRequest(FILE* fd){
 	resultadoParser r;
 	int leido = getline(&linea,&tamanioLeido,fd);//realoca linea y pone el tamaño leido
 
+	if(linea[leido-1]=='\n')
+		linea[leido-1] = '\0';
+
 	r = parseConsole(linea);
 	return r;
 }

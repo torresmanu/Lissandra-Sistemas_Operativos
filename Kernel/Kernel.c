@@ -28,7 +28,7 @@ int main(void) {
 	}
 
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
-	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
+//	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
@@ -347,7 +347,7 @@ resultado describe(char* nombreTabla)
 
 		pthread_mutex_unlock(&mConexion);
 
-		if(statusRespuesta<0)
+		if(statusRespuesta<0 || res.resultado == ERROR)
 			{
 				log_error(g_logger,"Describe fallido");
 			}

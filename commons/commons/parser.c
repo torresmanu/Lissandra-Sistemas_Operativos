@@ -79,7 +79,7 @@ resultadoParser parseConsole(char* mensaje){
 		if(mensaje == NULL) {
 			cont->nombreTabla = NULL;
 		} else {
-			cont->nombreTabla = mensaje;
+			cont->nombreTabla = strsep(&mensaje," ");
 		}
 		resParser.contenido = cont;
 	}
