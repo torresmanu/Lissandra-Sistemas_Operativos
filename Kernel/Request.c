@@ -263,9 +263,11 @@ void enviarJournal(void* element){
 	int size_to_send;
 
 	char* pi = serializarPaquete(&resParser, &size_to_send);
+	//aca habria que meter un mutex de conexion
 	send(mem->socket, pi, size_to_send, 0);
 
 	resultado res = recibir(mem->socket);
+	//liberar el mutex
 	free(res.mensaje);
 	if(res.contenido!=NULL)
 		free(res.contenido);
@@ -290,9 +292,3 @@ resultado journal(){
 	return res;
 
 }
-
-
-
-
-
-
