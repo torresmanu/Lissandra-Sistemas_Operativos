@@ -37,12 +37,7 @@ typedef struct{
 	char* nombre;
 }Tabla;
 
-typedef enum {REQUEST_OK, REQUEST_ERROR} status;
 t_list* tablas;
-
-t_list* tablaTemporal;
-
-#define MAX_BUFFER 100
 
 // EJECUTAR ARCHIVOS LQL //
 Script* run(char*);
@@ -55,18 +50,17 @@ Script* crearScript(resultadoParser*);
 bool terminoScript(Script *s);
 
 // EJECUCION DE REQUESTS
-status ejecutarRequest(resultadoParser*);
-status ejecutarScript(Script*);
-status ejecutar(Criterio*, resultadoParser*);
-status enviarRequest(Memoria*,resultadoParser*);
+resultado ejecutarRequest(resultadoParser*);
+resultado ejecutarScript(Script*);
+resultado ejecutar(Criterio*, resultadoParser*);
+resultado enviarRequest(Memoria*,resultadoParser*);
 
 metadataTabla* buscarTabla(char*);
 metadataTabla* obtenerTabla(resultadoParser*);
 bool usaTabla(resultadoParser*);
 
-
 resultado recibir(int conexion);
-status describe();
+resultado describe();
 
 
 #endif /* REQUEST_H_ */

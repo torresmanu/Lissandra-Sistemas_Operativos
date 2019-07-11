@@ -39,13 +39,12 @@ Script* parsearScript(FILE* fd){
 
 	while(!feof(fd)){
 		resultadoParser* req = malloc(sizeof(resultadoParser));
-
 		resultadoParser aux = leerRequest(fd);
 
 		memcpy(req,&aux,sizeof(resultadoParser));
 		list_add(script->instrucciones,req);
 	}
-	log_info(g_logger,"Script preparado, cantidad instrucciones: %d\n",script->instrucciones->elements_count);
+	log_info(g_logger,"Cantidad de instrucciones: %d\n",list_size(script->instrucciones));
 	return script;
 }
 
@@ -74,10 +73,10 @@ bool terminoScript(Script *s){
 	return s->pc == list_size(s->instrucciones);
 }
 
-status ejecutar(Criterio* criterio, resultadoParser* request){
+resultado ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio, request);
 	log_info(g_logger,"Elegi memoria: %d",mem->id);
-	status resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
+	resultado resultado = enviarRequest(mem, request); 		// Seguramente se cambie status por una estructura Resultado dependiendo lo que devuelva
 	return resultado;										// la memoria.
 }
 
@@ -118,9 +117,8 @@ resultado recibir(int conexion){
 	return res;
 }
 
-status enviarRequest(Memoria* mem, resultadoParser* request)
+resultado enviarRequest(Memoria* mem, resultadoParser* request)
 {
-	status result;
 	resultado res;
 	int size;
 
@@ -130,44 +128,32 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	res = recibir(mem->socket);
 	pthread_mutex_unlock(&mConexion);
 
-	if(res.resultado == ERROR || res.resultado == MENSAJE_MAL_FORMATEADO)
-		result = REQUEST_ERROR;
-	else
-		result = REQUEST_OK;
-
-
-	return result;
+	return res;
 }
 
-status ejecutarScript(Script *s){
+resultado ejecutarScript(Script *s){
 
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
 	log_info(g_logger,"PC:%d",s->pc);
-	log_info(g_logger,"Accion:%d",r->accionEjecutar);
 
-	status estado = ejecutarRequest(r);
+	resultado estado = ejecutarRequest(r);
 
 	(s->pc)++;
 	return estado;
 }
 
-status ejecutarRequest(resultadoParser *r){
-	status estado;
+resultado ejecutarRequest(resultadoParser *r)
+{
+	resultado estado;
 
 	if(usaTabla(r)){
 		metadataTabla* tabla = obtenerTabla(r);
 
 		if(tabla != NULL){
-			log_info(g_logger,"UsoTabla %s",tabla->nombreTabla);
-			log_info(g_logger,"Voy a ejecutar");
+			log_info(g_logger,"Uso la tabla: %s",tabla->nombreTabla);
 			log_info(g_logger,"Criterio: %d",toConsistencia(tabla->consistency)->tipo);
 			Criterio* cons = toConsistencia(tabla->consistency);
-			return ejecutar(cons,r);
-		}
-		else{
-			if(r->accionEjecutar == DROP)
-				return ejecutar(&sc,r);
-			return REQUEST_ERROR; 											// HACER UN ENUM
+			estado = ejecutar(cons,r);
 		}
 	}
 	else{
@@ -183,12 +169,17 @@ status ejecutarRequest(resultadoParser *r){
 			{
 				contenidoAdd* contenido = (contenidoAdd *)(r->contenido);
 				Memoria *mem = buscarMemoria(contenido->numMem);
+
 				if(mem==NULL)
-					return REQUEST_ERROR;
+				{
+					estado.resultado = ERROR;
+					return estado;
+				}
+
 				printf("Criterio: %s\n",contenido->criterio);//OJO CRITERIO
 				Criterio* cons = toConsistencia(contenido->criterio);
 				add(mem,cons);
-				estado = REQUEST_OK;
+				estado.resultado = OK;
 				break;
 			}
 			case CREATE:
@@ -206,8 +197,8 @@ status ejecutarRequest(resultadoParser *r){
 			default:
 				break;
 		}
-		return estado;
 	}
+	return estado;
 }
 
 void finalizarScript()	// Debe hacer un free y sacarlo de la cola

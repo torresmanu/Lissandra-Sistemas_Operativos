@@ -82,7 +82,6 @@ void iniciar_programa(void)
 	add(MemDescribe,&sc);
 
 	int status = obtenerMemorias(MemDescribe->socket);
-
 	establecerConexionPool(); 		/// ACA ME CONECTO CON TODAS LAS MEMORIAS DEL POOL ///
 }
 
@@ -199,7 +198,6 @@ void leerConsola(){
 		agregarScriptAEstado(res, NEW);
 		pthread_mutex_unlock(&mNew);
 
-		log_info(g_logger,"Nueva accion: %d a NEW",res->accionEjecutar);
 		sem_post(&sNuevo);	// Habilito el estado NEW
 
 		//free(linea); HAY QUE VOLVER A PONERLO
@@ -224,8 +222,6 @@ void planificadorLargoPlazo(){
 		agregarScriptAEstado(s,READY);
 		pthread_mutex_unlock(&mReady);
 
-		log_info(g_logger,"Paso el script a ready, cant rq:%d",s->instrucciones->elements_count);
-
 		sem_post(&sListo);
 
 		if(r->accionEjecutar==SALIR_CONSOLA)
@@ -235,7 +231,7 @@ void planificadorLargoPlazo(){
 }
 
 void ejecutador(){ // ACTUA COMO ESTADO EXEC
-	status e;
+	resultado e;
 	while(1){
 
 		sem_wait(&sListo);
@@ -249,22 +245,23 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 
 		for(int i=0; i < quantum ;i++) //ver caso en que falla, ejecutarS podria retornar un estado
 		{
-			log_info(g_logger,"Voy a ejecutar un script con %d request",s->instrucciones->elements_count);
 			e = ejecutarScript(s);
-
-			if(e == REQUEST_ERROR)
-			{
-				log_error(g_logger,"Error en request n°: %d",s->pc);
+			if (e.resultado == OK){
+				log_info(g_logger,"%s", e.mensaje);
+			}
+			else if(e.resultado == ERROR){
+				log_error(g_logger, "Error en request n°: %d", s->pc);
 				mandarAexit(s);
 				break;
 			}
-			if(terminoScript(s)){
-				log_info(g_logger,"Termino script");
+
+			if (terminoScript(s)) {
+				log_info(g_logger, "Termino script");
 				mandarAexit(s);
 				break;
 			}
 		}
-		if(e == REQUEST_OK && !terminoScript(s)){
+		if(e.resultado == OK && !terminoScript(s)){
 			log_info(g_logger,"Fin de quantum, vuelvo a ready");
 			mandarAready(s);
 		}
@@ -302,7 +299,7 @@ void realizarDescribeGlobal()
 	}
 }
 
-status describe()
+resultado describe()
 {
 	t_list* TablaLFS = list_create();
 	int size;
@@ -310,7 +307,6 @@ status describe()
 	int valueResponse;
 	resultado res;
 	accion acc;
-	status estado = REQUEST_ERROR;
 
 	resultadoParser* describe = malloc(sizeof(resultadoParser));
 	describe->accionEjecutar = DESCRIBE;
@@ -335,11 +331,13 @@ status describe()
 	{
 		log_error(g_logger,strerror(errno));
 		pthread_mutex_unlock(&mConexion);
+		res.resultado = ERROR;
 	}
 	else if(valueResponse == 0)
 	{
 		log_error(g_logger,"Posiblemente la memoria se desconectó.");
 		pthread_mutex_unlock(&mConexion);
+		res.resultado = ERROR;
 	}
 	else
 	{
@@ -347,11 +345,6 @@ status describe()
 		statusRespuesta = recibirYDeserializarRespuesta(mem->socket,&res); // Recibo la lista de tablas
 
 		pthread_mutex_unlock(&mConexion);
-
-		printf("Resultado accion: %d\n", res.accionEjecutar);
-		printf("Resultado mensaje: %s\n", res.mensaje);
-		printf("Resultado estado: %d\n", res.resultado);
-
 
 		if(statusRespuesta<0)
 			{
@@ -369,7 +362,7 @@ status describe()
 				{
 					printf("Tablas indexada n°:%d -> %s\n", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
 				}
-				estado = REQUEST_OK;
+				res.resultado = OK;
 			}
 	}
 	free(buffer);
@@ -378,7 +371,7 @@ status describe()
 	free(cd);
 	list_destroy(TablaLFS);
 
-	return estado;
+	return res;
 }
 
 void establecerConexionPool()
