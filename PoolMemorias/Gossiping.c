@@ -205,8 +205,10 @@ void agregarMemoria(Memoria* mem){
 		return ((Memoria*)elem)->numero == mem->numero;
 	}
 
-	if(list_any_satisfy(memoriasConocidas,memoriasIguales))
+	if(list_any_satisfy(memoriasConocidas,memoriasIguales)){
+		free(mem);
 		return;
+	}
 
 	list_add(memoriasConocidas,mem);
 }
