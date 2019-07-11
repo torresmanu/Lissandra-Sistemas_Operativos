@@ -558,8 +558,8 @@ void compactarTabla(char* tabla){
 	closedir(tabledir);
 
 	//Bloqueo la tabla
-	setearBloqueo(tabla);
-	sleep(1);
+	//setearBloqueo(tabla);
+	//sleep(1);
 	long inicioBloqueo = (long)time(NULL);
 
 	//Borro los archivos temporales y los binarios
@@ -628,7 +628,7 @@ void compactarTabla(char* tabla){
 
 	//Libero el bloqueo
 	long finBloqueo = (long)time(NULL);
-	liberarBloqueo(tabla);
+	//liberarBloqueo(tabla);
 	log_info(g_logger,"Tabla %s compactada exitosamente en %ld ms",tabla,finBloqueo-inicioBloqueo);
 }
 
