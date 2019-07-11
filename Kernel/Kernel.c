@@ -302,14 +302,15 @@ void realizarDescribeGlobal()
 	}
 }
 
-void describe()
+status describe()
 {
 	t_list* TablaLFS = list_create();
 	int size;
-	int status;
+	int statusRespuesta;
 	int valueResponse;
 	resultado res;
 	accion acc;
+	status estado = REQUEST_ERROR;
 
 	resultadoParser* describe = malloc(sizeof(resultadoParser));
 	describe->accionEjecutar = DESCRIBE;
@@ -343,7 +344,7 @@ void describe()
 	else
 	{
 		res.accionEjecutar=acc;
-		status = recibirYDeserializarRespuesta(mem->socket,&res); // Recibo la lista de tablas
+		statusRespuesta = recibirYDeserializarRespuesta(mem->socket,&res); // Recibo la lista de tablas
 
 		pthread_mutex_unlock(&mConexion);
 
@@ -352,7 +353,7 @@ void describe()
 		printf("Resultado estado: %d\n", res.resultado);
 
 
-		if(status<0)
+		if(statusRespuesta<0)
 			{
 				log_error(g_logger,"Describe fallido");
 			}
@@ -368,6 +369,7 @@ void describe()
 				{
 					printf("Tablas indexada n°:%d -> %s\n", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
 				}
+				estado = REQUEST_OK;
 			}
 	}
 	free(buffer);
@@ -375,6 +377,8 @@ void describe()
 	free(msg);
 	free(cd);
 	list_destroy(TablaLFS);
+
+	return estado;
 }
 
 void establecerConexionPool()

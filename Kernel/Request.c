@@ -22,16 +22,13 @@ Script* run(char* path){
 }
 
 resultadoParser leerRequest(FILE* fd){
-	char linea[1024];
-	size_t tamanioLeido;
+	char* linea=NULL;
+	size_t tamanioLeido = 0;
 
 	resultadoParser r;
-	getline(&linea,&tamanioLeido,fd); //realoca linea y pone el tamaño leido
-	log_info(g_logger,"Request: %s",linea);
+	int leido = getline(&linea,&tamanioLeido,fd);//realoca linea y pone el tamaño leido
 
 	r = parseConsole(linea);
-
-	//free(linea); Este tambien rompe
 	return r;
 }
 
@@ -40,23 +37,17 @@ Script* parsearScript(FILE* fd){
 	script->instrucciones = list_create();
 	script->pc=0;
 
-	char linea[1024];
-
-	while(fgets(linea,1024,fd)){
+	while(!feof(fd)){
 		resultadoParser* req = malloc(sizeof(resultadoParser));
-		resultadoParser aux;
-		aux = parseConsole(linea);
 
-		//req->accionEjecutar = aux.accionEjecutar;
-		//req->contenido = aux.contenido;
+		resultadoParser aux = leerRequest(fd);
 
 		memcpy(req,&aux,sizeof(resultadoParser));
 		list_add(script->instrucciones,req);
 	}
-	log_info(g_logger,"Script preparado. Cantidad de instrucciones: %d",list_size(script->instrucciones));
+	log_info(g_logger,"Script preparado, cantidad instrucciones: %d\n",script->instrucciones->elements_count);
 	return script;
 }
-
 
 Script* crearScript(resultadoParser* r){
 	Script* s;
@@ -139,15 +130,6 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	res = recibir(mem->socket);
 	pthread_mutex_unlock(&mConexion);
 
-	if(res.accionEjecutar==SELECT)
-		log_info(g_logger,"Value: %s",((registro*)(res.contenido))->value);
-	if(res.accionEjecutar==DROP)
-		log_info(g_logger,"Tabla %s eliminada con éxito", ((contenidoDrop*)res.contenido)->nombreTabla);
-	if(res.accionEjecutar==CREATE)
-		log_info(g_logger,"Tabla creada con éxito");
-	if(res.accionEjecutar==INSERT)
-		log_info(g_logger,"%s",res.mensaje);
-
 	if(res.resultado == ERROR || res.resultado == MENSAJE_MAL_FORMATEADO)
 		result = REQUEST_ERROR;
 	else
@@ -170,6 +152,7 @@ status ejecutarScript(Script *s){
 }
 
 status ejecutarRequest(resultadoParser *r){
+	status estado;
 
 	if(usaTabla(r)){
 		metadataTabla* tabla = obtenerTabla(r);
@@ -202,24 +185,25 @@ status ejecutarRequest(resultadoParser *r){
 				printf("Criterio: %s\n",contenido->criterio);//OJO CRITERIO
 				Criterio* cons = toConsistencia(contenido->criterio);
 				add(mem,cons);
+				estado = REQUEST_OK;
 				break;
 			}
 			case CREATE:
 			{
 				contenidoCreate* cont = (contenidoCreate*)(r->contenido);
 				Criterio* cons = toConsistencia(cont->consistencia);
-				ejecutar(cons,r);
+				estado = ejecutar(cons,r);
 				break;
 			}
 			case DESCRIBE:
 			{
-				describe();
+				estado = describe();
 				break;
 			}
 			default:
 				break;
 		}
-		return REQUEST_OK;
+		return estado;
 	}
 }
 
