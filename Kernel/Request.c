@@ -113,7 +113,7 @@ resultado recibir(int conexion){
 
 	}
 
-	//free(buffer);
+//	free(buffer);
 	return res;
 }
 
@@ -160,7 +160,7 @@ resultado ejecutarRequest(resultadoParser *r)
 		switch (r->accionEjecutar)
 		{
 			case JOURNAL:
-				//journal();
+				estado = journal();
 				break;
 			case METRICS:
 				//metrics();
@@ -253,3 +253,46 @@ metadataTabla* buscarTabla(char* nom)
 
 	return list_find(tablas,coincideNombre);
 }
+
+void enviarJournal(void* element){
+
+	Memoria* mem = (Memoria*)element;
+	resultadoParser resParser;
+	resParser.accionEjecutar=JOURNAL;
+	resParser.contenido=NULL;
+	int size_to_send;
+
+	char* pi = serializarPaquete(&resParser, &size_to_send);
+	send(mem->socket, pi, size_to_send, 0);
+
+	resultado res = recibir(mem->socket);
+	free(res.mensaje);
+	if(res.contenido!=NULL)
+		free(res.contenido);
+
+//	free(pi);
+
+
+}
+resultado journal(){
+	list_iterate(sc.memorias,enviarJournal);
+	log_info(g_logger,"Se hizo JOURNAL en las memorias SC.");
+
+	list_iterate(shc.memorias,enviarJournal);
+	log_info(g_logger,"Se hizo JOURNAL en las memorias SHC.");
+
+	list_iterate(ec.memorias,enviarJournal);
+	log_info(g_logger,"Se hizo JOURNAL en las memorias EC.");
+
+	resultado res;
+	res.resultado=OK;
+	res.mensaje="Se realiza JOURNAL en los 3 criterios";
+	return res;
+
+}
+
+
+
+
+
+

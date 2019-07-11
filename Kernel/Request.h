@@ -61,6 +61,6 @@ bool usaTabla(resultadoParser*);
 
 resultado recibir(int conexion);
 resultado describe();
-
+resultado journal();
 
 #endif /* REQUEST_H_ */

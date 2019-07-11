@@ -93,6 +93,7 @@ resultadoParser parseConsole(char* mensaje){
 	else if(strcmp(accion,"JOURNAL") == 0)
 	{
 		resParser.accionEjecutar=JOURNAL;
+		resParser.contenido=NULL;
 	}
 	else if(strcmp(accion,"DUMP") == 0)
 	{

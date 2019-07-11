@@ -234,6 +234,11 @@ resultadoParser recibirRequest(int conexion_cliente){
 			free(buffer2);
 			return rp;
 		}
+		if(rp.accionEjecutar == JOURNAL){
+			free(buffer2);
+			rp.contenido = NULL;
+			return rp;
+		}
 
 		status = recibirYDeserializarPaquete(conexion_cliente, &rp);
 		log_info(g_logger,"La accion es:%d", rp.accionEjecutar);
@@ -1282,7 +1287,9 @@ resultado parsear_mensaje(resultadoParser* resParser)
 			break;
 		}
 	}
-	free(resParser->contenido);
+
+	if(resParser->contenido!=NULL)
+		free(resParser->contenido);
 	return res;
 
 }
