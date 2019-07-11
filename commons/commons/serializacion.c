@@ -1205,6 +1205,28 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 
 		break;
 	}
+	case(JOURNAL): {
+		//Recibo el tamanio total
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&total_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		//Recibo el resultado
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&(res->resultado), buffer, buffer_size);
+		if (!status) return -2;
+
+		//Recibo el mensaje
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&message_size, buffer, buffer_size);
+		if (!status) return -2;
+
+		res->mensaje = malloc(message_size);
+		status = recv(socketCliente, res->mensaje, message_size, 0);
+		if (!status) return -2;
+
+		break;
+	}
 	default:
 		return -1;
 	}
