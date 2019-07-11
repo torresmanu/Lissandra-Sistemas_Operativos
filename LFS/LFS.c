@@ -238,6 +238,16 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 {
 
 	resultado res;
+	//Verifico que el tamaño del value sea correcto, caso contrario falla
+	int valueSize = strlen(value) + 1;
+	if(valueSize>getIntConfig("TAMANIO_VALUE")){
+		log_info(g_logger,"Tamaño del value incorrecto");
+		res.resultado=ERROR;
+		res.mensaje="Tamaño del value incorrecto";
+		res.accionEjecutar=INSERT;
+		res.contenido=NULL;
+		return res;
+	}
 	//Primero verifico que exista la tabla
 	if(existeMetadata(tabla) != 0){
 		log_info(g_logger,"No existe la tabla %s",tabla);
@@ -538,7 +548,7 @@ void hiloCompactacion(char* tabla) {
 	metadataTabla mt = obtenerMetadata(tabla);
 
 	while(1) {
-		sleep(mt.compaction_time);
+		sleep(mt.compaction_time/1000);
 		compactarTabla(tabla);
 	}
 }

@@ -560,11 +560,13 @@ void compactarTabla(char* tabla){
 	//Bloqueo la tabla
 	setearBloqueo(tabla);
 	sleep(1);
+	long inicioBloqueo = (long)time(NULL);
 
 	//Borro los archivos temporales y los binarios
 	tabledir = opendir(tablesPath);
 	if(tabledir == NULL){
 		log_info(g_logger,"Error al compactar tabla %s al abrir directorio",tabla);
+		liberarBloqueo(tabla);
 		return;
 	}
 	while((tablesde=readdir(tabledir))!= NULL){
@@ -625,8 +627,9 @@ void compactarTabla(char* tabla){
 	//list_destroy_and_destroy_elements(list,destroy_nodo_tabla);
 
 	//Libero el bloqueo
+	long finBloqueo = (long)time(NULL);
 	liberarBloqueo(tabla);
-	log_info(g_logger,"Tabla %s compactada exitosamente",tabla);
+	log_info(g_logger,"Tabla %s compactada exitosamente en %ld ms",tabla,finBloqueo-inicioBloqueo);
 }
 
 void compactar(){
