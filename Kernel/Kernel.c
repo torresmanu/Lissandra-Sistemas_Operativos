@@ -28,12 +28,12 @@ int main(void) {
 	}
 
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
-	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
+//	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
 	pthread_join(plp,NULL);
-	pthread_join(describeGlobal,NULL);
+//	pthread_join(describeGlobal,NULL);
 
 	for(int i=0; i<nivelMultiprocesamiento; i++)
 	{
@@ -247,7 +247,7 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 		if(deboSalir(s)) // ACA PUEDE ESTAR ROMPIENDO
 			return;
 
-		for(int i=0; i <= quantum ;i++) //ver caso en que falla, ejecutarS podria retornar un estado
+		for(int i=0; i < quantum ;i++) //ver caso en que falla, ejecutarS podria retornar un estado
 		{
 			log_info(g_logger,"Voy a ejecutar un script con %d request",s->instrucciones->elements_count);
 			e = ejecutarScript(s);

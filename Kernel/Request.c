@@ -80,8 +80,7 @@ Script* crearScript(resultadoParser* r){
 
 
 bool terminoScript(Script *s){
-	//return s->pc == list_size(s->instrucciones);
-	return list_size(s->instrucciones) == 0;
+	return s->pc == list_size(s->instrucciones);
 }
 
 status ejecutar(Criterio* criterio, resultadoParser* request){
@@ -147,7 +146,7 @@ status enviarRequest(Memoria* mem, resultadoParser* request)
 	if(res.accionEjecutar==CREATE)
 		log_info(g_logger,"Tabla creada con éxito");
 	if(res.accionEjecutar==INSERT)
-		log_info(g_logger,"Value %s insertado con éxito", ((contenidoInsert*)res.contenido)->value);
+		log_info(g_logger,"%s",res.mensaje);
 
 	if(res.resultado == ERROR || res.resultado == MENSAJE_MAL_FORMATEADO)
 		result = REQUEST_ERROR;
