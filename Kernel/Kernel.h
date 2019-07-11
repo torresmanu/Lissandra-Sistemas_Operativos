@@ -28,8 +28,10 @@ int nivelActual;
 int metadataRefresh;
 
 pthread_t plp; // Planificador a largo plazo
-pthread_t describeGlobal;
+pthread_t describeGlobal; // Describe global
+pthread_t* executer;
 
+resultado finalizar; // Variable de corte
 
 //////////// SOCKETS ////////////
 void iniciar_programa(void);

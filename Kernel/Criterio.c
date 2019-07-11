@@ -26,10 +26,12 @@ void liberarCriterios(){
 	list_destroy_and_destroy_elements(ec.memorias,destroy_nodo_memoria);
 }
 
-void destroy_nodo_memoria(void * elem){
-	Memoria* nodo_tabla_elem = (Memoria *) elem;
-	free(nodo_tabla_elem->ipMemoria);
-	free(nodo_tabla_elem->puerto);
+void liberarMemorias(){
+	list_destroy(pool);
+}
+
+void destroy_nodo_memoria(void* elem){
+	Memoria* nodo_tabla_elem = (Memoria*) elem;
 	free(nodo_tabla_elem);
 }
 
