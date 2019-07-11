@@ -25,8 +25,11 @@
 #include <commons/registro.h>
 #include "stdint.h"
 #include <string.h>
+#include <sys/inotify.h>
 
 #define PACKAGESIZE 100
+#define EVENT_SIZE  (sizeof(struct inotify_event))
+#define BUF_LEN     (1024 * (EVENT_SIZE + 16))
 
 int server_fd;
 char* IP_FS;
@@ -65,5 +68,8 @@ void crearHiloCompactacion(char*);
 void hiloCompactacion(char*);
 void crearHiloDump(void);
 void hiloDump(void);
+
+void monitorearConfig(void);
+void actualizarRetardos(void);
 
 #endif /* LFS_H_ */
