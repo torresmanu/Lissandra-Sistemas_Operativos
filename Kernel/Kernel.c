@@ -307,14 +307,14 @@ void realizarDescribeGlobal()
 {
 	while(1)
 	{
-		describe();
+		describe(NULL);
 		sleep(metadataRefresh/1000); // Lo paso a ms
 	}
 }
 
-resultado describe()
+resultado describe(char* nombreTabla)
 {
-	t_list* TablaLFS = list_create();
+	t_list* tablaLFS = list_create();
 	int size;
 	int statusRespuesta;
 	int valueResponse;
@@ -324,7 +324,7 @@ resultado describe()
 	resultadoParser* describe = malloc(sizeof(resultadoParser));
 	describe->accionEjecutar = DESCRIBE;
 	contenidoDescribe* cd = malloc(sizeof(contenidoDescribe));
-	cd->nombreTabla = NULL;
+	cd->nombreTabla = nombreTabla;
 	describe->contenido = cd;
 
 	Memoria* mem = list_get(pool,0);
@@ -365,15 +365,21 @@ resultado describe()
 			}
 			else
 			{
-				TablaLFS = (t_list*)res.contenido;
-				list_clean(tablas);						// Para no agregar repetidas
-				list_add_all(tablas,TablaLFS);
-				log_info(g_logger,"Describe global realizado con éxito");
-				log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
+				tablaLFS = (t_list*)res.contenido;
 
-				for(int i = 0; i<tablas->elements_count; i++)
-				{
-					printf("Tablas indexada n°:%d -> %s\n", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
+				if(list_size(tablaLFS)>1){
+					list_clean(tablas);						// Para no agregar repetidas
+					list_add_all(tablas,tablaLFS);
+					log_info(g_logger,"Describe global realizado con éxito");
+					log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
+
+					for(int i = 0; i<tablas->elements_count; i++)
+					{
+						log_info(g_logger,"Tablas indexada n°:%d -> %s", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
+					}
+				}
+				else{
+					reemplazarMetadata(list_get(tablaLFS,0));
 				}
 				res.resultado = OK;
 			}
@@ -382,7 +388,7 @@ resultado describe()
 	free(describe);
 	free(msg);
 	free(cd);
-	list_destroy(TablaLFS);
+	list_destroy(tablaLFS);
 
 	return res;
 }

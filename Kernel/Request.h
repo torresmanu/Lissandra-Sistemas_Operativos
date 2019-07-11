@@ -58,6 +58,7 @@ resultado enviarRequest(Memoria*,resultadoParser*);
 metadataTabla* buscarTabla(char*);
 metadataTabla* obtenerTabla(resultadoParser*);
 bool usaTabla(resultadoParser*);
+void reemplazarMetadata(metadataTabla* tablaNueva);
 
 resultado recibir(int conexion);
 resultado describe();
