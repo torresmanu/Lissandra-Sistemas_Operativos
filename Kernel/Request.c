@@ -164,8 +164,11 @@ status ejecutarRequest(resultadoParser *r){
 			Criterio* cons = toConsistencia(tabla->consistency);
 			return ejecutar(cons,r);
 		}
-		else
+		else{
+			if(r->accionEjecutar == DROP)
+				return ejecutar(&sc,r);
 			return REQUEST_ERROR; 											// HACER UN ENUM
+		}
 	}
 	else{
 		switch (r->accionEjecutar)
