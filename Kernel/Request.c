@@ -110,7 +110,7 @@ resultado recibir(int conexion){
 		if(status<0)
 			log_error(g_logger,"No hubo respuesta de la memoria.");
 		else if(res.resultado != OK)
-			log_info(g_logger,res.mensaje);
+			log_error(g_logger,res.mensaje);
 		else
 			log_info(g_logger,"Acción ejecutada con éxito.");
 
@@ -157,6 +157,10 @@ resultado ejecutarRequest(resultadoParser *r)
 			log_info(g_logger,"Criterio: %d",toConsistencia(tabla->consistency)->tipo);
 			Criterio* cons = toConsistencia(tabla->consistency);
 			estado = ejecutar(cons,r);
+		}
+		else{
+			log_error(g_logger, "No se encontró la tabla");
+			estado.resultado=ERROR;
 		}
 	}
 	else{
