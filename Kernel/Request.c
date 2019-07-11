@@ -191,7 +191,8 @@ resultado ejecutarRequest(resultadoParser *r)
 			}
 			case DESCRIBE:
 			{
-				estado = describe();
+				contenidoDescribe* cont = r->contenido;
+				estado = describe(cont->nombreTabla);
 				break;
 			}
 			default:
@@ -244,6 +245,22 @@ metadataTabla* buscarTabla(char* nom)
 	return list_find(tablas,coincideNombre);
 }
 
+void reemplazarMetadata(metadataTabla* tablaNueva){
+
+	bool coincideNombre(void* element)					//Subfunción de busqueda
+	{
+		bool e = strcmp(tablaNueva->nombreTabla,((metadataTabla*)element)->nombreTabla) == 0;
+		return e;
+	}
+
+	metadataTabla* vieja = list_remove_by_condition(tablas,coincideNombre);
+	list_add(tablas,tablaNueva);
+
+	if(vieja!=NULL)
+		log_info(g_logger,"Metadata de %s reemplazada con exito",tablaNueva->nombreTabla);
+	else
+		log_info(g_logger,"Metadata de %s agregada con exito",tablaNueva->nombreTabla);
+}
 
 void enviarJournal(void* element){
 
