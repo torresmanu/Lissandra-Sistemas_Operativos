@@ -83,6 +83,9 @@ bool terminoScript(Script *s){
 
 resultado ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio, request);
+
+	log_info(g_logger,"Numero de memoria elegida:%d",mem->id);
+
 	resultado resultado = enviarRequest(mem, request);
 
 	if(resultado.resultado==FULL){
