@@ -60,6 +60,9 @@ int iniciar_programa()
 	puntoMontaje = getStringConfig("PUNTO_MONTAJE");
 	magicNumber = getStringConfig("MAGIC_NUMBER");
 
+	sem_init(&semaforo,0,1);
+	sem_init(&semaforoMemtable,0,1);
+
 	//Inicializo el FS Propio
 	int status = inicializarFSPropio();
 	if(status != 0){
@@ -304,9 +307,6 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 
 resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 {
-	//Chequeo que no este bloqueada la tabla
-	bloquearTabla(tabla);
-	liberarBloqueoTabla(tabla);
 
 	resultado res;
 	res.accionEjecutar = CREATE;
@@ -689,7 +689,7 @@ void correrScript(){
 		}else{
 			log_info(g_logger,"ERROR");
 		}
-		sleep(1);
+		usleep(10000);
 		i++;
 	}
 	fclose(file);

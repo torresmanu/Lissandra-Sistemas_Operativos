@@ -8,6 +8,8 @@
 #ifndef LFS_H_
 #define LFS_H_
 
+#include <unistd.h>
+#include <semaphore.h>
 #include <commons/log.h>
 #include <commons/config.h>
 #include <commons/sockets.h>

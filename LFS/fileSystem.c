@@ -431,7 +431,7 @@ void compactarTabla(char* tabla){
 
 	//Si son 0 a compactar entonces vuelvo porque no tiene sentido seguir
 	if(cantidadACompactar ==  0){
-		log_info(g_logger,"Tabla %s compactada exitosamente",tabla);
+		log_info(g_logger,"Tabla %s sin temporales para compactar",tabla);
 		return;
 	}
 
@@ -556,10 +556,9 @@ void compactarTabla(char* tabla){
 		}
 	}
 	closedir(tabledir);
-
+	log_info(g_logger,"Comienzo bloqueo tabla %s",tabla);
 	//Bloqueo la tabla
 	bloquearTabla(tabla);
-	log_info(g_logger,"Comienzo bloqueo tabla %s",tabla);
 	//sleep(1);
 	long inicioBloqueo = (long)time(NULL);
 
@@ -625,7 +624,7 @@ void compactarTabla(char* tabla){
 	}
 
 	//Libero la lista
-	//list_destroy_and_destroy_elements(list,destroy_nodo_tabla);
+	list_destroy_and_destroy_elements(list,destroy_nodo_tabla);
 
 	//Libero el bloqueo
 	long finBloqueo = (long)time(NULL);
@@ -658,7 +657,7 @@ void bloquearTabla(char* tabla){
 		nodo_bloqueo* bloqueo = (nodo_bloqueo*)list_get(listaBloqueos,i);
 		if(strcmp(bloqueo->tabla,tabla) == 0){
 			encontrada = 1;
-			sem_wait(&bloqueo->bloqueo);
+			sem_wait(&(bloqueo->bloqueo));
 		}
 	}
 	//Si no encontre la tabla en la lista la creo

@@ -12,7 +12,6 @@
 #include "LFS.h"
 #include <dirent.h>
 #include <sys/types.h>
-#include <semaphore.h>
 
 t_list* listaBloqueos;
 

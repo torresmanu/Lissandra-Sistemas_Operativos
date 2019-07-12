@@ -36,4 +36,6 @@ int obtenerSiguienteBloque();
 //Funciones inicializacion
 int inicializarFSPropio();
 
+sem_t semaforo;
+
 #endif /* FILESYSTEM_H_ */

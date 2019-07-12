@@ -132,8 +132,10 @@ void liberarBloque(int bloque){
 }
 
 fs_file* fs_fopen(char* ruta){
+	sem_wait(&semaforo);
 	t_config* f = config_create(ruta);
 	if(f == NULL){
+		sem_post(&semaforo);
 		return NULL;
 	}
 	fs_file * fs_f= malloc(sizeof(fs_file));
@@ -141,19 +143,23 @@ fs_file* fs_fopen(char* ruta){
 	fs_f->size = config_get_int_value(f,"SIZE");
 	fs_f->bloques = config_get_array_value(f,"BLOCKS");
 	config_destroy(f);
+	sem_post(&semaforo);
 	return fs_f;
 }
 
 int fs_fcreate(char* ruta){
+	sem_wait(&semaforo);
 	//Asigno un bloque
 	int bloque = obtenerSiguienteBloque();
 	if(bloque == -1){
 		log_info(g_logger,"No quedan bloques libres");
+		sem_post(&semaforo);
 		return -1;
 	}
 	//Creo el archivo
 	FILE* f = fopen(ruta,"w");
 	if(f == NULL){
+		sem_post(&semaforo);
 		return -1;
 	}
 	//Escribo en el archivo
@@ -161,10 +167,12 @@ int fs_fcreate(char* ruta){
 	fprintf(f,"BLOCKS=[%i]\n",bloque);
 	fprintf(f,"NAME=%s\n",ruta);
 	fclose(f);
+	sem_post(&semaforo);
 	return 0;
 }
 
 void fs_fdelete(fs_file* fs){
+	sem_wait(&semaforo);
 	char* puntoMontura = string_duplicate(puntoMontaje);
 	//Libero los bloques y limpio el archivo de los bloques
 	int i=0;
@@ -187,6 +195,7 @@ void fs_fdelete(fs_file* fs){
 	}
 	//Borro el archivo
 	remove(fs->name);
+	sem_post(&semaforo);
 }
 
 void fs_fclose(fs_file* f){
@@ -194,11 +203,13 @@ void fs_fclose(fs_file* f){
 }
 
 void fs_fread(fs_file* fs,registro* resultado,int position){
+	sem_wait(&semaforo);
 	int size = sizeof(registro)+tamValue;
 	//Si el registro que quiero que leer esta por fuera del size retorno null en resultado
 	if(fs->size < (position+size)){
 		resultado = NULL;
 		log_error(g_logger,"[fs_fread]Devuelvo NULL");
+		sem_post(&semaforo);
 		return;
 	}
 	//Calculo en que bloque esta el registro
@@ -222,6 +233,7 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 	if(fBloque == NULL){
 		resultado = NULL;
 		log_error(g_logger,"[fs_fread]Devuelvo NULL");
+		sem_post(&semaforo);
 		return;
 	}
 	fseek(fBloque, relPosition*size, SEEK_SET );
@@ -229,9 +241,11 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 	resultado->value=malloc(tamValue);
 	fread(resultado->value,tamValue,1,fBloque);
 	fclose(fBloque);
+	sem_post(&semaforo);
 }
 
 int fs_fprint(fs_file* fs, registro* obj){
+	sem_wait(&semaforo);
 	int size = sizeof(registro) + tamValue;
 	//Veo cuantos bloques hay y me quedo con el ultimo
 	int cantBloques=0;
@@ -249,11 +263,13 @@ int fs_fprint(fs_file* fs, registro* obj){
 		ultimoBloque = obtenerSiguienteBloque();
 		//Si el ultimo bloque es menor a cero entonces hay algun error
 		if(ultimoBloque < 0){
+			sem_post(&semaforo);
 			return ultimoBloque;
 		}
 		//Actualizo el archivo con el nuevo bloque
 		t_config* f = config_create(fs->name);
 		if(f == NULL){
+			sem_post(&semaforo);
 			return -2;
 		}
 		char** bloques = config_get_array_value(f,"BLOCKS");
@@ -284,16 +300,18 @@ int fs_fprint(fs_file* fs, registro* obj){
 	string_append(&bloquePath,".bin");
 	FILE* fBloque = fopen(bloquePath,"a");
 	if(fBloque == NULL){
+		sem_post(&semaforo);
 		return -2;
 	}
 	fwrite(obj,sizeof(registro),1,fBloque);
-	printf("Valor insertado: %s\n",obj->value);
+	//printf("Valor insertado: %s\n",obj->value);
 	fwrite(obj->value,tamValue,1,fBloque);
 	fclose(fBloque);
 	//Actualizo el size
 	fs->size = fs->size + size;
 	t_config* f = config_create(fs->name);
 	if(f == NULL){
+		sem_post(&semaforo);
 		return -2;
 	}
 	char strSize[20];
@@ -301,5 +319,6 @@ int fs_fprint(fs_file* fs, registro* obj){
 	config_set_value(f,"SIZE",strSize);
 	config_save(f);
 	config_destroy(f);
+	sem_post(&semaforo);
 	return 0;
 }

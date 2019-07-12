@@ -1,0 +1,111 @@
+[INFO] 17:01:01:523 LFS/(21998:21998): Iniciando aplicacion LFS...
+[0m[INFO] 17:01:01:919 LFS/(21998:21998): FS Propio inicializado correctamente
+[0m[INFO] 17:01:01:931 LFS/(21998:21998): Memtable inicializada correctamente
+[0m[INFO] 17:01:01:934 LFS/(21998:21998): Lista bloqueos tablas iniciada correctamente
+[0m[INFO] 17:01:01:954 LFS/(21998:21998): A la escucha en el puerto 5003
+[0m[INFO] 17:01:02:22 LFS/(21998:21998): Error al obtener el path a las tablas
+[0m[INFO] 17:01:02:37 LFS/(21998:21998): [hiloDump] Hilo de dump creado exitosamente
+[0m[INFO] 17:01:02:47 LFS/(21998:21998): Aplicacion LFS inicializada correctamente
+[0m>JOURNAL
+CORRO SCRIPTS
+Linea ejecutada #1
+[INFO] 17:01:03:820 LFS/(21998:21998): Hilo tabla ANIMALS creado correctamente
+[0m[INFO] 17:01:03:823 LFS/(21998:21998): Tabla ANIMALS creada correctamente
+[0mLinea ejecutada #2
+[INFO] 17:01:03:859 LFS/(21998:21998): Hilo tabla METALS creado correctamente
+[0m[INFO] 17:01:03:861 LFS/(21998:21998): Tabla METALS creada correctamente
+[0mLinea ejecutada #3
+[INFO] 17:01:03:920 LFS/(21998:21998): Valor insertado en memtable
+[0m[INFO] 17:01:08:842 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:01:08:906 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:01:08:948 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:01:08:949 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:01:13:955 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:01:13:956 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:01:13:971 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:01:13:973 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:01:18:976 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:01:18:978 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:01:18:992 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:01:18:994 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:01:23:998 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:01:23:0 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:01:24:17 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:01:24:15 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:01:29:20 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:01:29:22 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:01:29:37 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:01:29:40 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:01:34:43 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:01:34:45 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:01:34:50 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:01:34:52 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:01:39:55 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:01:39:57 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:01:39:72 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:01:39:75 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:01:44:79 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:01:44:81 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:01:44:94 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:01:44:96 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:01:49:99 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:01:49:101 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:01:49:117 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:01:49:118 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:01:54:122 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:01:54:124 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:01:54:140 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:01:54:143 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:01:59:147 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:01:59:149 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:01:59:162 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:01:59:163 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:02:04:167 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:02:04:172 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:02:04:171 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:02:04:177 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:02:09:178 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:02:09:180 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:02:09:194 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:02:09:195 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:02:14:199 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:02:14:201 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:02:14:214 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:02:14:217 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:02:19:220 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:02:19:222 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:02:19:235 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:02:19:237 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:02:24:243 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:02:24:244 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:02:24:261 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:02:24:263 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:02:29:268 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:02:29:270 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:02:29:288 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:02:29:286 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:02:34:293 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:02:34:298 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:02:34:311 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:02:34:312 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:02:39:316 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:02:39:318 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:02:39:331 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:02:39:334 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:02:44:337 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:02:44:339 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:02:44:352 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:02:44:354 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:02:49:359 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:02:49:360 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:02:49:374 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:02:49:377 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:02:54:381 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:02:54:383 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:02:54:397 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:02:54:399 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m[INFO] 17:02:59:402 LFS/(21998:22005): Llamo a funcion compactar tabla METALS
+[0m[INFO] 17:02:59:404 LFS/(21998:22004): Llamo a funcion compactar tabla ANIMALS
+[0m[INFO] 17:02:59:419 LFS/(21998:22005): Tabla METALS sin temporales para compactar
+[0m[INFO] 17:02:59:421 LFS/(21998:22004): Tabla ANIMALS sin temporales para compactar
+[0m
