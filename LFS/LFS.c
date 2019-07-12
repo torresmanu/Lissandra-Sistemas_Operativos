@@ -10,7 +10,6 @@
 
 #include "LFS.h"
 
-
 int main(void) {
 	resultado res;
 	resultadoParser resParser;
@@ -49,6 +48,7 @@ int main(void) {
 int iniciar_programa()
 {
 	pthread_attr_t attr;
+	pthread_attr_t attr2;
 	pthread_t thread;
 
 	//Inicio el logger
@@ -71,6 +71,7 @@ int iniciar_programa()
 	listaBloqueos = list_create();
 	log_info(g_logger,"Lista bloqueos tablas iniciada correctamente");
 
+	//Inicio servidor para escuchar a las memorias
 	server_fd = iniciarServidor(getStringConfig("PUERTO_SERVIDOR"));
 	if(server_fd < 0) {
 		log_error(g_logger, "[iniciar_programa] Ocurrió un error al intentar iniciar el servidor");
@@ -81,7 +82,7 @@ int iniciar_programa()
 		int err = pthread_create(&thread, &attr, esperarClienteNuevo, server_fd);
 		if(err != 0) {
 			char* message_error = malloc(1024 * sizeof(char));
-			*message_error = "[iniciar_programa] Hubo un problema al crear el thread esperarClienteNuevo: ";
+			*message_error = "[iniciar_programa] Hubo un problema al crear el thread esperarClienteNuevo";
 			strcat(message_error, strerror(err));
 			log_error(g_logger, message_error);
 			free(message_error);
@@ -89,16 +90,31 @@ int iniciar_programa()
 		pthread_attr_destroy(&attr);
 	}
 
+	//Inicio los hilos de compactacion
 	listaHilosCompactacion = list_create();
-
 	t_list* metadatas = obtenerTodasMetadata();
 	for(int i = 0; i < list_size(metadatas); i++) {
 		metadataTabla* mt = list_get(metadatas, i);
 		crearHiloCompactacion(mt->nombreTabla);
 	}
 
+	//Inicio el hilo de dump
 	tiempoDump = getIntConfig("TIEMPO_DUMP");
 	crearHiloDump();
+
+	//Inicio el hilo que monitorea el archivo de config
+	pthread_attr_init(&attr2);
+	pthread_attr_setdetachstate(&attr2, PTHREAD_CREATE_DETACHED);
+
+	int err = pthread_create(&thread, &attr2, monitorearConfig, server_fd);
+	if(err != 0) {
+		char* message_error = malloc(1024 * sizeof(char));
+		*message_error = "[iniciar_programa] Hubo un problema al crear el thread monitorearConfig";
+		strcat(message_error, strerror(err));
+		log_error(g_logger, message_error);
+		free(message_error);
+	}
+	pthread_attr_destroy(&attr2);
 
 	return 0;
 }
@@ -385,7 +401,10 @@ resultado drop(char* tabla)
 
 resultado journal()
 {
-	compactar();
+	//compactar();
+	printf("CORRO SCRIPTS\n");
+	correrScript();
+	printf("TERMINO CORRER SCRIPTS\n");
 	resultado res;
 	res.accionEjecutar = JOURNAL;
 	res.contenido = NULL;
@@ -532,16 +551,20 @@ int iniciarServidor(char* configPuerto) {
 void crearHiloCompactacion(char* tabla) {
 	pthread_t thread;
 
-	int err = pthread_create(&thread, NULL, hiloCompactacion, tabla);
-	if(err != 0) {
-		log_info(g_logger,"[crearHiloCompactacion] Hubo un problema al crear el thread de compactación:[%s]", strerror(err));
-	}
-
 	estructuraHiloCompactacion* ehc = malloc(sizeof(estructuraHiloCompactacion));
-	ehc->nombreTabla = strdup(tabla);
+	ehc->nombreTabla = string_duplicate(tabla);
 	ehc->threadId = thread;
 
+
+	int err = pthread_create(&thread, NULL, hiloCompactacion, ehc->nombreTabla);
+	if(err != 0) {
+		log_info(g_logger,"[crearHiloCompactacion] Hubo un problema al crear el thread de compactación:[%s]", strerror(err));
+		free(ehc);
+	}
+
 	list_add(listaHilosCompactacion, ehc);
+
+	log_info(g_logger,"Hilo tabla %s creado correctamente",ehc->nombreTabla);
 }
 
 void hiloCompactacion(char* tabla) {
@@ -549,6 +572,7 @@ void hiloCompactacion(char* tabla) {
 
 	while(1) {
 		sleep(mt.compaction_time/1000);
+		log_info(g_logger,"Llamo a funcion compactar tabla %s",tabla);
 		compactarTabla(tabla);
 	}
 }
@@ -572,6 +596,7 @@ void crearHiloDump(void) {
 void hiloDump(void) {
 	while(1){
 		sleep(tiempoDump/1000);
+		esperarAlgunBloqueo();
 		dump();
 	}
 }
@@ -587,4 +612,76 @@ int getIntConfig(char* key){
 	int value = config_get_int_value(config,key);
 	config_destroy(config);
 	return value;
+}
+
+void monitorearConfig() {
+    int length, i = 0;
+    int fd;
+    int wd;
+    char buffer[BUF_LEN];
+
+    fd = inotify_init();
+
+    if (fd < 0) {
+        perror("inotify_init");
+    }
+
+    wd = inotify_add_watch(fd, "./",IN_MODIFY);
+
+    while(1){
+    	i=0;
+        length = read(fd, buffer, BUF_LEN);
+
+        if (length < 0) {
+            perror("read");
+        }
+        if(length == 0){
+        	printf("no lei nada\n");
+        }
+
+        while (i < length) {
+            struct inotify_event *event =
+                (struct inotify_event *) &buffer[i];
+            if (event->len) {
+                if (event->mask & IN_MODIFY) {
+                	if(strcmp("LFS.config",event->name)==0){
+                		log_info(g_logger,"El archivo %s fue modificado.", event->name);
+                		actualizarRetardos();
+                	}
+                }
+            }
+            i += EVENT_SIZE + event->len;
+        }
+    }
+
+    (void) inotify_rm_watch(fd, wd);
+    (void) close(fd);
+
+}
+
+void actualizarRetardos(){
+	sleep(3);
+	tiempoDump = getIntConfig("TIEMPO_DUMP");
+}
+
+void correrScript(){
+	FILE* file = fopen("../../prueba.lql","r");
+	if(file == NULL){
+		printf("ERROR AL OBTENER EL SCRIPT\n");
+		return;
+	}
+	char linea[1024];
+	int i=1;
+	while(fgets(linea,1024,(FILE*)file)){
+		printf("Linea ejecutada #%i\n",i);
+		resultadoParser resParser = parseConsole(linea);
+		resultado res = parsear_mensaje(&resParser);
+		if(res.resultado == OK){
+		}else{
+			log_info(g_logger,"ERROR");
+		}
+		sleep(1);
+		i++;
+	}
+	fclose(file);
 }
