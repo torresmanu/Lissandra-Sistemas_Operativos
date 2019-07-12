@@ -10,12 +10,17 @@
 // EJECUTAR ARCHIVO LQL
 Script* run(char* path){
 	FILE* arch = fopen(path, "r");
+	Script* script;
 	if(arch == NULL)
-		perror("\nError:");
+	{
+		log_error(g_logger, strerror(errno));
+	}
 	else
+	{
 		log_info(g_logger,"Abro el archivo: %s",path);
+	}
 
-	Script* script = parsearScript(arch);
+	script = parsearScript(arch);
 
 	fclose(arch);
 	return script;
@@ -78,7 +83,6 @@ bool terminoScript(Script *s){
 
 resultado ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio, request);
-	log_info(g_logger,"Elegi memoria: %d",mem->id);
 	resultado resultado = enviarRequest(mem, request);
 	return resultado;
 }
@@ -137,8 +141,7 @@ resultado enviarRequest(Memoria* mem, resultadoParser* request)
 resultado ejecutarScript(Script *s){
 
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
-	log_info(g_logger,"PC:%d",s->pc);
-
+	printf("Va por la request N°: %d\n", s->pc);
 	resultado estado = ejecutarRequest(r);
 
 	(s->pc)++;
@@ -154,7 +157,6 @@ resultado ejecutarRequest(resultadoParser *r)
 
 		if(tabla != NULL){
 			log_info(g_logger,"Uso la tabla: %s",tabla->nombreTabla);
-			log_info(g_logger,"Criterio: %d",toConsistencia(tabla->consistency)->tipo);
 			Criterio* cons = toConsistencia(tabla->consistency);
 			estado = ejecutar(cons,r);
 		}
@@ -176,17 +178,16 @@ resultado ejecutarRequest(resultadoParser *r)
 			{
 				contenidoAdd* contenido = (contenidoAdd *)(r->contenido);
 				Memoria *mem = buscarMemoria(contenido->numMem);
-
-				if(mem==NULL)
+				if(mem==NULL) // Validacion por si no existe
 				{
 					estado.resultado = ERROR;
 					return estado;
 				}
-
 				printf("Criterio: %s\n",contenido->criterio);//OJO CRITERIO
 				Criterio* cons = toConsistencia(contenido->criterio);
 				add(mem,cons);
 				estado.resultado = OK;
+				estado.mensaje = string_duplicate("Memoria agregado al criterio exitosamente");
 				break;
 			}
 			case CREATE:

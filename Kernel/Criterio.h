@@ -23,10 +23,10 @@ Criterio sc,shc,ec;
 void iniciarCriterios();
 void liberarCriterios();
 void liberarMemorias();
-void destroy_nodo_memoria(void * elem);
+void destroy_nodo_memoria(void*);
 Criterio* toConsistencia(char*);
 Memoria* masApropiada(Criterio*, resultadoParser*);
 void add(Memoria*,Criterio*);
-int hash(char* nom);
+int hash(resultadoParser*);
 
 #endif /* CRITERIO_H_ */
