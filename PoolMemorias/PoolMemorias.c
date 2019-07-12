@@ -32,10 +32,10 @@ int main(int argc, char* argv[]) {
 	//pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-	int errThreadGossiping = pthread_create(&threadGossiping, &attr, gossipingConRetardo, NULL);
-	if(errThreadGossiping != 0) {
-		log_info(g_logger,"Hubo un problema al crear el thread gossipingConRetardo:[%s]", strerror(errThreadGossiping));
-	}
+//	int errThreadGossiping = pthread_create(&threadGossiping, &attr, gossipingConRetardo, NULL);
+//	if(errThreadGossiping != 0) {
+//		log_info(g_logger,"Hubo un problema al crear el thread gossipingConRetardo:[%s]", strerror(errThreadGossiping));
+//	}
 	pthread_attr_destroy(&attr);
 
 
@@ -1088,8 +1088,9 @@ void drop(char* nombre_tabla){
 
 		pthread_mutex_lock(&mTabSeg);
 		list_remove_and_destroy_element(tabla_segmentos,segmento->numero_segmento,liberarSegmento);
-		corregirIndicesTablaSegmentos();
 		pthread_mutex_unlock(&mTabSeg);
+
+		corregirIndicesTablaSegmentos();
 
 		pthread_mutex_lock(&mTabPagGlobal);
 		corregirIndicesPaginasGlobal();
