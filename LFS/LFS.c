@@ -482,8 +482,10 @@ void gestionarConexion(int conexion_cliente) {
 				recibiendo = 0;
 			} else {
 				resultado res = parsear_mensaje(&rp);
-				char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
-				send(conexion_cliente, paqueteRespuesta, size_to_send, 0);
+				if(rp.accionEjecutar!=INSERT){
+					char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
+					send(conexion_cliente, paqueteRespuesta, size_to_send, 0);
+				}
 			}
 		}
 	}

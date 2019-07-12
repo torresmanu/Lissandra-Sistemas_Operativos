@@ -80,6 +80,18 @@ resultado ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio, request);
 	log_info(g_logger,"Elegi memoria: %d",mem->id);
 	resultado resultado = enviarRequest(mem, request);
+
+	if(resultado.resultado==FULL){
+		enviarJournal(mem);
+		resultado = enviarRequest(mem, request);
+//		resultadoParser* journal;
+//		journal->accionEjecutar=JOURNAL;
+//		journal->contenido=NULL;
+//		enviarRequest(mem, journal);
+//
+//		resultado = enviarRequest(mem, request);
+	}
+
 	return resultado;
 }
 
