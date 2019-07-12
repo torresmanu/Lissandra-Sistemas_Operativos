@@ -482,8 +482,10 @@ void gestionarConexion(int conexion_cliente) {
 				recibiendo = 0;
 			} else {
 				resultado res = parsear_mensaje(&rp);
-				char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
-				send(conexion_cliente, paqueteRespuesta, size_to_send, 0);
+				if(rp.accionEjecutar!=INSERT){
+					char* paqueteRespuesta = serializarRespuesta(&res, &size_to_send);
+					send(conexion_cliente, paqueteRespuesta, size_to_send, 0);
+				}
 			}
 		}
 	}
@@ -553,14 +555,14 @@ void crearHiloCompactacion(char* tabla) {
 
 	estructuraHiloCompactacion* ehc = malloc(sizeof(estructuraHiloCompactacion));
 	ehc->nombreTabla = string_duplicate(tabla);
-	ehc->threadId = thread;
-
 
 	int err = pthread_create(&thread, NULL, hiloCompactacion, ehc->nombreTabla);
 	if(err != 0) {
 		log_info(g_logger,"[crearHiloCompactacion] Hubo un problema al crear el thread de compactación:[%s]", strerror(err));
 		free(ehc);
 	}
+
+	ehc->threadId = thread;
 
 	list_add(listaHilosCompactacion, ehc);
 

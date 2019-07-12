@@ -545,9 +545,13 @@ resultado mandarALFS(resultadoParser resParser){
 
 	sleep(retardoLFS/1000);
 	char* pi = serializarPaquete(&resParser, &size_to_send);
-	send(serverSocket, pi, size_to_send, 0);
+	pthread_mutex_lock(&mConexion);
 
-	return recibir();
+	send(serverSocket, pi, size_to_send, 0);
+	resultado res = recibir();
+	pthread_mutex_unlock(&mConexion);
+
+	return res;
 }
 
 resultado recibir(){
@@ -703,13 +707,16 @@ void agregarPagina(Registro registro, Segmento *segmento, int posLibre, int valo
 }
 
 resultado iniciarReemplazo(char *nombre_tabla,Registro registro, int flagModificado){
+	pthread_mutex_lock(&mTabPagGlobal);
 	NodoTablaPaginas* nodoPagina = paginaMenosUsada();
+	pthread_mutex_unlock(&mTabPagGlobal);
+
 	log_info(g_logger,"Inicio reemplazo");
 
 	resultado res;
 	if(nodoPagina==NULL){
-		res.resultado = ERROR;
-		char *aux = "Memoria full, hace JOURNAL";
+		res.resultado = FULL;
+		char *aux = "Memoria full";
 		res.mensaje=strdup(aux);
 	}
 
@@ -808,9 +815,14 @@ bool memoriaFull(){
 }
 
 void journal(){
-	log_info(g_logger,"Journaling, por favor espere");
+
 	estaHaciendoJournal=true;
+	pthread_mutex_lock(&mConexion);
+	pthread_mutex_lock(&mTabPagGlobal);
+	log_info(g_logger,"Journaling, por favor espere");
 	list_iterate(tabla_paginas_global,enviarInsert);
+	pthread_mutex_unlock(&mTabPagGlobal);
+	pthread_mutex_unlock(&mConexion);
 
 	pthread_mutex_lock(&mTabSeg);
 	list_clean_and_destroy_elements(tabla_segmentos,liberarSegmento);
@@ -852,10 +864,10 @@ void enviarInsert(void *element){ //ver los casos de error
 
 		((NodoTablaPaginas*)element)->pagina->flag_modificado = 0;
 
-		resultado res = recibir();
-		free(res.mensaje);
-		if(res.contenido!=NULL)
-			free(res.contenido);
+//		resultado res = recibir();
+//		free(res.mensaje);
+//		if(res.contenido!=NULL)
+//			free(res.contenido);
 
 
 	}
@@ -1070,10 +1082,13 @@ void drop(char* nombre_tabla){
 
 		pthread_mutex_lock(&mTabSeg);
 		list_remove_and_destroy_element(tabla_segmentos,segmento->numero_segmento,liberarSegmento);
+		corregirIndicesTablaSegmentos();
 		pthread_mutex_unlock(&mTabSeg);
 
-		corregirIndicesTablaSegmentos();
+		pthread_mutex_lock(&mTabPagGlobal);
 		corregirIndicesPaginasGlobal();
+		pthread_mutex_unlock(&mTabPagGlobal);
+
 		log_info(g_logger, "Se libero el segmento de la tabla %s en memoria",nombre_tabla);
 	}
 	else{

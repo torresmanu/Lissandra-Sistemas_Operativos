@@ -84,6 +84,18 @@ bool terminoScript(Script *s){
 resultado ejecutar(Criterio* criterio, resultadoParser* request){
 	Memoria* mem = masApropiada(criterio, request);
 	resultado resultado = enviarRequest(mem, request);
+
+	if(resultado.resultado==FULL){
+		enviarJournal(mem);
+		resultado = enviarRequest(mem, request);
+//		resultadoParser* journal;
+//		journal->accionEjecutar=JOURNAL;
+//		journal->contenido=NULL;
+//		enviarRequest(mem, journal);
+//
+//		resultado = enviarRequest(mem, request);
+	}
+
 	return resultado;
 }
 

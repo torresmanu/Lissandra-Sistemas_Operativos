@@ -345,7 +345,7 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		memcpy(&valueSize, buffer, buffer_size);
 		if (!status) return -2;
 
-		ci->value = malloc(sizeof(valueSize));
+		ci->value = malloc(valueSize);
 		status = recv(socketCliente, ci->value, valueSize, 0);
 		if (!status) return -2;
 

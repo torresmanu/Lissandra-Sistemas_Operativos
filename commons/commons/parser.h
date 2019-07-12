@@ -37,7 +37,8 @@ typedef enum
 	MENSAJE_MAL_FORMATEADO,
 	ERROR,
 	EnJOURNAL,
-	ENVIADO
+	ENVIADO,
+	FULL
 }estado;
 
 typedef struct
