@@ -29,6 +29,7 @@ int main(void) {
 
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
 //	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
+	pthread_create(&gossipingAutomatico,NULL,(void*)realizarGossipingAutomatico,NULL);
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
@@ -69,6 +70,9 @@ void iniciar_programa(void)
 	//Tasa de refresh de la metada
 	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
 
+	//Tasa de refresh de la metada
+	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
+
 	pool = list_create();			// POOL DE MEMORIAS
 	tablas = list_create();			// ESTRUCTURA QUE CONTIENE TODAS LAS TABLAS (METADATA)
 
@@ -76,13 +80,11 @@ void iniciar_programa(void)
 
 	// Todoo para el describe
 	obtenerMemoriaDescribe();
-	gestionarConexionAMemoria(MemDescribe);
+
+	gossiping();
 
 	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
 	add(MemDescribe,&sc);
-
-	int status = obtenerMemorias(MemDescribe->socket);
-	establecerConexionPool(); 		/// ACA ME CONECTO CON TODAS LAS MEMORIAS DEL POOL ///
 }
 
 void terminar_programa()
@@ -128,6 +130,9 @@ void gestionarConexionAMemoria(Memoria* mem)
 	getaddrinfo(mem->ipMemoria,mem->puerto, &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
 
 	mem->socket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+
+	pthread_mutex_lock(&mConexion);
+
 	int res =connect(mem->socket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
 
 	if(res == -1)
@@ -146,6 +151,9 @@ void gestionarConexionAMemoria(Memoria* mem)
 	send(mem->socket,&codigo,sizeof(uint32_t),0);
 	int status = 0;
 	status = recv(mem->socket,&(mem->id),sizeof(mem->id),0);
+
+	pthread_mutex_unlock(&mConexion);
+
 	if(status != sizeof(uint32_t))
 		log_info(g_logger, "Error al recibir id de memoria");
 	log_info(g_logger, "ID Memoria: %i", mem->id);
@@ -309,6 +317,13 @@ void realizarDescribeGlobal()
 	{
 		describe(NULL);
 		sleep(metadataRefresh/1000); // Lo paso a ms
+	}
+}
+
+void realizarGossipingAutomatico(){
+	while(1){
+		sleep(retardoGossiping/1000);
+		gossiping();
 	}
 }
 

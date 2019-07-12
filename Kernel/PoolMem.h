@@ -18,6 +18,9 @@
 #include <string.h>
 #include <sys/socket.h>
 
+// Semaforos
+pthread_mutex_t mConexion;
+
 //las puse aca para que no me rompa, buscar un lugar mejor
 t_log* g_logger;
 t_config* g_config;
@@ -38,7 +41,7 @@ Memoria* MemDescribe;
 
 // MANEJO DE MEMORIAS
 int obtenerMemorias(int socket);
-void gossiping(Memoria *mem);
+void gossiping();
 Memoria obtenerMemoria(t_config* config);
 Memoria *buscarMemoria(int numero);
 void obtenerMemoriaDescribe();

@@ -26,9 +26,11 @@ int quantum; 					// Cantidad de Scripts en el estado EXEC
 int nivelMultiprocesamiento;    // Cuantos procesos (hilos) voy a ejecutar
 int nivelActual;
 int metadataRefresh;
+int retardoGossiping;
 
 pthread_t plp; // Planificador a largo plazo
 pthread_t describeGlobal; // Describe global
+pthread_t gossipingAutomatico;
 pthread_t* executer;
 
 resultado finalizar; // Variable de corte
@@ -51,5 +53,7 @@ bool deboSalir(Script *s);
 
 // DESCRIBE GLOBAL
 void realizarDescribeGlobal();
+
+void realizarGossipingAutomatico();
 
 #endif /* KERNEL_H_ */

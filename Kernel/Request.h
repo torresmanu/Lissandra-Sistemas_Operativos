@@ -24,8 +24,7 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 
-// Semaforos
-pthread_mutex_t mConexion;
+
 
 typedef struct{
 	t_list *instrucciones;

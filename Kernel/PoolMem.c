@@ -46,11 +46,13 @@ int obtenerMemorias(int socket){
 		status = recv(socket,&memNueva->id,sizeof(uint32_t),0);
 		if(status != sizeof(uint32_t)) return -2;
 
+		log_info(g_logger,"Recibi memoria:%d",memNueva->id);
+
 		if(!tengoMemoria(memNueva)){
 			memNueva->socket=-1;
 
 			list_add(pool,memNueva);
-			log_info(g_logger,"Recibi memoria numero:%d",memNueva->id);
+			log_info(g_logger,"Agregue memoria nueva numero:%d",memNueva->id);
 		}
 	}
 
@@ -78,6 +80,7 @@ void obtenerMemoriaDescribe()
 	MemDescribe->id = 22;
 	MemDescribe->ipMemoria = config_get_string_value(g_config,"IP_MEMORIA");
 	MemDescribe->puerto = config_get_string_value(g_config, "PUERTO_MEMORIA");
+	MemDescribe->socket = -1;
 	list_add(pool,MemDescribe);
 }
 
@@ -86,4 +89,13 @@ Memoria *buscarMemoria(int numero){
 		return ((Memoria*)elem)->id == numero;
 	}
 	return list_find(pool,numerosIguales);
+}
+
+void gossiping(){
+	establecerConexionPool();
+
+	pthread_mutex_lock(&mConexion);
+	int status = obtenerMemorias(MemDescribe->socket);
+	pthread_mutex_unlock(&mConexion);
+
 }
