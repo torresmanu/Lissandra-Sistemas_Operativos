@@ -55,6 +55,11 @@ int iniciar_programa()
 	g_logger = log_create("LFS.log", "LFS", 1, LOG_LEVEL_INFO);
 	log_info(g_logger,"Iniciando aplicacion LFS...");
 
+	tamValue = getIntConfig("TAMANIO_VALUE");
+	tamanioBloque = getIntConfig("BLOCK_SIZE");
+	puntoMontaje = getStringConfig("PUNTO_MONTAJE");
+	magicNumber = getStringConfig("MAGIC_NUMBER");
+
 	//Inicializo el FS Propio
 	int status = inicializarFSPropio();
 	if(status != 0){
@@ -196,7 +201,8 @@ resultado parsear_mensaje(resultadoParser* resParser)
 resultado select_acc(char* tabla,int key)
 {
 	//Chequeo que no este bloqueada la tabla
-	esperarBloqueo(tabla);
+	bloquearTabla(tabla);
+	liberarBloqueoTabla(tabla);
 
 	resultado res;
 	res.accionEjecutar = SELECT;
@@ -299,7 +305,8 @@ resultado insert(char* tabla,int key,char* value,long timestamp)
 resultado create(char* tabla,char* t_cons,int cant_part,int tiempo_comp)
 {
 	//Chequeo que no este bloqueada la tabla
-	esperarBloqueo(tabla);
+	bloquearTabla(tabla);
+	liberarBloqueoTabla(tabla);
 
 	resultado res;
 	res.accionEjecutar = CREATE;
@@ -374,7 +381,8 @@ resultado describe(char* tabla)
 resultado drop(char* tabla)
 {
 	//Chequeo que no este bloqueada la tabla
-	esperarBloqueo(tabla);
+	bloquearTabla(tabla);
+	liberarBloqueoTabla(tabla);
 
 	resultado res;
 	res.accionEjecutar = DROP;
@@ -598,7 +606,6 @@ void crearHiloDump(void) {
 void hiloDump(void) {
 	while(1){
 		sleep(tiempoDump/1000);
-		esperarAlgunBloqueo();
 		dump();
 	}
 }

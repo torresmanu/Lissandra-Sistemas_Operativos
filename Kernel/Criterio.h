@@ -27,6 +27,12 @@ void destroy_nodo_memoria(void*);
 Criterio* toConsistencia(char*);
 Memoria* masApropiada(Criterio*, resultadoParser*);
 void add(Memoria*,Criterio*);
+
+//RANDOM (EC)
+int memoriaRandom();
+
+//HASHEO (SHC)
 int hash(resultadoParser*);
+int obtenerHash(resultadoParser*);
 
 #endif /* CRITERIO_H_ */

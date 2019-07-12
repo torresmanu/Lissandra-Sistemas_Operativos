@@ -48,21 +48,26 @@ Criterio* toConsistencia(char* cadena)
 
 Memoria* masApropiada(Criterio* c, resultadoParser* r){
 	Memoria* mem;
-	int indice;
 	int memoriaElegida;
 	switch(c->tipo)
 	{
 		case SC:
-			mem = (Memoria*)list_get(sc.memorias,0);		// LOGICA DE CRITERIO STRONG CONSISTENCY
+		{	// LOGICA DE CRITERIO STRONG CONSISTENCY
+			mem = (Memoria*)list_get(sc.memorias,0);
 			break;
-		case SHC:											// LOGICA DE CRITERIO STRONG HASH CONSISTENCY
-			memoriaElegida = hash(r);
-			mem = (Memoria*)list_get(shc.memorias,memoriaElegida);
+		}
+		case SHC:
+		{
+			// LOGICA DE CRITERIO STRONG HASH CONSISTENCY
+			memoriaElegida = hash(r)+1;
+			mem = (Memoria*)list_get(shc.memorias,memoriaElegida-1);
 			break;
+		}
 		case EC:
 		{
-			memoriaElegida = rand()%list_size(ec.memorias)+1;	// Que sea aleatoria
-			mem = (Memoria*)list_get(ec.memorias,memoriaElegida-1); // LOGICA DE CRITERIO EVENTUAL CONSISTENCY
+			// LOGICA DE CRITERIO EVENTUAL CONSISTENCY
+			memoriaElegida = memoriaRandom()+1;				//(+1 porque los IDs de las memorias empiezan desde 1)
+			mem = (Memoria*)list_get(ec.memorias,memoriaElegida-1);
 			log_info(g_logger,"Elegi la memoria ID: %d", mem->id);
 			break;
 		}
@@ -81,12 +86,21 @@ void add(Memoria *memoria,Criterio *cons)
 	log_info(g_logger,"Agrege memoria N°:%d al criterio %d",memoria->id,cons->tipo);
 }
 
-/// Funcion de hasheo
+/// Funcion random (EC)
+int memoriaRandom()
+{
+	return rand()%list_size(ec.memorias);
+}
+
+/// Funcion de hasheo (SHC)
 int hash(resultadoParser* r)
 {
 	int cantMemorias = list_size(shc.memorias);
-	int numeroMemoria;
-
-
-	return numeroMemoria;
+	return obtenerHash(r)%cantMemorias; 			// 19827%3 --> 0
 }
+
+int obtenerHash(resultadoParser* r)
+{
+
+}
+

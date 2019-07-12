@@ -36,6 +36,10 @@ char* IP_FS;
 char* PUERTO_FS;
 t_list* listaHilosCompactacion;
 int tiempoDump;
+int tamValue;
+int tamanioBloque;
+char* puntoMontaje;
+char* magicNumber;
 
 typedef struct {
 	char* nombreTabla;

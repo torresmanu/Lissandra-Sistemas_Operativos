@@ -63,5 +63,6 @@ void reemplazarMetadata(metadataTabla* tablaNueva);
 resultado recibir(int conexion);
 resultado describe();
 resultado journal();
+void enviarJournal(void*);
 
 #endif /* REQUEST_H_ */
