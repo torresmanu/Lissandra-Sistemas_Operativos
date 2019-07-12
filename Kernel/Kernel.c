@@ -346,7 +346,9 @@ resultado describe(char* nombreTabla)
 			{
 				tablaLFS = (t_list*)res.contenido;
 
-				if(list_size(tablaLFS)>1){
+
+
+				if(list_size(tablaLFS)>0){
 					list_clean(tablas);						// Para no agregar repetidas
 					list_add_all(tablas,tablaLFS);
 					log_info(g_logger,"Describe global realizado con éxito");
@@ -357,9 +359,9 @@ resultado describe(char* nombreTabla)
 						log_info(g_logger,"Tablas indexada n°:%d -> %s", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
 					}
 				}
-				else{
-					reemplazarMetadata(list_get(tablaLFS,0));
-				}
+				else
+					log_info(g_logger,"No hay tablas");
+
 				res.resultado = OK;
 			}
 	}
