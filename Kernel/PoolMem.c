@@ -22,6 +22,8 @@ int obtenerMemorias(int socket){
 	if(status != sizeof(uint32_t)) return -2;
 	int cantElem = *(int*)buffer;
 
+	t_list* tablaGossip = list_create();
+
 	for(int i=0;i < cantElem;i++){
 		Memoria* memNueva = malloc(sizeof(Memoria));
 
@@ -44,17 +46,30 @@ int obtenerMemorias(int socket){
 		status = recv(socket,&memNueva->id,sizeof(uint32_t),0);
 		if(status != sizeof(uint32_t)) return -2;
 
-		if(memNueva->id==MemDescribe->id)
-			break;
+		if(!tengoMemoria(memNueva)){
+			memNueva->socket=-1;
 
-		memNueva->socket=-1;
-
-		list_add(pool,memNueva);
-		log_info(g_logger,"Recibi memoria numero:%d",memNueva->id);
+			list_add(pool,memNueva);
+			log_info(g_logger,"Recibi memoria numero:%d",memNueva->id);
+		}
 	}
+
 	free(buffer);
 	log_info(g_logger,"Recibi tabla completa");
 	return status;
+}
+
+bool tengoMemoria(Memoria* memNueva){
+	bool coincideId(void* elem){
+		Memoria* mem = elem;
+		return mem->id == memNueva->id;
+	}
+
+	return list_any_satisfy(pool,coincideId);
+}
+
+bool estoyConectado(Memoria* mem){
+	return mem->socket != -1;
 }
 
 void obtenerMemoriaDescribe()

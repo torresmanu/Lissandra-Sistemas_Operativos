@@ -400,8 +400,7 @@ void establecerConexionPool()
 	for(int i = 0; i<pool->elements_count; i++)
 	{
 		mem = list_get(pool,i);
-		if(mem->socket==MemDescribe->socket)
-			break;
-		gestionarConexionAMemoria(mem);
+		if(!estoyConectado(mem))
+			gestionarConexionAMemoria(mem);
 	}
 }

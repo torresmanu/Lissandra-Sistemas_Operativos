@@ -42,5 +42,7 @@ void gossiping(Memoria *mem);
 Memoria obtenerMemoria(t_config* config);
 Memoria *buscarMemoria(int numero);
 void obtenerMemoriaDescribe();
+bool tengoMemoria(Memoria* memNueva);
+bool estoyConectado(Memoria* mem);
 
 #endif /* POOLMEM_H_ */
