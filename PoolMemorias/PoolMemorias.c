@@ -190,6 +190,9 @@ void escucharKernel(int* conexion_cliente){
 		{
 			log_info(g_logger,"El kernel se desconecto");
 		}
+		else if(res.resultado == FULL){
+			log_info(g_logger,"Memoria FULL");
+		}
 
 		avisarResultado(res,*conexion_cliente);
 
@@ -585,7 +588,7 @@ resultado select_t(char *nombre_tabla, int key){
 
 	resultado res;
 	res.contenido=NULL;
-	res.accionEjecutar = SELECT;
+
 
 	Registro* registro;
 
@@ -638,6 +641,7 @@ resultado select_t(char *nombre_tabla, int key){
 	}
 	res.contenido = registro;
 
+	res.accionEjecutar = SELECT;
 	return res;
 }
 
