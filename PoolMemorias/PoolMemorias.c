@@ -175,23 +175,22 @@ void escucharKernel(int* conexion_cliente){
 		}
 		else if(res.resultado == ERROR)
 		{
-			log_info(g_logger,"Ocurrio un error al ejecutar la acción");
-			log_info(g_logger,res.mensaje);
+			log_error(g_logger,"Ocurrio un error al ejecutar la acción: %s",res.mensaje);
 		}
 		else if(res.resultado == MENSAJE_MAL_FORMATEADO)
 		{
-			log_info(g_logger,"Mensaje incorrecto");
+			log_error(g_logger,"Mensaje incorrecto");
 		}
 		else if(res.resultado == EnJOURNAL)
 		{
-			log_info(g_logger,"Se esta haciendo Journaling, ingrese la request mas tarde");
+			log_warning(g_logger,"Se esta haciendo Journaling, ingrese la request mas tarde");
 		}
 		else if(res.resultado == SALIR)
 		{
-			log_info(g_logger,"El kernel se desconecto");
+			log_error(g_logger,"El kernel se desconecto");
 		}
 		else if(res.resultado == FULL){
-			log_info(g_logger,"Memoria FULL");
+			log_warning(g_logger,"Memoria FULL");
 		}
 
 		avisarResultado(res,*conexion_cliente);

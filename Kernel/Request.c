@@ -123,7 +123,7 @@ resultado recibir(int conexion){
 		if(status<0)
 			log_error(g_logger,"No hubo respuesta de la memoria.");
 		else if(res.resultado != OK)
-			log_error(g_logger,res.mensaje);
+			log_warning(g_logger,res.mensaje);
 		else
 			log_info(g_logger,"Acción ejecutada con éxito.");
 
