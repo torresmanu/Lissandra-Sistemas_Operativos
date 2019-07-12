@@ -265,7 +265,7 @@ int iniciarServidor() {
 	servidor.sin_addr.s_addr = INADDR_ANY;
 
 	if(bind(conexion_servidor, (struct sockaddr *)&servidor, sizeof(servidor)) < 0) {
-		log_info(g_logger,"Error al asociar el puerto a la conexion. Posiblemente el puerto se encuentre ocupado");
+		log_error(g_logger,"Error al asociar el puerto a la conexion. Posiblemente el puerto se encuentre ocupado");
 	    close(conexion_servidor);
 	    return -1;
 	}
@@ -284,10 +284,10 @@ int conectarAlKernel(int conexion_servidor){
 
 	conexion_cliente = accept(conexion_servidor, (struct sockaddr *)&cliente, &longc);
 	if(conexion_cliente<0)
-		printf("Error al aceptar trafico\n");
+		log_error(g_logger,"Error al aceptar trafico");
 	else{
 		longc = sizeof(cliente);
-		printf("Conectando con %s:%d\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
+		log_error(g_logger,"Conectando con %s:%d", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
 	}
 	return conexion_cliente;
 }
@@ -343,7 +343,7 @@ void monitorearConfig() {
             perror("read");
         }
         if(length == 0){
-        	printf("no lei nada\n");
+        	log_error(g_logger,"No lei cambios en config");
         }
 
         while (i < length) {
@@ -393,7 +393,7 @@ bool iniciar_programa()
 	//Me conecto al LFS
 	bool estado = gestionarConexionALFS();
 	if(!estado){
-		log_info(g_logger,"Error al conectarse al LFS");
+		log_error(g_logger,"Error al conectarse al LFS");
 		return false;
 	}
 
@@ -414,7 +414,7 @@ bool iniciar_programa()
 	memoria=malloc(TAM_MEMORIA_PRINCIPAL);
 
 	if(memoria==NULL){
-		log_info(g_logger,"Error al inicializar la memoria principal");
+		log_error(g_logger,"Error al inicializar la memoria principal");
 		return false;
 	}
 
@@ -487,14 +487,14 @@ bool handshake(){
 	int valueResponse = recv(serverSocket, buffer, sizeof(int), 0);
 	memcpy(&acc, buffer, sizeof(int));
 	if(valueResponse < 0) {
-		log_info(g_logger,"Error al recibir los datos del handshake");
+		log_error(g_logger,"Error al recibir los datos del handshake");
 		estado = false;
 	} else {
 		resultado res;
 		res.accionEjecutar = acc;
 		int status = recibirYDeserializarRespuesta(serverSocket, &res);
 		if(status<0) {
-			log_info(g_logger,"Error");
+			log_error(g_logger,"Error al deserializar respuesta");
 			estado = false;
 		} else {
 			log_info(g_logger,"Recibi la respuesta del HANDSHAKE");
@@ -566,14 +566,14 @@ resultado recibir(){
 
 	if(valueResponse < 0) {
 		res.resultado=ERROR;
-		log_info(g_logger,"Error al recibir los datos");
+		log_error(g_logger,"Error al recibir los datos");
 	} else {
 
 		res.accionEjecutar = acc;
 		int status = recibirYDeserializarRespuesta(serverSocket, &res);
 		if(status<0) {
 			res.contenido=NULL;
-			log_info(g_logger,"Error");
+			log_error(g_logger,"Error al recibir");
 		} else if(res.resultado != OK) {
 			res.contenido=NULL;
 			log_info(g_logger,res.mensaje);
@@ -613,7 +613,7 @@ resultado select_t(char *nombre_tabla, int key){
 		actualizarTablaGlobal(pagina->numero_pagina);
 	}
 	else{
-		log_info(g_logger,"No encontre el registro, voy a hablar con el LFS");	//Tengo que pedirselo al LFS y agregarlo en la pagina
+		log_warning(g_logger,"No encontre el registro, voy a hablar con el LFS");	//Tengo que pedirselo al LFS y agregarlo en la pagina
 
 		registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
 
@@ -773,16 +773,15 @@ void consola(){
 		}
 		else if(res.resultado == ERROR)
 		{
-			log_info(g_logger,"Ocurrio un error al ejecutar la acción");
-			log_info(g_logger,res.mensaje);
+			log_error(g_logger,"Ocurrio un error al ejecutar la acción: %s",res.mensaje);
 		}
 		else if(res.resultado == MENSAJE_MAL_FORMATEADO)
 		{
-			log_info(g_logger,"Mensaje incorrecto");
+			log_warning(g_logger,"Mensaje incorrecto");
 		}
 		else if(res.resultado == EnJOURNAL)
 		{
-			log_info(g_logger,"Se esta haciendo Journaling, ingrese la request mas tarde");
+			log_warning(g_logger,"Se esta haciendo Journaling, ingrese la request mas tarde");
 		}
 		else if(res.resultado == SALIR)
 		{
@@ -824,7 +823,7 @@ void journal(){
 	estaHaciendoJournal=true;
 	pthread_mutex_lock(&mConexion);
 	pthread_mutex_lock(&mTabPagGlobal);
-	log_info(g_logger,"Journaling, por favor espere");
+	log_warning(g_logger,"Journaling, por favor espere");
 	list_iterate(tabla_paginas_global,enviarInsert);
 	pthread_mutex_unlock(&mTabPagGlobal);
 	pthread_mutex_unlock(&mConexion);
