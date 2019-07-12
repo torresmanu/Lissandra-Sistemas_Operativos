@@ -580,6 +580,7 @@ resultado select_t(char *nombre_tabla, int key){
 	Pagina* pagina;
 
 	resultado res;
+	res.contenido=NULL;
 	res.accionEjecutar = SELECT;
 
 	Registro* registro;
