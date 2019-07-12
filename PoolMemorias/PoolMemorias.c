@@ -573,8 +573,10 @@ resultado recibir(){
 		res.accionEjecutar = acc;
 		int status = recibirYDeserializarRespuesta(serverSocket, &res);
 		if(status<0) {
+			res.contenido=NULL;
 			log_info(g_logger,"Error");
 		} else if(res.resultado != OK) {
+			res.contenido=NULL;
 			log_info(g_logger,res.mensaje);
 		}
 	}
