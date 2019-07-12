@@ -22,8 +22,6 @@ int obtenerMemorias(int socket){
 	if(status != sizeof(uint32_t)) return -2;
 	int cantElem = *(int*)buffer;
 
-	t_list* tablaGossip = list_create();
-
 	for(int i=0;i < cantElem;i++){
 		Memoria* memNueva = malloc(sizeof(Memoria));
 
@@ -94,8 +92,51 @@ Memoria *buscarMemoria(int numero){
 void gossiping(){
 	establecerConexionPool();
 
-	pthread_mutex_lock(&mConexion);
+	bloquearConexion(MemDescribe);
+
 	int status = obtenerMemorias(MemDescribe->socket);
-	pthread_mutex_unlock(&mConexion);
+	desbloquearConexion(MemDescribe);
 
 }
+
+void establecerConexionPool()
+{
+	Memoria* mem;
+
+	for(int i = 0; i<pool->elements_count; i++)
+	{
+		mem = list_get(pool,i);
+		if(!estoyConectado(mem))
+			gestionarConexionAMemoria(mem);
+	}
+}
+
+
+
+void agregarMutex(Memoria* mem){
+	pthread_mutex_t* mutex = malloc(sizeof(pthread_mutex_t));
+	pthread_mutex_init(mutex,NULL);
+
+	dictionary_put(mutexsConexiones,mem->puerto,mutex);
+}
+
+void liberarMutexs(){
+	dictionary_destroy_and_destroy_elements(mutexsConexiones,pthread_mutex_destroy);
+}
+
+pthread_mutex_t* obtenerMutex(Memoria* mem){
+	return dictionary_get(mutexsConexiones,mem->puerto);
+}
+
+void bloquearConexion(Memoria* mem){
+	pthread_mutex_t* mConexion = obtenerMutex(mem);
+
+	pthread_mutex_lock(mConexion);
+}
+
+void desbloquearConexion(Memoria* mem){
+	pthread_mutex_t* mConexion = obtenerMutex(mem);
+
+	pthread_mutex_unlock(mConexion);
+}
+

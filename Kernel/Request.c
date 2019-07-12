@@ -136,10 +136,11 @@ resultado enviarRequest(Memoria* mem, resultadoParser* request)
 	int size;
 
 	char* msg = serializarPaquete(request,&size);
-	pthread_mutex_lock(&mConexion);
+
+	bloquearConexion(mem);
 	send(mem->socket, msg, size, 0);
 	res = recibir(mem->socket);
-	pthread_mutex_unlock(&mConexion);
+	desbloquearConexion(mem);
 
 	return res;
 }
@@ -285,10 +286,10 @@ void enviarJournal(void* element){
 	int size_to_send;
 	char* pi = serializarPaquete(&resParser, &size_to_send);
 
-	pthread_mutex_lock(&mConexion);
+	bloquearConexion(mem);
 	send(mem->socket, pi, size_to_send, 0);
 	resultado res = recibir(mem->socket);
-	pthread_mutex_unlock(&mConexion);
+	bloquearConexion(mem);
 
 	free(res.mensaje);
 	if(res.contenido!=NULL)

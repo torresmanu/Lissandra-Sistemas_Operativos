@@ -17,9 +17,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <semaphore.h>
+#include <pthread.h>
 
 // Semaforos
-pthread_mutex_t mConexion;
+t_dictionary* mutexsConexiones;
 
 //las puse aca para que no me rompa, buscar un lugar mejor
 t_log* g_logger;
@@ -40,6 +42,8 @@ t_list *pool;
 Memoria* MemDescribe;
 
 // MANEJO DE MEMORIAS
+void establecerConexionPool();
+
 int obtenerMemorias(int socket);
 void gossiping();
 Memoria obtenerMemoria(t_config* config);
@@ -47,5 +51,11 @@ Memoria *buscarMemoria(int numero);
 void obtenerMemoriaDescribe();
 bool tengoMemoria(Memoria* memNueva);
 bool estoyConectado(Memoria* mem);
+
+void agregarMutex(Memoria* mem);
+void liberarMutexs();
+pthread_mutex_t* obtenerMutex(Memoria* mem);
+void bloquearConexion(Memoria* mem);
+void desbloquearConexion(Memoria* mem);
 
 #endif /* POOLMEM_H_ */

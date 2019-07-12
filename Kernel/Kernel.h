@@ -14,8 +14,6 @@
 #include <commons/log.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#include <semaphore.h>
-#include <pthread.h>
 #include "Estados.h"
 #include "Request.h"
 
@@ -40,8 +38,7 @@ void iniciar_programa(void);
 void terminar_programa(void);
 int enviar_mensaje(int socket_cliente);
 int iniciarCliente();
-void gestionarConexionAMemoria(Memoria *mem);
-void establecerConexionPool();
+
 
 //////////// CONSOLA Y PLANIFICADORES ////////////
 void leerConsola();
@@ -55,5 +52,8 @@ bool deboSalir(Script *s);
 void realizarDescribeGlobal();
 
 void realizarGossipingAutomatico();
+
+void gestionarConexionAMemoria(Memoria *mem);
+
 
 #endif /* KERNEL_H_ */

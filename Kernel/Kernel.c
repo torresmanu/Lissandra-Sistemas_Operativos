@@ -16,7 +16,6 @@ int main(void) {
 	pthread_mutex_init(&mNew,NULL);
 	pthread_mutex_init(&mReady,NULL);
 	pthread_mutex_init(&mExit,NULL);
-	pthread_mutex_init(&mConexion,NULL);
 
 	iniciar_programa();
 
@@ -57,6 +56,8 @@ void iniciar_programa(void)
 	//Inicio las configs
 	g_config = config_create("Kernel.config");
 	log_info(g_logger,"Configuraciones inicializadas");
+
+	mutexsConexiones = dictionary_create();
 
 	//Inicializo los estados
 	iniciarEstados();
@@ -115,49 +116,12 @@ void terminar_programa()
 	//Libero el pool de memorias
 	liberarMemorias();
 
+	//Libero el diccionario de mutexs
+	liberarMutexs();
+
 }
 
-void gestionarConexionAMemoria(Memoria* mem)
-{
 
-	struct addrinfo hints;
-	struct addrinfo* serverInfo;
-
-	memset(&hints, 0, sizeof(hints)); // Relleno con 0 toda la estructura de hints.
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-
-	getaddrinfo(mem->ipMemoria,mem->puerto, &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
-
-	mem->socket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
-
-	pthread_mutex_lock(&mConexion);
-
-	int res =connect(mem->socket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
-
-	if(res == -1)
-	{
-		log_error(g_logger, "Memoria inaccesible: %s", strerror(errno));
-	}
-	else
-	{
-		log_info(g_logger, "Conectado con IP: %s:%s",MemDescribe->ipMemoria, MemDescribe->puerto);
-
-	}
-	freeaddrinfo(serverInfo); // Libero
-
-	// Envio un 1
-	uint32_t codigo = 1;
-	send(mem->socket,&codigo,sizeof(uint32_t),0);
-	int status = 0;
-	status = recv(mem->socket,&(mem->id),sizeof(mem->id),0);
-
-	pthread_mutex_unlock(&mConexion);
-
-	if(status != sizeof(uint32_t))
-		log_info(g_logger, "Error al recibir id de memoria");
-	log_info(g_logger, "ID Memoria: %i", mem->id);
-}
 
 
 // Propias de Kernel
@@ -346,7 +310,7 @@ resultado describe(char* nombreTabla)
 
 	char* msg = serializarPaquete(describe,&size);
 
-	pthread_mutex_lock(&mConexion);
+	bloquearConexion(mem);
 
 	send(mem->socket, msg, size, 0);
 	// Pido el describe a la memoria
@@ -358,13 +322,13 @@ resultado describe(char* nombreTabla)
 	if(valueResponse < 0)
 	{
 		log_error(g_logger,strerror(errno));
-		pthread_mutex_unlock(&mConexion);
+		desbloquearConexion(mem);
 		res.resultado = ERROR;
 	}
 	else if(valueResponse == 0)
 	{
 		log_error(g_logger,"Posiblemente la memoria se desconectó.");
-		pthread_mutex_unlock(&mConexion);
+		desbloquearConexion(mem);
 		res.resultado = ERROR;
 	}
 	else
@@ -372,7 +336,7 @@ resultado describe(char* nombreTabla)
 		res.accionEjecutar=acc;
 		statusRespuesta = recibirYDeserializarRespuesta(mem->socket,&res); // Recibo la lista de tablas
 
-		pthread_mutex_unlock(&mConexion);
+		desbloquearConexion(mem);
 
 		if(statusRespuesta<0 || res.resultado == ERROR)
 			{
@@ -408,14 +372,47 @@ resultado describe(char* nombreTabla)
 	return res;
 }
 
-void establecerConexionPool()
+void gestionarConexionAMemoria(Memoria* mem)
 {
-	Memoria* mem;
 
-	for(int i = 0; i<pool->elements_count; i++)
+	struct addrinfo hints;
+	struct addrinfo* serverInfo;
+
+	memset(&hints, 0, sizeof(hints)); // Relleno con 0 toda la estructura de hints.
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+
+	getaddrinfo(mem->ipMemoria,mem->puerto, &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
+
+	mem->socket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+
+	agregarMutex(mem);
+
+	bloquearConexion(mem);
+
+	int res =connect(mem->socket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
+
+	if(res == -1)
 	{
-		mem = list_get(pool,i);
-		if(!estoyConectado(mem))
-			gestionarConexionAMemoria(mem);
+		log_error(g_logger, "Memoria inaccesible: %s", strerror(errno));
 	}
+	else
+	{
+		log_info(g_logger, "Conectado con IP: %s:%s",MemDescribe->ipMemoria, MemDescribe->puerto);
+
+		// Envio un 1
+		uint32_t codigo = 1;
+		send(mem->socket,&codigo,sizeof(uint32_t),0);
+		int status = 0;
+		status = recv(mem->socket,&(mem->id),sizeof(mem->id),0);
+
+		desbloquearConexion(mem);
+
+		if(status != sizeof(uint32_t))
+			log_info(g_logger, "Error al recibir id de memoria");
+		log_info(g_logger, "ID Memoria: %i", mem->id);
+
+	}
+	freeaddrinfo(serverInfo); // Libero
+
 }
