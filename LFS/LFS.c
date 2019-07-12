@@ -401,7 +401,10 @@ resultado drop(char* tabla)
 
 resultado journal()
 {
-	compactar();
+	//compactar();
+	printf("CORRO SCRIPTS\n");
+	correrScript();
+	printf("TERMINO CORRER SCRIPTS\n");
 	resultado res;
 	res.accionEjecutar = JOURNAL;
 	res.contenido = NULL;
@@ -548,16 +551,20 @@ int iniciarServidor(char* configPuerto) {
 void crearHiloCompactacion(char* tabla) {
 	pthread_t thread;
 
-	int err = pthread_create(&thread, NULL, hiloCompactacion, tabla);
-	if(err != 0) {
-		log_info(g_logger,"[crearHiloCompactacion] Hubo un problema al crear el thread de compactación:[%s]", strerror(err));
-	}
-
 	estructuraHiloCompactacion* ehc = malloc(sizeof(estructuraHiloCompactacion));
-	ehc->nombreTabla = strdup(tabla);
+	ehc->nombreTabla = string_duplicate(tabla);
 	ehc->threadId = thread;
 
+
+	int err = pthread_create(&thread, NULL, hiloCompactacion, ehc->nombreTabla);
+	if(err != 0) {
+		log_info(g_logger,"[crearHiloCompactacion] Hubo un problema al crear el thread de compactación:[%s]", strerror(err));
+		free(ehc);
+	}
+
 	list_add(listaHilosCompactacion, ehc);
+
+	log_info(g_logger,"Hilo tabla %s creado correctamente",ehc->nombreTabla);
 }
 
 void hiloCompactacion(char* tabla) {
@@ -565,6 +572,7 @@ void hiloCompactacion(char* tabla) {
 
 	while(1) {
 		sleep(mt.compaction_time/1000);
+		log_info(g_logger,"Llamo a funcion compactar tabla %s",tabla);
 		compactarTabla(tabla);
 	}
 }
@@ -588,6 +596,7 @@ void crearHiloDump(void) {
 void hiloDump(void) {
 	while(1){
 		sleep(tiempoDump/1000);
+		esperarAlgunBloqueo();
 		dump();
 	}
 }
@@ -653,4 +662,26 @@ void monitorearConfig() {
 void actualizarRetardos(){
 	sleep(3);
 	tiempoDump = getIntConfig("TIEMPO_DUMP");
+}
+
+void correrScript(){
+	FILE* file = fopen("../../prueba.lql","r");
+	if(file == NULL){
+		printf("ERROR AL OBTENER EL SCRIPT\n");
+		return;
+	}
+	char linea[1024];
+	int i=1;
+	while(fgets(linea,1024,(FILE*)file)){
+		printf("Linea ejecutada #%i\n",i);
+		resultadoParser resParser = parseConsole(linea);
+		resultado res = parsear_mensaje(&resParser);
+		if(res.resultado == OK){
+		}else{
+			log_info(g_logger,"ERROR");
+		}
+		sleep(1);
+		i++;
+	}
+	fclose(file);
 }
