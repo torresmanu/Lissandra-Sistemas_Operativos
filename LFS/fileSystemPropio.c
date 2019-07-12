@@ -12,7 +12,7 @@
 
 int inicializarFSPropio(){
 	//Inicializo primero el bitmap
-	char* metadataPath = getStringConfig("PUNTO_MONTAJE");
+	char* metadataPath = string_duplicate(puntoMontaje);
 	string_append(&metadataPath,"/metadata");
 	char* fsBitmapPath = string_duplicate(metadataPath);
 	string_append(&fsBitmapPath,"/bitmap.bin");
@@ -42,9 +42,9 @@ int inicializarFSPropio(){
 	fclose(f);
 
 	//Creo el directorio bloque
-	char* bloquesPath = getStringConfig("PUNTO_MONTAJE");
+	char* bloquesPath = string_duplicate(puntoMontaje);
 	string_append(&bloquesPath,"/");
-	string_append(&bloquesPath,getStringConfig("MAGIC_NUMBER"));
+	string_append(&bloquesPath,magicNumber);
 	status = mkdir(bloquesPath,0777);
 	if(status != 0){
 		return status;
@@ -69,7 +69,7 @@ int inicializarFSPropio(){
 
 //Devuelve el siguiente bloque libre, -1 si esta lleno o -2 si hay un error
 int obtenerSiguienteBloque(){
-	char* fsBitmapPath = getStringConfig("PUNTO_MONTAJE");
+	char* fsBitmapPath = string_duplicate(puntoMontaje);
 	string_append(&fsBitmapPath,"/metadata/bitmap.bin");
 	FILE* f = fopen(fsBitmapPath,"r+");
 	//Si f no es null entonces el archivo ya existe
@@ -108,7 +108,7 @@ void liberarBloque(int bloque){
 	if(bloque >= blocks){
 		return;
 	}
-	char* fsBitmapPath = getStringConfig("PUNTO_MONTAJE");
+	char* fsBitmapPath = string_duplicate(puntoMontaje);
 	string_append(&fsBitmapPath,"/metadata/bitmap.bin");
 	FILE* f = fopen(fsBitmapPath,"r+");
 	//Si f no es null entonces el archivo ya existe
@@ -165,7 +165,7 @@ int fs_fcreate(char* ruta){
 }
 
 void fs_fdelete(fs_file* fs){
-	char* puntoMontura = getStringConfig("PUNTO_MONTAJE");
+	char* puntoMontura = string_duplicate(puntoMontaje);
 	//Libero los bloques y limpio el archivo de los bloques
 	int i=0;
 	while(fs->bloques[i] != 0){
@@ -175,7 +175,7 @@ void fs_fdelete(fs_file* fs){
 		//Limpio el archivo del bloque
 		char* bloquePath = string_duplicate(puntoMontura);
 		string_append(&bloquePath,"/");
-		string_append(&bloquePath,getStringConfig("MAGIC_NUMBER"));
+		string_append(&bloquePath,magicNumber);
 		string_append(&bloquePath,"/bloques/");
 		string_append(&bloquePath,fs->bloques[i]);
 		string_append(&bloquePath,".bin");
@@ -194,14 +194,15 @@ void fs_fclose(fs_file* f){
 }
 
 void fs_fread(fs_file* fs,registro* resultado,int position){
-	int size = sizeof(registro)+getIntConfig("TAMANIO_VALUE");
+	int size = sizeof(registro)+tamValue;
 	//Si el registro que quiero que leer esta por fuera del size retorno null en resultado
 	if(fs->size < (position+size)){
 		resultado = NULL;
+		log_error(g_logger,"[fs_fread]Devuelvo NULL");
 		return;
 	}
 	//Calculo en que bloque esta el registro
-	int tamBloque = getIntConfig("BLOCK_SIZE");
+	int tamBloque = tamanioBloque;
 	int cantPorBloque = tamBloque/size;
 	int posBloque = position/cantPorBloque;
 	int relPosition = position - posBloque * cantPorBloque;
@@ -211,26 +212,27 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 		bloque = string_duplicate(fs->bloques[i]);
 	}
 	//Abro el archivo bloque
-	char* bloquePath = getStringConfig("PUNTO_MONTAJE");
+	char* bloquePath = string_duplicate(puntoMontaje);
 	string_append(&bloquePath,"/");
-	string_append(&bloquePath,getStringConfig("MAGIC_NUMBER"));
+	string_append(&bloquePath,magicNumber);
 	string_append(&bloquePath,"/bloques/");
 	string_append(&bloquePath,bloque);
 	string_append(&bloquePath,".bin");
-	FILE* fBloque = fopen(bloquePath,"rb");
+	FILE* fBloque = fopen(bloquePath,"r");
 	if(fBloque == NULL){
 		resultado = NULL;
+		log_error(g_logger,"[fs_fread]Devuelvo NULL");
 		return;
 	}
 	fseek(fBloque, relPosition*size, SEEK_SET );
 	fread(resultado,sizeof(registro),1,fBloque);
-	resultado->value=malloc(getIntConfig("TAMANIO_VALUE"));
-	fread(resultado->value,getIntConfig("TAMANIO_VALUE"),1,fBloque);
+	resultado->value=malloc(tamValue);
+	fread(resultado->value,tamValue,1,fBloque);
 	fclose(fBloque);
 }
 
 int fs_fprint(fs_file* fs, registro* obj){
-	int size = sizeof(registro) + getIntConfig("TAMANIO_VALUE");
+	int size = sizeof(registro) + tamValue;
 	//Veo cuantos bloques hay y me quedo con el ultimo
 	int cantBloques=0;
 	int ultimoBloque=0;
@@ -239,7 +241,7 @@ int fs_fprint(fs_file* fs, registro* obj){
 		cantBloques++;
 	}
 	//Me fijo si el ultimo bloque esta ocupado, si no lo esta escribo sobre el ultimo y si lo esta pido otro
-	int tamBloque = getIntConfig("BLOCK_SIZE");
+	int tamBloque = tamanioBloque;
 	int cantObjPorBloque = tamBloque / size;
 	int tamanoDisponible = cantObjPorBloque * cantBloques * size;
 	if(tamanoDisponible < (fs->size + size)){
@@ -272,9 +274,9 @@ int fs_fprint(fs_file* fs, registro* obj){
 		config_destroy(f);
 	}
 	//Abro el ultimo bloque
-	char* bloquePath = getStringConfig("PUNTO_MONTAJE");
+	char* bloquePath = string_duplicate(puntoMontaje);
 	string_append(&bloquePath,"/");
-	string_append(&bloquePath,getStringConfig("MAGIC_NUMBER"));
+	string_append(&bloquePath,magicNumber);
 	string_append(&bloquePath,"/bloques/");
 	char strUltimoBloque[20];
 	sprintf(strUltimoBloque, "%i", ultimoBloque);
@@ -285,7 +287,8 @@ int fs_fprint(fs_file* fs, registro* obj){
 		return -2;
 	}
 	fwrite(obj,sizeof(registro),1,fBloque);
-	fwrite(obj->value,getIntConfig("TAMANIO_VALUE"),1,fBloque);
+	printf("Valor insertado: %s\n",obj->value);
+	fwrite(obj->value,tamValue,1,fBloque);
 	fclose(fBloque);
 	//Actualizo el size
 	fs->size = fs->size + size;

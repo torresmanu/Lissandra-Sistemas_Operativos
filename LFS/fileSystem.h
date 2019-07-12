@@ -19,7 +19,7 @@ t_list* listaBloqueos;
 typedef struct
 {
 	char* tabla;
-	int bloqueo;
+	sem_t bloqueo;
 } nodo_bloqueo;
 
 
@@ -40,11 +40,9 @@ int fs_create_tmp(char* tabla,t_list* regList);
 void compactarTabla(char* tabla);
 void compactar();
 
-void setearBloqueo(char* tabla);
-void liberarBloqueo(char* tabla);
-int consultarBloqueo(char* tabla);
-void esperarBloqueo(char* tabla);
-int consultarAlgunBloqueo();
-void esperarAlgunBloqueo();
+void bloquearTabla(char* tabla);
+void liberarBloqueoTabla(char* tabla);
+void bloquearTodasTablas();
+void liberarTodasTablas();
 
 #endif /* FILESYSTEM_H_ */

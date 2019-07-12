@@ -558,7 +558,8 @@ void compactarTabla(char* tabla){
 	closedir(tabledir);
 
 	//Bloqueo la tabla
-	//setearBloqueo(tabla);
+	bloquearTabla(tabla);
+	log_info(g_logger,"Comienzo bloqueo tabla %s",tabla);
 	//sleep(1);
 	long inicioBloqueo = (long)time(NULL);
 
@@ -566,7 +567,7 @@ void compactarTabla(char* tabla){
 	tabledir = opendir(tablesPath);
 	if(tabledir == NULL){
 		log_info(g_logger,"Error al compactar tabla %s al abrir directorio",tabla);
-		liberarBloqueo(tabla);
+		liberarBloqueoTabla(tabla);
 		return;
 	}
 	while((tablesde=readdir(tabledir))!= NULL){
@@ -628,7 +629,8 @@ void compactarTabla(char* tabla){
 
 	//Libero el bloqueo
 	long finBloqueo = (long)time(NULL);
-	//liberarBloqueo(tabla);
+	log_info(g_logger,"Termino bloqueo tabla %s",tabla);
+	liberarBloqueoTabla(tabla);
 	log_info(g_logger,"Tabla %s compactada exitosamente en %ld ms",tabla,finBloqueo-inicioBloqueo);
 }
 
@@ -649,65 +651,47 @@ void compactar(){
 	closedir(tabledir);
 }
 
-void setearBloqueo(char* tabla){
+void bloquearTabla(char* tabla){
 	//Recorro entre los nodos buscando la tabla, si no la encuentro la creo como bloqueada
 	int encontrada = 0;
 	for(int i=0;i<list_size(listaBloqueos);i++){
 		nodo_bloqueo* bloqueo = (nodo_bloqueo*)list_get(listaBloqueos,i);
 		if(strcmp(bloqueo->tabla,tabla) == 0){
 			encontrada = 1;
-			bloqueo->bloqueo = -1;
+			sem_wait(&bloqueo->bloqueo);
 		}
 	}
 	//Si no encontre la tabla en la lista la creo
 	if(encontrada == 0){
 		nodo_bloqueo* bloqueo = malloc(sizeof(bloqueo));
 		bloqueo->tabla = string_duplicate(tabla);
-		bloqueo->bloqueo = -1;
+		sem_init(&(bloqueo->bloqueo),0,0);
 		list_add(listaBloqueos,bloqueo);
 	}
 }
 
-void liberarBloqueo(char* tabla){
+void liberarBloqueoTabla(char* tabla){
 	//Reccorro la lista hasta encontrar la tabla y liberar el bloqueo sobre esa tabla
 	for(int i=0;i<list_size(listaBloqueos);i++){
 		nodo_bloqueo* bloqueo = (nodo_bloqueo*)list_get(listaBloqueos,i);
 		if(strcmp(bloqueo->tabla,tabla) == 0){
-			bloqueo->bloqueo = 0;
+			sem_post(&(bloqueo->bloqueo));
 		}
 	}
 }
 
-int consultarBloqueo(char* tabla){
+void bloquearTodasTablas(){
 	//Reccorro la lista hasta encontrar la tabla y obtener el valor
 	for(int i=0;i<list_size(listaBloqueos);i++){
 		nodo_bloqueo* bloqueo = (nodo_bloqueo*)list_get(listaBloqueos,i);
-		if(strcmp(bloqueo->tabla,tabla) == 0){
-			return bloqueo->bloqueo;
-		}
+		sem_wait(&(bloqueo->bloqueo));
 	}
-	return 0;
 }
 
-int consultarAlgunBloqueo(){
+void liberarTodasTablas(){
 	//Reccorro la lista hasta encontrar la tabla y obtener el valor
 	for(int i=0;i<list_size(listaBloqueos);i++){
 		nodo_bloqueo* bloqueo = (nodo_bloqueo*)list_get(listaBloqueos,i);
-		if(bloqueo->bloqueo != 0){
-			return bloqueo->bloqueo;
-		}
-	}
-	return 0;
-}
-
-void esperarBloqueo(char* tabla){
-	while(consultarBloqueo(tabla) != 0){
-		//Espero a que se libere
-	}
-}
-
-void esperarAlgunBloqueo(){
-	while(consultarAlgunBloqueo() != 0){
-		//Espero a que no haya ninguna tabla bloqueada
+		sem_post(&(bloqueo->bloqueo));
 	}
 }
