@@ -406,7 +406,6 @@ void gestionarConexionAMemoria(Memoria* mem)
 		int status = 0;
 		status = recv(mem->socket,&(mem->id),sizeof(mem->id),0);
 
-		desbloquearConexion(mem);
 
 		if(status != sizeof(uint32_t))
 			log_info(g_logger, "Error al recibir id de memoria");
@@ -414,5 +413,5 @@ void gestionarConexionAMemoria(Memoria* mem)
 
 	}
 	freeaddrinfo(serverInfo); // Libero
-
+	desbloquearConexion(mem);
 }

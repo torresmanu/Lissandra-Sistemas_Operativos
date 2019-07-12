@@ -289,7 +289,7 @@ void enviarJournal(void* element){
 	bloquearConexion(mem);
 	send(mem->socket, pi, size_to_send, 0);
 	resultado res = recibir(mem->socket);
-	bloquearConexion(mem);
+	desbloquearConexion(mem);
 
 	free(res.mensaje);
 	if(res.contenido!=NULL)
