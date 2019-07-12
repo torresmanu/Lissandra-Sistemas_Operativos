@@ -553,14 +553,14 @@ void crearHiloCompactacion(char* tabla) {
 
 	estructuraHiloCompactacion* ehc = malloc(sizeof(estructuraHiloCompactacion));
 	ehc->nombreTabla = string_duplicate(tabla);
-	ehc->threadId = thread;
-
 
 	int err = pthread_create(&thread, NULL, hiloCompactacion, ehc->nombreTabla);
 	if(err != 0) {
 		log_info(g_logger,"[crearHiloCompactacion] Hubo un problema al crear el thread de compactación:[%s]", strerror(err));
 		free(ehc);
 	}
+
+	ehc->threadId = thread;
 
 	list_add(listaHilosCompactacion, ehc);
 
