@@ -18,6 +18,7 @@ void iniciarCriterios(){
 
 	ec.tipo = EC;
 	ec.memorias = list_create();
+	srand(time(NULL));
 }
 
 void liberarCriterios(){
@@ -48,18 +49,21 @@ Criterio* toConsistencia(char* cadena)
 Memoria* masApropiada(Criterio* c, resultadoParser* r){
 	Memoria* mem;
 	int indice;
+	int memoriaElegida;
 	switch(c->tipo)
 	{
 		case SC:
 			mem = (Memoria*)list_get(sc.memorias,0);		// LOGICA DE CRITERIO STRONG CONSISTENCY
 			break;
 		case SHC:											// LOGICA DE CRITERIO STRONG HASH CONSISTENCY
-
+			memoriaElegida = hash(r);
+			mem = (Memoria*)list_get(shc.memorias,memoriaElegida);
 			break;
 		case EC:
 		{
-			int cantidadMemorias = rand()%list_size(ec.memorias)+1;	// Que sea aleatoria
-			mem = (Memoria*)list_get(ec.memorias,cantidadMemorias); // LOGICA DE CRITERIO EVENTUAL CONSISTENCY
+			memoriaElegida = rand()%list_size(ec.memorias)+1;	// Que sea aleatoria
+			mem = (Memoria*)list_get(ec.memorias,memoriaElegida-1); // LOGICA DE CRITERIO EVENTUAL CONSISTENCY
+			log_info(g_logger,"Elegi la memoria ID: %d", mem->id);
 			break;
 		}
 		default:
@@ -78,15 +82,11 @@ void add(Memoria *memoria,Criterio *cons)
 }
 
 /// Funcion de hasheo
-int hash(char* nom)
+int hash(resultadoParser* r)
 {
 	int cantMemorias = list_size(shc.memorias);
 	int numeroMemoria;
 
-	for(int i=0; i < strlen(nom); i++)
-	{
-		numeroMemoria += (int)*nom++;
-	}
 
 	return numeroMemoria;
 }
