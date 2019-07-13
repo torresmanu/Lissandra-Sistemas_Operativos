@@ -100,11 +100,11 @@ resultado recibir(int conexion){
 
 	resultado res;
 	accion acc;
-	char* buffer = malloc(sizeof(int));
+	char* buffer = malloc(sizeof(acc));
 	int valueResponse;
 
-	valueResponse = recv(conexion, buffer, sizeof(int), 0);
-	memcpy(&acc, buffer, sizeof(int));
+	valueResponse = recv(conexion, buffer, sizeof(acc), 0);
+	memcpy(&acc, buffer, sizeof(acc));
 
 	if(valueResponse < 0)
 	{

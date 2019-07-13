@@ -20,6 +20,7 @@ int main(void) {
 	}
 
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
+
 	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 	pthread_create(&gossipingAutomatico,NULL,(void*)realizarGossipingAutomatico,NULL);
 	pthread_create(&monitoreador,NULL,(void*)controlConfig,NULL);

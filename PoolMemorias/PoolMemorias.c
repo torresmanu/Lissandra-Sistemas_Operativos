@@ -24,12 +24,13 @@ int main(int argc, char* argv[]) {
 	if(errThreadJournal != 0) {
 		log_info(g_logger,"Hubo un problema al crear el thread journalConRetardo:[%s]", strerror(errThreadJournal));
 	}
-	//pthread_attr_destroy(&attr);
+
+	pthread_attr_destroy(&attr);
 
 	//pthread_attr_t attr;
 	pthread_t threadGossiping;
 
-	//pthread_attr_init(&attr);
+	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	int errThreadGossiping = pthread_create(&threadGossiping, &attr, gossipingConRetardo, NULL);
@@ -47,6 +48,7 @@ int main(int argc, char* argv[]) {
 
 	gossiping();
 
+	correrScript();
 	consola();
 
 	//ver si esta bien que este aca
@@ -62,6 +64,33 @@ int main(int argc, char* argv[]) {
 
 
 }
+
+void correrScript() {
+	printf("CORRO SCRIPTS\n");
+
+	FILE* file = fopen("../../prueba.lql","r");
+	if(file == NULL){
+		printf("ERROR AL OBTENER EL SCRIPT\n");
+		return;
+	}
+	char linea[1024];
+	int i=1;
+	while(fgets(linea,1024,(FILE*)file)){
+		printf("Linea ejecutada #%i\n",i);
+		resultadoParser resParser = parseConsole(linea);
+		resultado res = parsear_mensaje(&resParser);
+		if(res.resultado == OK){
+		}else{
+			log_info(g_logger,"ERROR");
+		}
+		usleep(100000);
+		i++;
+	}
+	fclose(file);
+
+	printf("TERMINO CORRER SCRIPTS\n");
+}
+
 
 void escucharConexiones(){
 	int conexion_servidor = iniciarServidor();
