@@ -95,7 +95,6 @@ void gossiping(){
 	establecerConexionPool();
 
 	bloquearConexion(MemDescribe);
-
 	int status = obtenerMemorias(MemDescribe->socket);
 	desbloquearConexion(MemDescribe);
 
