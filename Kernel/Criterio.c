@@ -36,6 +36,15 @@ void destroy_nodo_memoria(void* elem){
 	free(nodo_tabla_elem);
 }
 
+Memoria* buscarMemoriaPorID(int id, t_list* lista)
+{
+	bool coincideID(void* element)		//Subfunción de busqueda
+	{
+		return ((Memoria*)element)->id == id;
+	}
+	return list_find(lista,coincideID);
+}
+
 Criterio* toConsistencia(char* cadena)
 {
 	if(strcmp(cadena, "SC") == 0)
@@ -50,6 +59,7 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 	Memoria* mem;
 	char* aux;
 	int memoriaElegida;
+
 	switch(c->tipo)
 	{
 		case SC:
@@ -61,23 +71,31 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 		case SHC:
 		{
 			// LOGICA DE CRITERIO STRONG HASH CONSISTENCY
-			memoriaElegida = hash(r)+1;
-			mem = (Memoria*)list_get(shc.memorias,memoriaElegida-1);
 			aux="SHC";
+			if(r->accionEjecutar == SELECT || r->accionEjecutar == INSERT)
+			{
+				memoriaElegida = obtenerHash(r)+1;
+				mem = buscarMemoriaPorID(memoriaElegida,shc.memorias);
+			}
+			else
+			{
+				mem = (Memoria*)list_get(shc.memorias,0); // Elijo la primera y listo
+			}
+			printf("Elegi la memoria ID: %d", memoriaElegida);
 			break;
 		}
 		case EC:
 		{
 			// LOGICA DE CRITERIO EVENTUAL CONSISTENCY
-			memoriaElegida = memoriaRandom()+1;				//(+1 porque los IDs de las memorias empiezan desde 1)
-			mem = (Memoria*)list_get(ec.memorias,memoriaElegida-1);
+			memoriaElegida = memoriaRandom() + 1;				//(+1 porque los IDs de las memorias empiezan desde 1)
+			mem = buscarMemoriaPorID(memoriaElegida,ec.memorias);
 			aux="EC";
 			break;
 		}
 		default:
 			break;
 	}
-	if(mem==NULL){
+	if(mem	== NULL){
 		log_warning(g_logger,"No hay memorias asociadas al criterio %s",aux);
 		mem = MemDescribe;
 	}
@@ -97,7 +115,6 @@ void add(Memoria *memoria,Criterio *cons)
 int memoriaRandom()
 {
 	int cantMemorias = list_size(ec.memorias);
-
 	if(cantMemorias>0)
 		return rand()%cantMemorias;
 	else
@@ -105,15 +122,22 @@ int memoriaRandom()
 }
 
 /// Funcion de hasheo (SHC)
-int hash(resultadoParser* r)
-{
-	int cantMemorias = list_size(shc.memorias);
-	return obtenerHash(r)%cantMemorias; 			// 19827%3 --> 0
-}
-
 int obtenerHash(resultadoParser* r)
 {
-	int hash;
-	return hash;
+	int cantMemorias = list_size(shc.memorias);
+	return hash(r)%cantMemorias; 			// 19827%3 --> 0
 }
 
+int hash(resultadoParser* r)
+{
+	if(r->accionEjecutar == SELECT)
+	{
+		contenidoSelect* s = ((contenidoSelect*)r->contenido);
+		return s->key;
+	}
+	else
+	{
+		contenidoInsert* i = ((contenidoInsert*)r->contenido);
+		return i->key;
+	}
+}

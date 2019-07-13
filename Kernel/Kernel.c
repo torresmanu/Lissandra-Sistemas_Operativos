@@ -434,7 +434,7 @@ void controlConfig()
 	        perror("Error en el inicio del Inotify: ");
 	    }
 
-	    wd = inotify_add_watch(fd, "./", IN_MODIFY);
+	    wd = inotify_add_watch(fd, pathDirectorioActual, IN_MODIFY);
 
 	    while(finalizar.resultado != SALIR){
 	    	i=0;
@@ -466,7 +466,7 @@ void controlConfig()
 
 void actualizarRetardos()
 {
-	sem_wait(&sDescribe); // Rompe el hilo del DESCRIBE sino
+	// Un problema de sincronización
 
 	config_destroy(g_config);
 	g_config = config_create("Kernel.config");
@@ -476,7 +476,6 @@ void actualizarRetardos()
 	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
 	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
 
-	sem_post(&sDescribe);
 }
 
 ////////////////////////////////////////////////////

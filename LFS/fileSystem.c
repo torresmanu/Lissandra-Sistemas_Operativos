@@ -386,9 +386,11 @@ int fs_create_tmp(char* tabla,t_list* regList){
 		sprintf(strReg, "%ld;%i;%s\n",reg->timestamp,reg->key,reg->value);
 		fprintf(file, "%s",strReg);*/
 		//Escribo el archivo en el FS propio
+		log_info(g_logger,"Inserto registro %i;%s;%ld",reg->key,reg->value,reg->timestamp);
 		int status = fs_fprint(file,reg);
 		if(status != 0){
 			fs_fclose(file);
+			log_error(g_logger,"Error al generar archivo");
 			return -1;
 		}
 	}
@@ -410,6 +412,7 @@ void compactarTabla(char* tabla){
 		return;
 	}
 	int cantidadACompactar = 0;
+	sem_wait(&semaforoMemtable);
 	//Itero entre los archivos temporales para renombrarlos
 	while((tablesde=readdir(tabledir))!= NULL){
 		if(string_contains(tablesde->d_name,"tmp") && !string_contains(tablesde->d_name,"tmpc")){
@@ -428,6 +431,7 @@ void compactarTabla(char* tabla){
 	}
 
 	closedir(tabledir);
+	sem_post(&semaforoMemtable);
 
 	//Si son 0 a compactar entonces vuelvo porque no tiene sentido seguir
 	if(cantidadACompactar ==  0){
@@ -534,7 +538,7 @@ void compactarTabla(char* tabla){
 				for(int i = 0; i < list_size(nodo->lista_registros); i++){
 					registro* reg_aux = ((registro*)list_get(nodo->lista_registros,i));
 					if(reg_aux->key == reg->key){
-						if(reg_aux->timestamp < reg->timestamp){
+						if(reg_aux->timestamp <= reg->timestamp){
 							strcpy(reg_aux->value,reg->value);
 							reg_aux->timestamp = reg->timestamp;
 						}

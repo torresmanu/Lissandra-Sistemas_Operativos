@@ -48,7 +48,6 @@ int main(int argc, char* argv[]) {
 
 	gossiping();
 
-//	correrScript();
 	consola();
 
 	//ver si esta bien que este aca

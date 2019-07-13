@@ -62,16 +62,15 @@ void memtable_insert(char* nombre_tabla, registro reg){
 		nodo->nombre_tabla = string_duplicate(nombre_tabla);
 		nodo->lista_registros = list_create();
 		list_add(memtable_list,nodo);
-
 	}
 	//Una vez que tengo el nodo itero a ver si encuentro un nodo con ese valor, si lo encuentro actualizo
 	for(int i = 0; i < list_size(nodo->lista_registros); i++){
 		registro* reg_aux = ((registro*)list_get(nodo->lista_registros,i));
 		if(reg_aux->key == reg.key){
 			if(reg_aux->timestamp <= reg.timestamp){
-				strcpy(reg_aux->value,reg.value);
+				reg_aux->value=string_duplicate(reg.value);
 				reg_aux->timestamp = reg.timestamp;
-				log_info(g_logger,"Valor actualizado en memtable");
+				log_info(g_logger,"Valor actualizado en memtable %s;%i;%s,%ld",nodo->nombre_tabla,reg_aux->key,reg_aux->value,reg_aux->timestamp);
 				sem_post(&semaforoMemtable);
 				return;
 			}else{
@@ -85,7 +84,7 @@ void memtable_insert(char* nombre_tabla, registro reg){
 	registro * reg_aux = malloc(sizeof(registro));
 	memcpy(reg_aux,&reg,sizeof(registro));
 	list_add(nodo->lista_registros,reg_aux);
-	log_info(g_logger,"Valor insertado en memtable",nombre_tabla,reg_aux->key,reg_aux->value);
+	log_info(g_logger,"Valor insertado en memtable %s;%i;%s,%ld",nodo->nombre_tabla,reg_aux->key,reg_aux->value,reg_aux->timestamp);
 	sem_post(&semaforoMemtable);
 }
 
@@ -95,6 +94,7 @@ int memtable_dump(){
 	//Itero entre las tablas de la memtable
 	for(int i = 0; i < list_size(memtable_list); i++){
 		nodo_tabla* nodo = ((nodo_tabla*)list_get(memtable_list,i));
+		log_info(g_logger,"Genero .tmp de %s",nodo->nombre_tabla);
 		int status = fs_create_tmp(nodo->nombre_tabla,nodo->lista_registros);
 		if(status != 0){
 			log_info(g_logger,"Error al realizar dump");
@@ -102,8 +102,8 @@ int memtable_dump(){
 			return status;
 		}
 	}
-	finalizar_memtable();
-	iniciar_memtable();
+	log_info(g_logger,"Genere todos los .tmp");
+	list_clean(memtable_list);
 	log_info(g_logger,"Dump realizado exitosamente");
 	sem_post(&semaforoMemtable);
 	return 0;
