@@ -92,6 +92,10 @@ resultado ejecutar(Criterio* criterio, resultadoParser* request){
 		enviarJournal(mem);
 		resultado = enviarRequest(mem, request);
 	}
+//	if(resultado.resultado==EnJOURNAL){
+//		log_warning(g_logger,"Vuelvo a enviar la request");
+//		resultado = ejecutar(criterio, request);
+//	}
 
 	return resultado;
 }
