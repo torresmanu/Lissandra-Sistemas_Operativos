@@ -38,7 +38,7 @@ typedef struct{
 
 t_list* tablas;
 
-int* tTotal; // Tiempo de ejecucion de la request
+int tTotal; // Tiempo de ejecucion de la request
 int tInicio;
 int tFinal;
 sem_t sRequest;

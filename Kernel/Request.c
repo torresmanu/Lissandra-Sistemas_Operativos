@@ -182,16 +182,17 @@ resultado ejecutarRequest(resultadoParser *r)
 		if(tabla != NULL){
 			log_info(g_logger,"Uso la tabla: %s",tabla->nombreTabla);
 			Criterio* cons = toConsistencia(tabla->consistency);
+
 			if(r->accionEjecutar == SELECT || r->accionEjecutar == INSERT)
 			{
 				tInicio = time(NULL);
 			}
 			estado = ejecutar(cons,r); // EJECUTO
+
 			if(estado.resultado == OK && (r->accionEjecutar == SELECT || r->accionEjecutar == INSERT))
 			{
 				tFinal = time(NULL);
 				tTotal = tFinal - tInicio;
-				printf("TIEMPO QUE TARDO: %d", tTotal);
 			}
 		}
 		else{

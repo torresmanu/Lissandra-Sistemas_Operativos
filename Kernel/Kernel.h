@@ -81,6 +81,7 @@ void mostrarMemoryLoad(void*);
 int sumarReads(t_list*);
 int sumarWrites(t_list*);
 void setearEstadisticas(void*);
+int obtenerLatency();
 
 
 #endif /* KERNEL_H_ */

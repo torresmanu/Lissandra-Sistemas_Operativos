@@ -519,11 +519,13 @@ void mostrarMetrics(Criterio* crit)
 	log_info(g_logger, "Métricas del criterio: %d", crit->tipo);
 	int reads = sumarReads(crit->memorias);
 	int writes = sumarWrites(crit->memorias);
-	int readLatency;
-	int writeLateny;
+	int readLatency = obtenerLatency(crit->reads);
+	int writeLateny = obtenerLatency(crit->writes);
 
 	log_info(g_logger, "Cantidad de INSERTS en los ultimos 30s del criterio %d: %d", crit->tipo, writes);
 	log_info(g_logger, "Cantidad de SELECTS en los ultimos 30s del criterio %d: %d", crit->tipo, reads);
+	log_info(g_logger, "Tiempo promedio de ejecucion de un INSERT %d: %d", crit->tipo, readLatency);
+	log_info(g_logger, "Tiempo promedio de ejecucion de un SELECT %d: %d", crit->tipo, writeLateny);
 }
 
 void mostrarMemoryLoad(void* elem)
@@ -567,5 +569,10 @@ void setearEstadisticas(void* elem)
 	mem->insertsTotales = 0;
 	mem->selectsTotales = 0;
 	mem->totalOperaciones = 0;
+}
+
+int obtenerLatency(t_list* tiempos)
+{
+
 }
 

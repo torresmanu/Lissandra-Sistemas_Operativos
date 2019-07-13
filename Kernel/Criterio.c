@@ -81,7 +81,7 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 			{
 				mem = (Memoria*)list_get(shc.memorias,0); // Elijo la primera y listo
 			}
-			printf("Elegi la memoria ID: %d", memoriaElegida);
+			printf("Elegi la memoria ID: %d\n", mem->id);
 			break;
 		}
 		case EC:
