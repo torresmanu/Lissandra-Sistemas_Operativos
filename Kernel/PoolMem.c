@@ -47,6 +47,9 @@ int obtenerMemorias(int socket){
 		if(status != sizeof(uint32_t)) return -2;
 
 		log_info(g_logger,"Recibi memoria:%d",memNueva->id);
+		memNueva->insertsTotales = 0;
+		memNueva->selectsTotales = 0;
+		memNueva->totalOperaciones = 0;
 
 		if(!tengoMemoria(memNueva)){
 			memNueva->socket=-1;
@@ -81,6 +84,9 @@ void obtenerMemoriaDescribe()
 	MemDescribe->ipMemoria = config_get_string_value(g_config,"IP_MEMORIA");
 	MemDescribe->puerto = config_get_string_value(g_config, "PUERTO_MEMORIA");
 	MemDescribe->socket = -1;
+	MemDescribe->insertsTotales = 0;
+	MemDescribe->selectsTotales = 0;
+	MemDescribe->totalOperaciones = 0;
 	list_add(pool,MemDescribe);
 }
 

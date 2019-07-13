@@ -5,6 +5,7 @@ int main(void) {
 	sem_init(&sNuevo,0,0);
 	sem_init(&sListo,0,0);
 	sem_init(&sDescribe,0,1);
+	sem_init(&sRequest,0,0);
 
 	pthread_mutex_init(&mNew,NULL);
 	pthread_mutex_init(&mReady,NULL);
@@ -24,6 +25,7 @@ int main(void) {
 	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 	pthread_create(&gossipingAutomatico,NULL,(void*)realizarGossipingAutomatico,NULL);
 	pthread_create(&monitoreador,NULL,(void*)controlConfig,NULL);
+	pthread_create(&metricas,NULL,(void*)realizarMetrics,NULL);
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
@@ -31,6 +33,8 @@ int main(void) {
 	{
 		pthread_join(plp,NULL);
 		pthread_join(describeGlobal,NULL);
+		pthread_join(metricas,NULL);
+		pthread_join(monitoreador,NULL);
 
 		for(int i=0; i<nivelMultiprocesamiento; i++)
 		{
@@ -80,6 +84,9 @@ void iniciar_programa(void)
 
 //	socketsPool = list_create();	// SOCKETS DE TODO EL POOL
 
+	// Tiempos de requests
+	tTotal = malloc(sizeof(int));
+
 	// Todoo para el describe
 	obtenerMemoriaDescribe();
 
@@ -102,6 +109,8 @@ void terminar_programa()
 	//Libero hilos
 	pthread_cancel(plp);
 	pthread_cancel(describeGlobal);
+	pthread_cancel(metricas);
+	pthread_cancel(monitoreador);
 
 	for(int i=0; i<nivelMultiprocesamiento; i++)
 	{
@@ -347,8 +356,6 @@ resultado describe(char* nombreTabla)
 			{
 				tablaLFS = (t_list*)res.contenido;
 
-
-
 				if(list_size(tablaLFS)>0){
 					list_clean(tablas);						// Para no agregar repetidas
 					list_add_all(tablas,tablaLFS);
@@ -476,6 +483,89 @@ void actualizarRetardos()
 	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
 	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
 
+
 }
 
 ////////////////////////////////////////////////////
+
+void realizarMetrics()
+{
+	while(1)
+	{
+		sleep(30);
+		metrics();
+		limpiarEstadisticas();
+	}
+}
+
+resultado metrics(){
+	resultado res;
+
+	mostrarMetrics(&sc);
+	mostrarMetrics(&ec);
+	mostrarMetrics(&shc);
+	list_iterate(pool,mostrarMemoryLoad);
+
+	res.accionEjecutar=METRICS;
+	res.contenido=NULL;
+	res.mensaje="Métricas informadas.";
+	res.resultado=OK;
+
+	return res;
+}
+
+void mostrarMetrics(Criterio* crit)
+{
+	log_info(g_logger, "Métricas del criterio: %d", crit->tipo);
+	int reads = sumarReads(crit->memorias);
+	int writes = sumarWrites(crit->memorias);
+	int readLatency;
+	int writeLateny;
+
+	log_info(g_logger, "Cantidad de INSERTS en los ultimos 30s del criterio %d: %d", crit->tipo, writes);
+	log_info(g_logger, "Cantidad de SELECTS en los ultimos 30s del criterio %d: %d", crit->tipo, reads);
+}
+
+void mostrarMemoryLoad(void* elem)
+{
+	Memoria* mem = (Memoria*)elem;
+	int select = (mem->selectsTotales * 100) / mem->totalOperaciones;
+	int insert = (mem->insertsTotales * 100) / mem->totalOperaciones;
+	log_info(g_logger,"Memory Load de la memoria ID: %d", mem->id);
+	log_info(g_logger,"El %d%% de las operaciones totales son SELECTS",select);
+	log_info(g_logger,"El %d%% de las operaciones totales son INSERTS",insert);
+}
+
+int sumarReads(t_list* memorias)
+{
+	int total = 0;
+	for(int i = 0; i<list_size(memorias); i++)
+	{
+		total += ((Memoria*)list_get(memorias,i))->selectsTotales;
+	}
+	return total;
+}
+
+int sumarWrites(t_list* memorias)
+{
+	int total = 0;
+	for(int i = 0; i<list_size(memorias); i++)
+	{
+		total += ((Memoria*)list_get(memorias,i))->insertsTotales;
+	}
+	return total;
+}
+
+void limpiarEstadisticas()
+{
+	list_iterate(pool,setearEstadisticas);
+}
+
+void setearEstadisticas(void* elem)
+{
+	Memoria* mem = (Memoria*)elem;
+	mem->insertsTotales = 0;
+	mem->selectsTotales = 0;
+	mem->totalOperaciones = 0;
+}
+

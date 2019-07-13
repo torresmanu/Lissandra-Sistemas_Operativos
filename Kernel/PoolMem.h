@@ -22,6 +22,7 @@
 
 // Semaforos
 t_dictionary* mutexsConexiones;
+pthread_mutex_t usoConfig;
 
 //las puse aca para que no me rompa, buscar un lugar mejor
 t_log* g_logger;
@@ -35,6 +36,9 @@ typedef struct{
 	char* puerto;
 	uint32_t id;
 	int socket;
+	int totalOperaciones;
+	int selectsTotales;
+	int insertsTotales;
 }Memoria;
 
 // Pool de Memorias

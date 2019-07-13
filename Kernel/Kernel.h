@@ -41,6 +41,7 @@ pthread_t describeGlobal; 		// Describe global
 pthread_t gossipingAutomatico;	// Gossipeo
 pthread_t* executer;			// Hilos de ejecucion (actuan como estado EXEC)
 pthread_t monitoreador;			// Monitoreador del config
+pthread_t metricas;				// Metricas cada 30 segundos
 
 resultado finalizar; // Variable de corte
 
@@ -71,5 +72,15 @@ void realizarGossipingAutomatico();
 //////////// MONITOREADOR ////////////
 void controlConfig();
 void actualizarRetardos();
+
+//////////// METRICS ////////////
+void realizarMetrics();
+void mostrarMetrics(Criterio*);
+void limpiarEstadisticas();
+void mostrarMemoryLoad(void*);
+int sumarReads(t_list*);
+int sumarWrites(t_list*);
+void setearEstadisticas(void*);
+
 
 #endif /* KERNEL_H_ */

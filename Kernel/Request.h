@@ -38,6 +38,11 @@ typedef struct{
 
 t_list* tablas;
 
+int* tTotal; // Tiempo de ejecucion de la request
+int tInicio;
+int tFinal;
+sem_t sRequest;
+
 // EJECUTAR ARCHIVOS LQL //
 Script* run(char*);
 
@@ -62,6 +67,7 @@ void reemplazarMetadata(metadataTabla* tablaNueva);
 resultado recibir(int conexion);
 resultado describe();
 resultado journal();
+resultado metrics();
 void enviarJournal(void*);
 
 #endif /* REQUEST_H_ */

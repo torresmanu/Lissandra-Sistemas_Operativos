@@ -82,12 +82,22 @@ bool terminoScript(Script *s){
 }
 
 resultado ejecutar(Criterio* criterio, resultadoParser* request){
+
 	Memoria* mem = masApropiada(criterio, request);
-
 	log_info(g_logger,"Numero de memoria elegida:%d",mem->id);
-
 	resultado resultado = enviarRequest(mem, request);
 
+	// Para las metricas
+	if(resultado.resultado == OK && request->accionEjecutar == SELECT){
+		(mem->selectsTotales)++;
+	}
+	else if(resultado.resultado == OK && request->accionEjecutar == INSERT){
+		(mem->insertsTotales)++;
+	}
+
+	(mem->totalOperaciones)++;
+
+	// Si esta llena..
 	if(resultado.resultado==FULL){
 		enviarJournal(mem);
 		resultado = enviarRequest(mem, request);
@@ -168,7 +178,17 @@ resultado ejecutarRequest(resultadoParser *r)
 		if(tabla != NULL){
 			log_info(g_logger,"Uso la tabla: %s",tabla->nombreTabla);
 			Criterio* cons = toConsistencia(tabla->consistency);
-			estado = ejecutar(cons,r);
+			if(r->accionEjecutar == SELECT || r->accionEjecutar == INSERT)
+			{
+				tInicio = time(NULL);
+			}
+			estado = ejecutar(cons,r); // EJECUTO
+			if(estado.resultado == OK && (r->accionEjecutar == SELECT || r->accionEjecutar == INSERT))
+			{
+				tFinal = time(NULL);
+				tTotal = tFinal - tInicio;
+				printf("TIEMPO QUE TARDO: %d", tTotal);
+			}
 		}
 		else{
 			log_error(g_logger, "No se encontró la tabla");
@@ -182,7 +202,7 @@ resultado ejecutarRequest(resultadoParser *r)
 				estado = journal();
 				break;
 			case METRICS:
-				//metrics();
+				estado = metrics();
 				break;
 			case ADD:
 			{
