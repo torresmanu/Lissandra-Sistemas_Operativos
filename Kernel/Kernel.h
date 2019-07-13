@@ -14,31 +14,45 @@
 #include <commons/log.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <sys/inotify.h>
 #include "Estados.h"
 #include "Request.h"
 
-char* IP;
-char* PUERTO;
+// SEMAFOROS
+sem_t sNuevo; // Semáforo para el estado NEW
+sem_t sListo; // Semáforo para el estado READY
+sem_t sDescribe;
+pthread_mutex_t mNew;
+pthread_mutex_t mReady;
+pthread_mutex_t mExit;
+pthread_mutex_t mConfiguracion;
 
+// VARIABLES DEL CONFIG
 int quantum; 					// Cantidad de Scripts en el estado EXEC
 int nivelMultiprocesamiento;    // Cuantos procesos (hilos) voy a ejecutar
 int nivelActual;
 int metadataRefresh;
 int retardoGossiping;
+int sleepEjecucion;
 
-pthread_t plp; // Planificador a largo plazo
-pthread_t describeGlobal; // Describe global
-pthread_t gossipingAutomatico;
-pthread_t* executer;
+// HILOS
+pthread_t plp; 					// Planificador a largo plazo
+pthread_t describeGlobal; 		// Describe global
+pthread_t gossipingAutomatico;	// Gossipeo
+pthread_t* executer;			// Hilos de ejecucion (actuan como estado EXEC)
+pthread_t monitoreador;			// Monitoreador del config
 
 resultado finalizar; // Variable de corte
 
-//////////// SOCKETS ////////////
+// MONITOREADOR
+#define EVENT_SIZE  (sizeof(struct inotify_event))
+#define BUF_LEN     (1024 * (EVENT_SIZE + 16))
+char pathDirectorioActual[256];
+
+
+//////////// INICIALIZACION DEL KERNEL  ////////////
 void iniciar_programa(void);
 void terminar_programa(void);
-int enviar_mensaje(int socket_cliente);
-int iniciarCliente();
-
 
 //////////// CONSOLA Y PLANIFICADORES ////////////
 void leerConsola();
@@ -48,12 +62,14 @@ void mandarAready(Script *s);
 void mandarAexit(Script *s);
 bool deboSalir(Script *s);
 
-// DESCRIBE GLOBAL
+//////////// DESCRIBE GLOBAL ////////////
 void realizarDescribeGlobal();
 
+//////////// GOSSIPING ////////////
 void realizarGossipingAutomatico();
 
-void gestionarConexionAMemoria(Memoria *mem);
-
+//////////// MONITOREADOR ////////////
+void controlConfig();
+void actualizarRetardos();
 
 #endif /* KERNEL_H_ */

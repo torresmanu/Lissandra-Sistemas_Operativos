@@ -20,10 +20,10 @@ int main(int argc, char* argv[]) {
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-//	int errThreadJournal = pthread_create(&threadJournal, &attr, journalConRetardo, NULL);
-//	if(errThreadJournal != 0) {
-//		log_info(g_logger,"Hubo un problema al crear el thread journalConRetardo:[%s]", strerror(errThreadJournal));
-//	}
+	int errThreadJournal = pthread_create(&threadJournal, &attr, journalConRetardo, NULL);
+	if(errThreadJournal != 0) {
+		log_info(g_logger,"Hubo un problema al crear el thread journalConRetardo:[%s]", strerror(errThreadJournal));
+	}
 	//pthread_attr_destroy(&attr);
 
 	//pthread_attr_t attr;
@@ -755,7 +755,6 @@ void consola(){
 	while(res.resultado != SALIR)
 	{
 		mensaje = readline(">");
-
 		if(mensaje)
 			add_history(mensaje);
 
