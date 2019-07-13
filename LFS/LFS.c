@@ -468,11 +468,11 @@ void gestionarConexion(int conexion_cliente) {
 	int status;
 	resultadoParser rp;
 	int size_to_send;
+	accion acc;
 
-	char* buffer2 = malloc(sizeof(int));
+	char* buffer2 = malloc(sizeof(acc));
 
 	while(recibiendo) {
-		accion acc;
 		int valueResponse = recv(conexion_cliente, buffer2, sizeof(int), 0);
 		memcpy(&acc, buffer2, sizeof(int));
 

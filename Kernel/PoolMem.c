@@ -13,12 +13,14 @@ int obtenerMemorias(int socket){
 
 	accion pedido = GOSSIPING;
 	send(socket,&pedido,sizeof(int),0);
-	log_info(g_logger,"Mando solicitud de gossiping");
+	log_info(g_logger,"Gossiping en proceso..");
 
 	char* buffer = malloc(sizeof(uint32_t));
 	status = recv(socket,buffer,sizeof(uint32_t),0);
 	if(status==-1)
-		perror("Error recv");
+		log_error(g_logger,"Error en el gossiping");
+	else if(status == 0)
+		log_error(g_logger,"Se desconectó la memoria del config. Se procede a la desconexión de kernel..");
 	if(status != sizeof(uint32_t)) return -2;
 	int cantElem = *(int*)buffer;
 
@@ -55,7 +57,7 @@ int obtenerMemorias(int socket){
 	}
 
 	free(buffer);
-	log_info(g_logger,"Recibi tabla completa");
+	log_info(g_logger,"Gossiping completado.");
 	return status;
 }
 
@@ -120,7 +122,13 @@ void agregarMutex(Memoria* mem){
 }
 
 void liberarMutexs(){
-	dictionary_destroy_and_destroy_elements(mutexsConexiones,pthread_mutex_destroy);
+	dictionary_destroy_and_destroy_elements(mutexsConexiones,liberarMutex);
+}
+
+void liberarMutex(void* elem)
+{
+	pthread_mutex_t* mutex = (pthread_mutex_t*)elem;
+	pthread_mutex_destroy(mutex);
 }
 
 pthread_mutex_t* obtenerMutex(Memoria* mem){

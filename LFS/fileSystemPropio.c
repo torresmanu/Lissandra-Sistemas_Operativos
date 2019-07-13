@@ -25,11 +25,15 @@ int inicializarFSPropio(){
 	}
 	//Creo primero el directorio metadata
 	int status = mkdir(metadataPath,0777);
+	free(metadataPath);
 	if(status != 0){
+		free(fsBitmapPath);
 		return status;
 	}
 	f = fopen(fsBitmapPath,"w");
+	free(fsBitmapPath);
 	if(f == NULL){
+		fclose(f);
 		return -1;
 	}
 	int blocks = getIntConfig("BLOCKS");
@@ -39,6 +43,8 @@ int inicializarFSPropio(){
 		bitmapData[i] = 0;
 	}
 	fwrite(bitmapData,sizeof(char),blocksChar,f);
+
+	free(bitmapData);
 	fclose(f);
 
 	//Creo el directorio bloque
@@ -47,11 +53,13 @@ int inicializarFSPropio(){
 	string_append(&bloquesPath,magicNumber);
 	status = mkdir(bloquesPath,0777);
 	if(status != 0){
+		free(bloquesPath);
 		return status;
 	}
 	string_append(&bloquesPath,"/bloques");
 	status = mkdir(bloquesPath,0777);
 	if(status != 0){
+		free(bloquesPath);
 		return status;
 	}
 	for(int i=0;i<blocks;i++){
@@ -63,7 +71,10 @@ int inicializarFSPropio(){
 		if(fBloque != NULL){
 			fclose(fBloque);
 		}
+		free(bloquePath);
 	}
+
+	free(bloquesPath);
 	return 0;
 }
 
