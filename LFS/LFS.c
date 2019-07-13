@@ -135,6 +135,7 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		{
 			contenidoSelect* contSel;
 			contSel = (contenidoSelect*)resParser->contenido;
+			log_info(g_logger, "Llego SELECT %i", contSel->key);
 			res = select_acc(contSel->nombreTabla,contSel->key);
 			//free(contSel->nombreTabla);
 			break;
@@ -148,6 +149,7 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		case INSERT:
 		{
 			contenidoInsert* contIns = resParser->contenido;
+			log_info(g_logger, "Llego INSERT %i;%s;%ld", contIns->key, contIns->value, contIns->timestamp);
 			res = insert(contIns->nombreTabla,contIns->key,contIns->value,contIns->timestamp);
 			break;
 		}
@@ -201,7 +203,7 @@ resultado parsear_mensaje(resultadoParser* resParser)
 
 }
 
-resultado select_acc(char* tabla,int key)
+resultado select_acc(char* tabla,uint16_t key)
 {
 	//Chequeo que no este bloqueada la tabla
 	bloquearTabla(tabla);
@@ -259,7 +261,7 @@ resultado select_acc(char* tabla,int key)
 	return res;
 }
 
-resultado insert(char* tabla,int key,char* value,long timestamp)
+resultado insert(char* tabla,uint16_t key,char* value,long timestamp)
 {
 
 	resultado res;
