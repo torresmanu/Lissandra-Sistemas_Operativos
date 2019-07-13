@@ -325,11 +325,12 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 
 	int buffer_size = sizeof(int);
 	char* buffer = malloc(buffer_size);
+	char* buffer2 = malloc(sizeof(uint16_t));
 
 	switch(rp->accionEjecutar) {
 	case(INSERT): {
 		contenidoInsert* ci = malloc(sizeof(contenidoInsert));
-		char* bufferTimestamp = malloc(sizeof(ci->timestamp));
+		char* bufferTimestamp = malloc(sizeof(long));
 		int valueSize;
 		int nombreTablaSize;
 
@@ -337,8 +338,8 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		memcpy(&total_size, buffer, buffer_size);
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(ci->key), 0);
-		memcpy(&(ci->key), buffer, sizeof(ci->key));
+		status = recv(socketCliente, buffer2, sizeof(ci->key), 0);
+		memcpy(&(ci->key), buffer2, sizeof(ci->key));
 		if (!status) return -2;
 
 		status = recv(socketCliente, buffer, sizeof(valueSize), 0);
@@ -370,11 +371,11 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		contenidoSelect* cs = malloc(sizeof(contenidoSelect));
 		int nombreTablaSize;
 
-		status = recv(socketCliente, buffer, sizeof(total_size), 0);
+		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&total_size, buffer, buffer_size);
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(nombreTablaSize), 0);
+		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&nombreTablaSize, buffer, buffer_size);
 		if (!status) return -2;
 
@@ -382,8 +383,8 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		status = recv(socketCliente, cs->nombreTabla, nombreTablaSize, 0);
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(cs->key), 0);
-		memcpy(&(cs->key), buffer, sizeof(cs->key));
+		status = recv(socketCliente, buffer2, sizeof(cs->key), 0);
+		memcpy(&(cs->key), buffer2, sizeof(cs->key));
 		if (!status) return -2;
 
 		rp->contenido = cs;
@@ -395,11 +396,11 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		int nombreTablaSize;
 		int consistencia_size;
 
-		status = recv(socketCliente, buffer, sizeof(total_size), 0);
+		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&total_size, buffer, buffer_size);
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(nombreTablaSize), 0);
+		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&nombreTablaSize, buffer, buffer_size);
 		if (!status) return -2;
 
@@ -407,7 +408,7 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		status = recv(socketCliente, cc->nombreTabla, nombreTablaSize, 0);
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(consistencia_size), 0);
+		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&consistencia_size, buffer, buffer_size);
 		if (!status) return -2;
 
@@ -415,12 +416,12 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		status = recv(socketCliente, cc->consistencia, consistencia_size, 0);
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(cc->cant_part), 0);
-		memcpy(&(cc->cant_part), buffer, sizeof(cc->cant_part));
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&(cc->cant_part), buffer, sizeof(int));
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(cc->tiempo_compresion), 0);
-		memcpy(&(cc->tiempo_compresion), buffer, sizeof(cc->tiempo_compresion));
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&(cc->tiempo_compresion), buffer, sizeof(int));
 		if (!status) return -2;
 
 		rp->contenido = cc;
@@ -431,12 +432,12 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		contenidoDescribe* cd = malloc(sizeof(contenidoDescribe));
 		int nombreTablaSize;
 
-		status = recv(socketCliente, buffer, sizeof(total_size), 0);
+		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&total_size, buffer, buffer_size);
 		if (!status) return -2;
 
 		if(total_size > (sizeof(rp->accionEjecutar) + sizeof(int))) {
-			status = recv(socketCliente, buffer, sizeof(nombreTablaSize), 0);
+			status = recv(socketCliente, buffer, sizeof(int), 0);
 			memcpy(&nombreTablaSize, buffer, buffer_size);
 			if (!status) return -2;
 
@@ -455,11 +456,11 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		contenidoDrop* cd = malloc(sizeof(contenidoDrop));
 		int nombreTablaSize;
 
-		status = recv(socketCliente, buffer, sizeof(total_size), 0);
+		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&total_size, buffer, buffer_size);
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(nombreTablaSize), 0);
+		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&nombreTablaSize, buffer, buffer_size);
 		if (!status) return -2;
 
@@ -475,15 +476,15 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		contenidoAdd* ca = malloc(sizeof(contenidoAdd));
 		int criterio_size;
 
-		status = recv(socketCliente, buffer, sizeof(total_size), 0);
+		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&total_size, buffer, buffer_size);
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(ca->numMem), 0);
-		memcpy(&(ca->numMem), buffer, sizeof(ca->numMem));
+		status = recv(socketCliente, buffer, sizeof(int), 0);
+		memcpy(&(ca->numMem), buffer, sizeof(int));
 		if (!status) return -2;
 
-		status = recv(socketCliente, buffer, sizeof(criterio_size), 0);
+		status = recv(socketCliente, buffer, sizeof(int), 0);
 		memcpy(&criterio_size, buffer, buffer_size);
 		if (!status) return -2;
 
@@ -505,6 +506,7 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 		return -1;
 	}
 
+	free(buffer2);
 	free(buffer);
 	return 0;
 
@@ -940,6 +942,7 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 
 	int buffer_size = sizeof(int);
 	char* buffer = malloc(buffer_size);
+	char* buffer2 = malloc(sizeof(uint16_t));
 
 	switch(res->accionEjecutar) {
 	case(INSERT): {
@@ -1003,8 +1006,8 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 			status = recv(socketCliente, reg->value, valueSize, 0);
 			if (!status) return -2;
 
-			status = recv(socketCliente, buffer, sizeof(reg->key), 0);
-			memcpy(&(reg->key), buffer, sizeof(reg->key));
+			status = recv(socketCliente, buffer2, sizeof(reg->key), 0);
+			memcpy(&(reg->key), buffer2, sizeof(reg->key));
 			if (!status) return -2;
 
 			status = recv(socketCliente, bufferTimestamp, sizeof(reg->timestamp), 0);
@@ -1220,6 +1223,7 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		return -1;
 	}
 
+	free(buffer2);
 	free(buffer);
 	return 0;
 }
