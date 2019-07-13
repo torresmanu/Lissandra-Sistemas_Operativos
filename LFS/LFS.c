@@ -135,7 +135,7 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		{
 			contenidoSelect* contSel;
 			contSel = (contenidoSelect*)resParser->contenido;
-			log_info(g_logger, "Llego SELECT %i", contSel->key);
+//			log_info(g_logger, "Llego SELECT %i", contSel->key);
 			res = select_acc(contSel->nombreTabla,contSel->key);
 			//free(contSel->nombreTabla);
 			break;
