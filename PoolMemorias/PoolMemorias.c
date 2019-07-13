@@ -661,8 +661,8 @@ resultado select_t(char *nombre_tabla, int key){
 		registro = pedirAlLFS(nombre_tabla,key);	//mejor pasar un Segmento
 
 		if(registro==NULL){
-			char* aux = "Fallo al recibir registro";
-			res.resultado=ERROR;
+			char* aux = "No se encontro el registro";
+			res.resultado=OK;
 			res.mensaje= string_duplicate(aux);
 			return res;
 		}
