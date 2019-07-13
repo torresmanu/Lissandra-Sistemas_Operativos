@@ -10,7 +10,7 @@
 
 #include "Globales.h"
 #include "Gossiping.h"
-
+#include <unistd.h>
 
 
 #define EVENT_SIZE  (sizeof(struct inotify_event))
@@ -77,6 +77,7 @@ void corregirIndicesTablaSegmentos();
 void corregirIndicesPaginasGlobal();
 void drop(char* nombre_tabla);
 
+void correrScript(void);
 
 #endif /* POOLMEMORIAS_H_ */
 

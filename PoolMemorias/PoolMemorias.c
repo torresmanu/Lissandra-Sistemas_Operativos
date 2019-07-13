@@ -20,22 +20,23 @@ int main(int argc, char* argv[]) {
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-//	int errThreadJournal = pthread_create(&threadJournal, &attr, journalConRetardo, NULL);
-//	if(errThreadJournal != 0) {
-//		log_info(g_logger,"Hubo un problema al crear el thread journalConRetardo:[%s]", strerror(errThreadJournal));
-//	}
-	//pthread_attr_destroy(&attr);
+	int errThreadJournal = pthread_create(&threadJournal, &attr, journalConRetardo, NULL);
+	if(errThreadJournal != 0) {
+		log_info(g_logger,"Hubo un problema al crear el thread journalConRetardo:[%s]", strerror(errThreadJournal));
+	}
+
+	pthread_attr_destroy(&attr);
 
 	//pthread_attr_t attr;
 	pthread_t threadGossiping;
 
-	//pthread_attr_init(&attr);
+	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-//	int errThreadGossiping = pthread_create(&threadGossiping, &attr, gossipingConRetardo, NULL);
-//	if(errThreadGossiping != 0) {
-//		log_info(g_logger,"Hubo un problema al crear el thread gossipingConRetardo:[%s]", strerror(errThreadGossiping));
-//	}
+	int errThreadGossiping = pthread_create(&threadGossiping, &attr, gossipingConRetardo, NULL);
+	if(errThreadGossiping != 0) {
+		log_info(g_logger,"Hubo un problema al crear el thread gossipingConRetardo:[%s]", strerror(errThreadGossiping));
+	}
 	pthread_attr_destroy(&attr);
 
 
@@ -47,6 +48,7 @@ int main(int argc, char* argv[]) {
 
 	gossiping();
 
+	correrScript();
 	consola();
 
 	//ver si esta bien que este aca
@@ -62,6 +64,33 @@ int main(int argc, char* argv[]) {
 
 
 }
+
+void correrScript() {
+	printf("CORRO SCRIPTS\n");
+
+	FILE* file = fopen("../../prueba.lql","r");
+	if(file == NULL){
+		printf("ERROR AL OBTENER EL SCRIPT\n");
+		return;
+	}
+	char linea[1024];
+	int i=1;
+	while(fgets(linea,1024,(FILE*)file)){
+		printf("Linea ejecutada #%i\n",i);
+		resultadoParser resParser = parseConsole(linea);
+		resultado res = parsear_mensaje(&resParser);
+		if(res.resultado == OK){
+		}else{
+			log_info(g_logger,"ERROR");
+		}
+		usleep(100000);
+		i++;
+	}
+	fclose(file);
+
+	printf("TERMINO CORRER SCRIPTS\n");
+}
+
 
 void escucharConexiones(){
 	int conexion_servidor = iniciarServidor();
@@ -155,12 +184,13 @@ void iniciarHiloKernel(struct sockaddr_in *cliente, socklen_t *longc, int* conex
 }
 
 void escucharKernel(int* conexion_cliente){
-//	int conexion_servidor = iniciarServidor();
-//	int conexion_cliente = conectarAlKernel(conexion_servidor);
+
 	resultado res;
 	res.resultado = OK;
 
 	while(res.resultado!=SALIR){
+		pthread_mutex_lock(&mConexionKernel);
+
 		resultadoParser resParser = recibirRequest(*conexion_cliente);
 		if(estaHaciendoJournal){
 			res.resultado=EnJOURNAL;
@@ -194,6 +224,8 @@ void escucharKernel(int* conexion_cliente){
 		}
 
 		avisarResultado(res,*conexion_cliente);
+
+		pthread_mutex_unlock(&mConexionKernel);
 
 		if(res.mensaje!=NULL)
 			free(res.mensaje);
@@ -374,6 +406,8 @@ bool iniciar_programa()
 	pthread_mutex_init(&mTabPagGlobal,NULL);
 	pthread_mutex_init(&mMemoriasConocidas,NULL);
 	pthread_mutex_init(&mBitmap,NULL);
+	pthread_mutex_init(&mConexion,NULL);
+	pthread_mutex_init(&mConexionKernel,NULL);
 
 
 
@@ -755,7 +789,6 @@ void consola(){
 	while(res.resultado != SALIR)
 	{
 		mensaje = readline(">");
-
 		if(mensaje)
 			add_history(mensaje);
 

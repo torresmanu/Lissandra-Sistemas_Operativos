@@ -28,6 +28,10 @@ Criterio* toConsistencia(char*);
 Memoria* masApropiada(Criterio*, resultadoParser*);
 void add(Memoria*,Criterio*);
 
+// MANEJO DE MEMORIAS
+Memoria* buscarMemoriaPorID(int, t_list*);
+bool coincideID(void*);
+
 //RANDOM (EC)
 int memoriaRandom();
 

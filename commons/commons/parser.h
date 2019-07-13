@@ -11,6 +11,7 @@
 #include "string.h"
 #include <stddef.h>
 #include <time.h>
+#include "stdint.h"
 
 typedef enum
 {
@@ -61,7 +62,7 @@ typedef struct {
 typedef struct
 {
 	char* nombreTabla;
-	int key;
+	uint16_t key;
 	char* value;
 	long timestamp;
 } contenidoInsert;
@@ -69,7 +70,7 @@ typedef struct
 typedef struct
 {
 	char* nombreTabla;
-	int key;
+	uint16_t key;
 } contenidoSelect;
 
 typedef struct

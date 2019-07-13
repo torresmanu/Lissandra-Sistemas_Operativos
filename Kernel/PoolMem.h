@@ -54,8 +54,10 @@ bool estoyConectado(Memoria* mem);
 
 void agregarMutex(Memoria* mem);
 void liberarMutexs();
+void liberarMutex(void*);
 pthread_mutex_t* obtenerMutex(Memoria* mem);
 void bloquearConexion(Memoria* mem);
 void desbloquearConexion(Memoria* mem);
+void gestionarConexionAMemoria(Memoria *mem);
 
 #endif /* POOLMEM_H_ */

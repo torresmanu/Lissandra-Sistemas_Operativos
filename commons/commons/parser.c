@@ -15,7 +15,8 @@ resultadoParser parseConsole(char* mensaje){
 		contenidoSelect* cont = malloc(sizeof(contenidoSelect));
 		cont->nombreTabla = strsep(&mensaje," ");
 		char * str_key = strsep(&mensaje," ");
-		cont->key = atoi(str_key);
+//		cont->key = atoi(str_key);
+		cont->key = (uint16_t)strtoul(str_key, NULL, 10);
 		resParser.contenido=cont;
 	}
 	else if(strcmp(accion,"INSERT") == 0)
@@ -24,7 +25,8 @@ resultadoParser parseConsole(char* mensaje){
 		contenidoInsert* cont = malloc(sizeof(contenidoInsert));
 		cont->nombreTabla = strsep(&mensaje," ");
 		char * str_key = strsep(&mensaje," ");
-		cont->key = atoi(str_key);
+//		cont->key = atoi(str_key);
+		cont->key = (uint16_t)strtoul(str_key, NULL, 10);
 		if(mensaje[0] == '\"'){
 			strsep(&mensaje,"\"");
 			cont->value = strsep(&mensaje,"\"");

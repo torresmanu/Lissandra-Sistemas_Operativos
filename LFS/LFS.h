@@ -52,8 +52,8 @@ t_log* g_logger;
 
 
 resultado parsear_mensaje(resultadoParser *);
-resultado select_acc(char *,int);
-resultado insert(char*,int,char*,long);
+resultado select_acc(char *,uint16_t);
+resultado insert(char*,uint16_t,char*,long);
 resultado create(char*,char*,int,int);
 resultado describe(char*);
 resultado drop(char*);

@@ -1,17 +1,10 @@
-
 #include "Kernel.h"
-
-sem_t sNuevo; // Semáforo para el estado NEW
-sem_t sListo; // Semáforo para el estado READY
-
-pthread_mutex_t mNew;
-pthread_mutex_t mReady;
-pthread_mutex_t mExit;
 
 int main(void) {
 
 	sem_init(&sNuevo,0,0);
 	sem_init(&sListo,0,0);
+	sem_init(&sDescribe,0,1);
 
 	pthread_mutex_init(&mNew,NULL);
 	pthread_mutex_init(&mReady,NULL);
@@ -27,8 +20,10 @@ int main(void) {
 	}
 
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
-//	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
+
+	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 	pthread_create(&gossipingAutomatico,NULL,(void*)realizarGossipingAutomatico,NULL);
+	pthread_create(&monitoreador,NULL,(void*)controlConfig,NULL);
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
@@ -73,6 +68,12 @@ void iniciar_programa(void)
 
 	//Tasa de refresh de la metada
 	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
+
+	//Tiempo de pausa en la ejecucion (NO USADA AUN)
+	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
+
+	//Pongo el WATCH en el directorio del kernel
+	getcwd(pathDirectorioActual, sizeof(pathDirectorioActual));
 
 	pool = list_create();			// POOL DE MEMORIAS
 	tablas = list_create();			// ESTRUCTURA QUE CONTIENE TODAS LAS TABLAS (METADATA)
@@ -157,11 +158,8 @@ void agregarScriptAEstado(void* elem, nombreEstado estado)  // Aca hace las comp
 	}
 }
 
-void leerConsola(){
-
-	resultado result;
-	result.resultado = OK;
-
+void leerConsola()
+{
 	printf("\nBienvenido! Welcome! Youkoso!\n");
 	while(1)
 	{
@@ -279,8 +277,11 @@ void realizarDescribeGlobal()
 {
 	while(1)
 	{
+		sem_wait(&sDescribe);
+		printf("La metadata refresh es: %d\n", metadataRefresh);
 		describe(NULL);
 		sleep(metadataRefresh/1000); // Lo paso a ms
+		sem_post(&sDescribe);
 	}
 }
 
@@ -400,7 +401,7 @@ void gestionarConexionAMemoria(Memoria* mem)
 	}
 	else
 	{
-		log_info(g_logger, "Conectado con IP: %s:%s",MemDescribe->ipMemoria, MemDescribe->puerto);
+		log_info(g_logger, "Conectado con IP: %s:%s",mem->ipMemoria, mem->puerto);
 
 		// Envio un 1
 		uint32_t codigo = 1;
@@ -417,3 +418,64 @@ void gestionarConexionAMemoria(Memoria* mem)
 	freeaddrinfo(serverInfo); // Libero
 	desbloquearConexion(mem);
 }
+
+////////////////////////////////////////////////////
+
+void controlConfig()
+{
+	int length, i = 0;
+	    int fd;
+	    int wd;
+	    char buffer[BUF_LEN];
+
+	    fd = inotify_init();
+
+	    if (fd < 0) {
+	        perror("Error en el inicio del Inotify: ");
+	    }
+
+	    wd = inotify_add_watch(fd, pathDirectorioActual, IN_MODIFY);
+
+	    while(finalizar.resultado != SALIR){
+	    	i=0;
+	        length = read(fd, buffer, BUF_LEN);
+	        if (length < 0) {
+	            perror("Error en la lectura del archivo de config: ");
+	        }
+	        if(length == 0){
+	        	printf("Sin cambios en el archivo de configuración.\n");
+	        }
+
+	        while (i < length) {
+	            struct inotify_event *event =
+	                (struct inotify_event *) &buffer[i];
+	            if (event->len) {
+	                if (event->mask & IN_MODIFY) {
+	                	if(strcmp("Kernel.config",event->name)==0){
+	                		log_info(g_logger,"El archivo %s fue modificado.", event->name);
+	                		actualizarRetardos();
+	                	}
+	                }
+	            }
+	            i += EVENT_SIZE + event->len;
+	        }
+	    }
+	    (void) inotify_rm_watch(fd, wd);
+	    (void) close(fd);
+}
+
+void actualizarRetardos()
+{
+	// Un problema de sincronización
+
+	config_destroy(g_config);
+	g_config = config_create("Kernel.config");
+
+	// Obtengo los nuevos valores
+	quantum = config_get_int_value(g_config,"QUANTUM");
+	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
+	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
+
+}
+
+////////////////////////////////////////////////////
