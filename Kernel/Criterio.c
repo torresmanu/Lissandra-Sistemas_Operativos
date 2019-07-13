@@ -61,9 +61,16 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 		case SHC:
 		{
 			// LOGICA DE CRITERIO STRONG HASH CONSISTENCY
-			memoriaElegida = hash(r)+1;
-			mem = (Memoria*)list_get(shc.memorias,memoriaElegida-1);
 			aux="SHC";
+			if(r->accionEjecutar == SELECT || r->accionEjecutar == INSERT)
+			{
+				memoriaElegida = obtenerHash(r)+1;
+				mem = (Memoria*)list_get(shc.memorias,memoriaElegida-1);
+			}
+			else
+			{
+				mem = (Memoria*)list_get(shc.memorias,0); // Elijo la primera y listo
+			}
 			break;
 		}
 		case EC:
@@ -77,7 +84,7 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 		default:
 			break;
 	}
-	if(mem==NULL){
+	if(mem	== NULL){
 		log_warning(g_logger,"No hay memorias asociadas al criterio %s",aux);
 		mem = MemDescribe;
 	}
@@ -97,7 +104,6 @@ void add(Memoria *memoria,Criterio *cons)
 int memoriaRandom()
 {
 	int cantMemorias = list_size(ec.memorias);
-
 	if(cantMemorias>0)
 		return rand()%cantMemorias;
 	else
@@ -105,15 +111,25 @@ int memoriaRandom()
 }
 
 /// Funcion de hasheo (SHC)
-int hash(resultadoParser* r)
-{
-	int cantMemorias = list_size(shc.memorias);
-	return obtenerHash(r)%cantMemorias; 			// 19827%3 --> 0
-}
-
 int obtenerHash(resultadoParser* r)
 {
-	int hash;
-	return hash;
+	int cantMemorias = list_size(shc.memorias);
+	return hash(r)%cantMemorias; 			// 19827%3 --> 0
 }
+
+int hash(resultadoParser* r)
+{
+	if(r->accionEjecutar == SELECT)
+	{
+		contenidoSelect* s = ((contenidoSelect*)r->contenido);
+		return s->key;
+	}
+	else
+	{
+		contenidoInsert* i = ((contenidoInsert*)r->contenido);
+		return i->key;
+	}
+
+}
+
 
