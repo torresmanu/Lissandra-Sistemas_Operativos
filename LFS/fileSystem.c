@@ -662,7 +662,7 @@ void bloquearTabla(char* tabla){
 	}
 	//Si no encontre la tabla en la lista la creo
 	if(encontrada == 0){
-		nodo_bloqueo* bloqueo = malloc(sizeof(bloqueo));
+		nodo_bloqueo* bloqueo = malloc(sizeof(nodo_bloqueo));
 		bloqueo->tabla = string_duplicate(tabla);
 		sem_init(&(bloqueo->bloqueo),0,0);
 		list_add(listaBloqueos,bloqueo);
