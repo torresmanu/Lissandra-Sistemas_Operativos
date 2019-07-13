@@ -534,7 +534,7 @@ void compactarTabla(char* tabla){
 				for(int i = 0; i < list_size(nodo->lista_registros); i++){
 					registro* reg_aux = ((registro*)list_get(nodo->lista_registros,i));
 					if(reg_aux->key == reg->key){
-						if(reg_aux->timestamp < reg->timestamp){
+						if(reg_aux->timestamp <= reg->timestamp){
 							strcpy(reg_aux->value,reg->value);
 							reg_aux->timestamp = reg->timestamp;
 						}
