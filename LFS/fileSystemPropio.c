@@ -314,9 +314,11 @@ int fs_fprint(fs_file* fs, registro* obj){
 		sem_post(&semaforo);
 		return -2;
 	}
+	char * strValue = string_duplicate(obj->value);
+	obj->value = NULL;
 	fwrite(obj,sizeof(registro),1,fBloque);
 	//printf("Valor insertado: %s\n",obj->value);
-	fwrite(obj->value,tamValue,1,fBloque);
+	fwrite(strValue,tamValue,1,fBloque);
 	fclose(fBloque);
 	//Actualizo el size
 	fs->size = fs->size + size;

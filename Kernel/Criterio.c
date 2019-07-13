@@ -87,8 +87,8 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 		case EC:
 		{
 			// LOGICA DE CRITERIO EVENTUAL CONSISTENCY
-			memoriaElegida = memoriaRandom() + 1;				//(+1 porque los IDs de las memorias empiezan desde 1)
-			mem = buscarMemoriaPorID(memoriaElegida,ec.memorias);
+			memoriaElegida = memoriaRandom()+1;				//(+1 porque los IDs de las memorias empiezan desde 1)
+			mem = (Memoria*)list_get(ec.memorias,memoriaElegida-1);
 			aux="EC";
 			break;
 		}

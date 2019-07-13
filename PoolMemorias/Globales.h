@@ -48,6 +48,7 @@ typedef struct
 	int numero_segmento;
 	char *nombre_tabla;//[NOMBRE_TABLA];
 	t_list* puntero_tpaginas;
+	pthread_mutex_t mTablaPaginas;
 
 } Segmento;
 
@@ -103,5 +104,6 @@ pthread_mutex_t mMemoriasConocidas;
 pthread_mutex_t mBitmap;
 pthread_mutex_t mConexion;
 pthread_mutex_t mConexionKernel;
+pthread_mutex_t mJournal;
 
 #endif /* GLOBALES_H_ */

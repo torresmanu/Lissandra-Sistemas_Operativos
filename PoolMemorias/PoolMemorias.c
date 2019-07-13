@@ -48,7 +48,6 @@ int main(int argc, char* argv[]) {
 
 	gossiping();
 
-	correrScript();
 	consola();
 
 	//ver si esta bien que este aca
@@ -189,16 +188,25 @@ void escucharKernel(int* conexion_cliente){
 	res.resultado = OK;
 
 	while(res.resultado!=SALIR){
-		pthread_mutex_lock(&mConexionKernel);
+//		pthread_mutex_lock(&mConexionKernel);
 
 		resultadoParser resParser = recibirRequest(*conexion_cliente);
-		if(estaHaciendoJournal){
-			res.resultado=EnJOURNAL;
-			res.mensaje = NULL;
-		}
-		else
-			res = parsear_mensaje(&resParser);
 
+//		pthread_mutex_lock(&mJournal);
+//		if(estaHaciendoJournal){
+//			pthread_mutex_unlock(&mJournal);
+//			res.accionEjecutar=resParser.accionEjecutar;
+//			res.resultado=EnJOURNAL;
+//			char* aux = "En Journal";
+//			res.mensaje= string_duplicate(aux);
+//			res.contenido=NULL;
+//		}
+//		else{
+		pthread_mutex_lock(&mJournal);
+		res = parsear_mensaje(&resParser);
+		pthread_mutex_unlock(&mJournal);
+
+//		}
 		if(res.resultado == OK)
 		{
 			log_info(g_logger,res.mensaje);
@@ -225,7 +233,8 @@ void escucharKernel(int* conexion_cliente){
 
 		avisarResultado(res,*conexion_cliente);
 
-		pthread_mutex_unlock(&mConexionKernel);
+
+//		pthread_mutex_unlock(&mConexionKernel);
 
 		if(res.mensaje!=NULL)
 			free(res.mensaje);
@@ -407,8 +416,8 @@ bool iniciar_programa()
 	pthread_mutex_init(&mMemoriasConocidas,NULL);
 	pthread_mutex_init(&mBitmap,NULL);
 	pthread_mutex_init(&mConexion,NULL);
-	pthread_mutex_init(&mConexionKernel,NULL);
-
+//	pthread_mutex_init(&mConexionKernel,NULL);
+	pthread_mutex_init(&mJournal,NULL);
 
 
 	estaHaciendoJournal = false;
@@ -696,6 +705,7 @@ void almacenarRegistro(char *nombre_tabla,Registro registro, int posLibre){
 	Segmento *segmento;
 	if(!encuentraSegmento(nombre_tabla,&segmento))
 		segmento = agregarSegmento(nombre_tabla);
+
 	agregarPagina(registro, segmento, posLibre, 0); //le paso cero como valorFlag porque solo la usamos en el select esta funcion
 }
 
@@ -703,6 +713,7 @@ Segmento *agregarSegmento(char *nombre_tabla){
 	//creo segmento con el ntabla
 	Segmento* segmento=(Segmento *)malloc(sizeof(Segmento));
 	segmento->nombre_tabla = malloc(strlen(nombre_tabla)+1);
+	pthread_mutex_init(&(segmento->mTablaPaginas),NULL);
 
 	pthread_mutex_lock(&mTabSeg);
 	segmento->numero_segmento=tabla_segmentos->elements_count;
@@ -733,7 +744,10 @@ void agregarPagina(Registro registro, Segmento *segmento, int posLibre, int valo
 
 	pagina->flag_modificado=valorFlag;
 
+	pthread_mutex_lock(&(segmento->mTablaPaginas));
 	list_add(segmento->puntero_tpaginas, pagina);
+	pthread_mutex_unlock(&(segmento->mTablaPaginas));
+
 
 	NodoTablaPaginas* nodo=malloc(sizeof(NodoTablaPaginas));
 	nodo->pagina=pagina;
@@ -766,7 +780,9 @@ resultado iniciarReemplazo(char *nombre_tabla,Registro registro, int flagModific
 
 		removerPagina(nodoPagina);
 
+		pthread_mutex_lock(&(segmento->mTablaPaginas));
 		list_add(segmento->puntero_tpaginas,nodoPagina->pagina);
+		pthread_mutex_unlock(&(segmento->mTablaPaginas));
 		nodoPagina->segmento=segmento;
 
 		pthread_mutex_lock(&mTabPagGlobal);
@@ -831,7 +847,9 @@ void removerPagina(NodoTablaPaginas *nodo){
 	bool numeroPagIgual(void* element){
 		return nodo->pagina->numero_pagina==((Pagina*)element)->numero_pagina;
 	}
+	pthread_mutex_lock(&(nodo->segmento->mTablaPaginas));
 	list_remove_by_condition(nodo->segmento->puntero_tpaginas,numeroPagIgual);
+	pthread_mutex_unlock(&(nodo->segmento->mTablaPaginas));
 }
 
 NodoTablaPaginas* paginaMenosUsada(){
@@ -853,7 +871,10 @@ bool memoriaFull(){
 
 void journal(){
 
-	estaHaciendoJournal=true;
+//	pthread_mutex_lock(&mJournal);
+//	estaHaciendoJournal=true;
+//	pthread_mutex_unlock(&mJournal);
+	pthread_mutex_lock(&mJournal);
 	pthread_mutex_lock(&mConexion);
 	pthread_mutex_lock(&mTabPagGlobal);
 	log_warning(g_logger,"Journaling, por favor espere");
@@ -861,12 +882,16 @@ void journal(){
 	pthread_mutex_unlock(&mTabPagGlobal);
 	pthread_mutex_unlock(&mConexion);
 
+
 	pthread_mutex_lock(&mTabSeg);
 	list_clean_and_destroy_elements(tabla_segmentos,liberarSegmento);
 	pthread_mutex_unlock(&mTabSeg);
 
-	estaHaciendoJournal=false;
+//	pthread_mutex_lock(&mJournal);
+//	estaHaciendoJournal=false;
+//	pthread_mutex_unlock(&mJournal);
 	log_info(g_logger,"Termino el journal, puede ingresar sus request");
+	pthread_mutex_unlock(&mJournal);
 }
 
 void enviarInsert(void *element){ //ver los casos de error
@@ -899,7 +924,9 @@ void enviarInsert(void *element){ //ver los casos de error
 		free(cont->value);
 		free(cont);
 
+		pthread_mutex_lock(&(((NodoTablaPaginas*)element)->segmento->mTablaPaginas));
 		((NodoTablaPaginas*)element)->pagina->flag_modificado = 0;
+		pthread_mutex_unlock(&(((NodoTablaPaginas*)element)->segmento->mTablaPaginas));
 
 //		resultado res = recibir();
 //		free(res.mensaje);
@@ -913,15 +940,15 @@ void enviarInsert(void *element){ //ver los casos de error
 	}
 }
 
-void cambiarNumerosPaginas(t_list* listaPaginas){
-	for(int i=0;i<listaPaginas->elements_count;i++){
-
-		Pagina *aux = list_get(listaPaginas,i);
-		aux->numero_pagina = i;
-
-		list_replace(listaPaginas,i,aux);
-	}
-}
+//void cambiarNumerosPaginas(t_list* listaPaginas){
+//	for(int i=0;i<listaPaginas->elements_count;i++){
+//
+//		Pagina *aux = list_get(listaPaginas,i);
+//		aux->numero_pagina = i;
+//
+//		list_replace(listaPaginas,i,aux);
+//	}
+//}
 
 
 
@@ -997,7 +1024,9 @@ bool encuentraPagina(Segmento* segmento,uint16_t key, Pagina** pagina){
 		return i==key;
 	}
 
+	pthread_mutex_lock(&(segmento->mTablaPaginas));
 	Pagina* paginaAux = list_find(segmento->puntero_tpaginas,tieneKey);
+	pthread_mutex_unlock(&(segmento->mTablaPaginas));
 //	memcpy(paginaAux,,sizeof(Pagina));
 
 	if(paginaAux==NULL){
@@ -1028,7 +1057,10 @@ resultado insert(char *nombre_tabla,uint16_t key,char *value,long timestamp){
 	if(encuentraSegmento(nombre_tabla,&segmento)){
 
 		if(encuentraPagina(segmento,key,&pagina)){	//en vez de basura(char *) pasarle una pagina
+			pthread_mutex_lock(&(segmento->mTablaPaginas));
 			actualizarRegistro(pagina,value,timestamp);
+			pthread_mutex_unlock(&(segmento->mTablaPaginas));
+
 			actualizarTablaGlobal(pagina->numero_pagina);
 			res.resultado=OK;
 		}
@@ -1067,8 +1099,11 @@ void liberarSegmento(void* elemento){
 
 	Segmento* segmento = (Segmento*) elemento;
 
+	pthread_mutex_lock(&(segmento->mTablaPaginas));
 	list_destroy_and_destroy_elements(segmento->puntero_tpaginas,liberarPagina);
+	pthread_mutex_unlock(&(segmento->mTablaPaginas));
 
+//	pthread_mutex_destroy(&(segmento->mTablaPaginas));
 	free(segmento);
 }
 
@@ -1203,7 +1238,7 @@ void destruirMutexs(){
 	pthread_mutex_destroy(&mTabPagGlobal);
 	pthread_mutex_destroy(&mMemoriasConocidas);
 	pthread_mutex_destroy(&mBitmap);
-
+	pthread_mutex_destroy(&mJournal);
 
 }
 
@@ -1251,7 +1286,10 @@ void destroy_nodo_pagina(void * elem){
 
 void destroy_nodo_segmento(void * elem){
 	Segmento* nodo_tabla_elem = (Segmento *) elem;
+	pthread_mutex_lock(&(nodo_tabla_elem->mTablaPaginas));
 	list_destroy_and_destroy_elements(nodo_tabla_elem->puntero_tpaginas,destroy_nodo_pagina);
+	pthread_mutex_unlock(&(nodo_tabla_elem->mTablaPaginas));
+
 	free(nodo_tabla_elem);
 }
 
@@ -1286,7 +1324,10 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		}
 		case JOURNAL:
 		{
+			pthread_mutex_unlock(&mJournal);
 			journal();
+			pthread_mutex_lock(&mJournal);
+
 			res.accionEjecutar = JOURNAL;
 			res.resultado = OK;
 			res.contenido = NULL;
@@ -1340,6 +1381,7 @@ resultado parsear_mensaje(resultadoParser* resParser)
 			res.mensaje = NULL;
 			break;
 		}
+
 	}
 
 	if(resParser->contenido!=NULL)
