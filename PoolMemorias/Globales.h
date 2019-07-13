@@ -102,7 +102,6 @@ pthread_mutex_t mTabPagGlobal;
 pthread_mutex_t mMemoriasConocidas;
 pthread_mutex_t mBitmap;
 pthread_mutex_t mConexion;
-
-
+pthread_mutex_t mConexionKernel;
 
 #endif /* GLOBALES_H_ */

@@ -113,6 +113,7 @@ int hash(resultadoParser* r)
 
 int obtenerHash(resultadoParser* r)
 {
-
+	int hash;
+	return hash;
 }
 
