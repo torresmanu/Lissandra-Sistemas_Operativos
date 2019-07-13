@@ -400,7 +400,7 @@ void gestionarConexionAMemoria(Memoria* mem)
 	}
 	else
 	{
-		log_info(g_logger, "Conectado con IP: %s:%s",MemDescribe->ipMemoria, MemDescribe->puerto);
+		log_info(g_logger, "Conectado con IP: %s:%s",mem->ipMemoria, mem->puerto);
 
 		// Envio un 1
 		uint32_t codigo = 1;
