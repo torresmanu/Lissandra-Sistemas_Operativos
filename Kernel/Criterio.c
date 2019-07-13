@@ -36,6 +36,15 @@ void destroy_nodo_memoria(void* elem){
 	free(nodo_tabla_elem);
 }
 
+Memoria* buscarMemoriaPorID(int id, t_list* lista)
+{
+	bool coincideID(void* element)		//Subfunción de busqueda
+	{
+		return ((Memoria*)element)->id == id;
+	}
+	return list_find(lista,coincideID);
+}
+
 Criterio* toConsistencia(char* cadena)
 {
 	if(strcmp(cadena, "SC") == 0)
@@ -50,6 +59,7 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 	Memoria* mem;
 	char* aux;
 	int memoriaElegida;
+
 	switch(c->tipo)
 	{
 		case SC:
@@ -65,19 +75,20 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 			if(r->accionEjecutar == SELECT || r->accionEjecutar == INSERT)
 			{
 				memoriaElegida = obtenerHash(r)+1;
-				mem = (Memoria*)list_get(shc.memorias,memoriaElegida-1);
+				mem = buscarMemoriaPorID(memoriaElegida,shc.memorias);
 			}
 			else
 			{
 				mem = (Memoria*)list_get(shc.memorias,0); // Elijo la primera y listo
 			}
+			printf("Elegi la memoria ID: %d", memoriaElegida);
 			break;
 		}
 		case EC:
 		{
 			// LOGICA DE CRITERIO EVENTUAL CONSISTENCY
-			memoriaElegida = memoriaRandom()+1;				//(+1 porque los IDs de las memorias empiezan desde 1)
-			mem = (Memoria*)list_get(ec.memorias,memoriaElegida-1);
+			memoriaElegida = memoriaRandom() + 1;				//(+1 porque los IDs de las memorias empiezan desde 1)
+			mem = buscarMemoriaPorID(memoriaElegida,ec.memorias);
 			aux="EC";
 			break;
 		}
@@ -129,7 +140,4 @@ int hash(resultadoParser* r)
 		contenidoInsert* i = ((contenidoInsert*)r->contenido);
 		return i->key;
 	}
-
 }
-
-
