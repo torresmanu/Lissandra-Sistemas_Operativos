@@ -25,7 +25,7 @@ int main(void) {
 	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 	pthread_create(&gossipingAutomatico,NULL,(void*)realizarGossipingAutomatico,NULL);
 	pthread_create(&monitoreador,NULL,(void*)controlConfig,NULL);
-	pthread_create(&metricas,NULL,(void*)realizarMetrics,NULL);
+	//pthread_create(&metricas,NULL,(void*)realizarMetrics,NULL);
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
@@ -33,7 +33,7 @@ int main(void) {
 	{
 		pthread_join(plp,NULL);
 		pthread_join(describeGlobal,NULL);
-		pthread_join(metricas,NULL);
+		//pthread_join(metricas,NULL);
 		pthread_join(monitoreador,NULL);
 
 		for(int i=0; i<nivelMultiprocesamiento; i++)
@@ -84,8 +84,6 @@ void iniciar_programa(void)
 
 //	socketsPool = list_create();	// SOCKETS DE TODO EL POOL
 
-	// Tiempos de requests
-	tTotal = malloc(sizeof(int));
 
 	// Todoo para el describe
 	obtenerMemoriaDescribe();
@@ -484,7 +482,6 @@ void actualizarRetardos()
 	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
 	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
 
-
 }
 
 ////////////////////////////////////////////////////
@@ -495,7 +492,6 @@ void realizarMetrics()
 	{
 		sleep(30);
 		metrics();
-		limpiarEstadisticas();
 	}
 }
 
@@ -519,77 +515,63 @@ void mostrarMetrics(Criterio* crit)
 	// Memory Load
 	printf("------------------------------------------------------------------------\n");
 	list_iterate(crit->memorias,mostrarMemoryLoad);
+	list_iterate(crit->memorias,limpiarMetricasMemoria);
 
 	// Metricas de read and writes
 	log_info(g_logger, "Métricas del criterio: %s", mostrarConsistencia(crit->tipo));
-	int reads = sumarReads(crit->memorias);
-	int writes = sumarWrites(crit->memorias);
-	int readLatency = obtenerLatency(crit->reads);
-	int writeLateny = obtenerLatency(crit->writes);
+	log_info(g_logger, "Reads / 30s %s: %d", mostrarConsistencia(crit->tipo), crit->amountReads);
+	log_info(g_logger, "Writes / 30s %s: %d", mostrarConsistencia(crit->tipo), crit->amountWrites);
+	if(crit->amountReads == 0)
+	{
+		// Evitar la division por cero
+		log_info(g_logger, "Read Latency / 30s %s: %d ms", mostrarConsistencia(crit->tipo), 0);
+	}
+	else
+	{
+		log_info(g_logger, "Read Latency / 30s %s: %ld ms", mostrarConsistencia(crit->tipo), crit->timeTotalReads / crit->amountReads);
 
-	log_info(g_logger, "Reads / 30s %s: %d", mostrarConsistencia(crit->tipo), reads);
-	log_info(g_logger, "Writes / 30s %s: %d", mostrarConsistencia(crit->tipo), writes);
-	log_info(g_logger, "Read Latency / 30s %s: %d ms", mostrarConsistencia(crit->tipo), writeLateny);
-	log_info(g_logger, "Write Latency / 30s %s: %d ms", mostrarConsistencia(crit->tipo), readLatency);
+	}
+	if(crit->amountWrites == 0)
+	{
+		log_info(g_logger, "Write Latency / 30s %s: %d ms", mostrarConsistencia(crit->tipo), 0);
+	}
+	else
+	{
+		log_info(g_logger, "Write Latency / 30s %s: %ld ms", mostrarConsistencia(crit->tipo), crit->timeTotalWrites / crit->amountWrites);
+	}
+
+	// Dejo en cero todooo
+	limpiarMetricasCriterio(crit);
 }
 
 void mostrarMemoryLoad(void* elem)
 {
-	int load;
 	Memoria* mem = (Memoria*)elem;
 	if(mem->totalOperaciones > 0)
 	{
-		load = (((mem->insertsTotales) + (mem->selectsTotales)) * 100) + mem->totalOperaciones;
+		int load = (mem->insertsTotales + mem->selectsTotales) / mem->totalOperaciones;
+		log_info(g_logger, "Memory Load (Memoria %zu): %d%%", mem->id, load);
 	}
 	else
 	{
-		load = 0;
+		log_info(g_logger, "Memory Load (Memoria %zu): %d%%", mem->id, 0);
 	}
-	log_info(g_logger,"Memory Load (Memoria %zu): %d%%", mem->id, load);
 }
 
-int sumarReads(t_list* memorias)
+void limpiarMetricasCriterio(Criterio* c)
 {
-	int total = 0;
-	for(int i = 0; i<list_size(memorias); i++)
-	{
-		total += ((Memoria*)list_get(memorias,i))->selectsTotales;
-	}
-	return total;
+	c->amountReads = 0;
+	c->amountWrites = 0;
+	c->timeTotalReads = 0;
+	c->timeTotalWrites = 0;
+	c->amountTotales = 0;
 }
 
-int sumarWrites(t_list* memorias)
-{
-	int total = 0;
-	for(int i = 0; i<list_size(memorias); i++)
-	{
-		total += ((Memoria*)list_get(memorias,i))->insertsTotales;
-	}
-	return total;
-}
-
-void limpiarEstadisticas()
-{
-	list_iterate(pool,setearEstadisticas);
-}
-
-void setearEstadisticas(void* elem)
+void limpiarMetricasMemoria(void * elem)
 {
 	Memoria* mem = (Memoria*)elem;
 	mem->insertsTotales = 0;
 	mem->selectsTotales = 0;
 	mem->totalOperaciones = 0;
 }
-
-int obtenerLatency(t_list* tiempos)
-{
-	return list_fold(tiempos,0,sumarTiempos);
-}
-
-
-void* sumarTiempos(void* elem1, void* elem2)
-{
-
-}
-
 

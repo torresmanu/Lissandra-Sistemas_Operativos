@@ -15,8 +15,11 @@ typedef enum{SC, SHC, EC} t_consist;
 typedef struct{
 	t_consist tipo;
 	t_list *memorias;
-	t_list* reads;
-	t_list* writes;
+	long timeTotalReads;
+	long timeTotalWrites;
+	int amountReads;
+	int amountWrites;
+	int amountTotales;
 }Criterio;
 
 Criterio sc,shc,ec;
@@ -30,10 +33,6 @@ Criterio* toConsistencia(char*);
 char* mostrarConsistencia(t_consist);
 Memoria* masApropiada(Criterio*, resultadoParser*);
 void add(Memoria*,Criterio*);
-
-// MANEJO DE MEMORIAS
-Memoria* buscarMemoriaPorID(uint32_t, t_list*);
-bool coincideID(void*);
 
 //RANDOM (EC)
 int memoriaRandom();

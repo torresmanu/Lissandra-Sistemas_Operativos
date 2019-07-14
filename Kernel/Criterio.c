@@ -36,15 +36,6 @@ void destroy_nodo_memoria(void* elem){
 	free(nodo_tabla_elem);
 }
 
-Memoria* buscarMemoriaPorID(uint32_t id, t_list* lista)
-{
-	bool coincideID(void* element)		//Subfunción de busqueda
-	{
-		return ((Memoria*)element)->id == id;
-	}
-	return list_find(lista,coincideID);
-}
-
 Criterio* toConsistencia(char* cadena)
 {
 	if(strcmp(cadena, "SC") == 0)

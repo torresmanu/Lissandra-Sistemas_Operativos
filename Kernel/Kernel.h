@@ -76,13 +76,9 @@ void actualizarRetardos();
 //////////// METRICS ////////////
 void realizarMetrics();
 void mostrarMetrics(Criterio*);
-void limpiarEstadisticas();
 void mostrarMemoryLoad(void*);
-int sumarReads(t_list*);
-int sumarWrites(t_list*);
-void setearEstadisticas(void*);
-int obtenerLatency();
-void* sumarTiempos(void*, void*);
+void limpiarMetricasMemoria(void*);
+void limpiarMetricasCriterio(Criterio*);
 
 
 #endif /* KERNEL_H_ */

@@ -172,6 +172,18 @@ resultado ejecutarScript(Script *s){
 	return estado;
 }
 
+void contabilizarTiempo(Criterio* c, resultadoParser* r, long tiempo)
+{
+	if(r->accionEjecutar == SELECT)
+	{
+		c->timeTotalReads += tiempo;
+	}
+	if(r->accionEjecutar == INSERT)
+	{
+		c->timeTotalWrites += tiempo;
+	}
+}
+
 resultado ejecutarRequest(resultadoParser *r)
 {
 	resultado estado;
@@ -187,6 +199,7 @@ resultado ejecutarRequest(resultadoParser *r)
 			{
 				tInicio = (long)time(NULL);
 			}
+
 			estado = ejecutar(cons,r); // EJECUTO
 
 			if(estado.resultado == OK && (r->accionEjecutar == SELECT || r->accionEjecutar == INSERT))
@@ -194,6 +207,7 @@ resultado ejecutarRequest(resultadoParser *r)
 				tFinal = (long)time(NULL);
 				tTotal = tFinal - tInicio;
 				log_warning(g_logger,"Tiempo requerido: %d segundos", tTotal/1000);
+				contabilizarTiempo(cons,r, tTotal);
 			}
 		}
 		else{
@@ -275,7 +289,6 @@ metadataTabla* obtenerTabla(resultadoParser* r){
 		default:
 			return NULL;
 	}
-	printf("PRUEBA DE tINICIO: %zu", tInicio);
 }
 
 metadataTabla* buscarTabla(char* nom)
