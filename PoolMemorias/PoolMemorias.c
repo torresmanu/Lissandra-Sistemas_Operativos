@@ -1044,7 +1044,11 @@ resultado insert(char *nombre_tabla,uint16_t key,char *value,long timestamp){
 	Pagina* pagina;
 
 	Registro registro;
-	registro.timestamp=timestamp;
+	if(timestamp == 0){
+		registro.timestamp= (long)time(NULL);
+	}else{
+		registro.timestamp=timestamp;
+	}
 	registro.key=key;
 	registro.value=value;
 

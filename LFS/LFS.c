@@ -263,7 +263,9 @@ resultado select_acc(char* tabla,uint16_t key)
 
 resultado insert(char* tabla,uint16_t key,char* value,long timestamp)
 {
-
+	if(timestamp == 0){
+		timestamp = (long)time(NULL);
+	}
 	resultado res;
 	//Verifico que el tamaño del value sea correcto, caso contrario falla
 	int valueSize = strlen(value) + 1;

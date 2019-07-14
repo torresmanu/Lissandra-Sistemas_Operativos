@@ -199,7 +199,9 @@ resultado ejecutarRequest(resultadoParser *r)
 			{
 				tInicio = (long)time(NULL);
 			}
-
+			if(r->accionEjecutar == INSERT && ((contenidoInsert*)(r->contenido))->timestamp == 0){
+				((contenidoInsert*)(r->contenido))->timestamp = (long)time(NULL);
+			}
 			estado = ejecutar(cons,r); // EJECUTO
 
 			if(estado.resultado == OK && (r->accionEjecutar == SELECT || r->accionEjecutar == INSERT))

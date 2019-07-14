@@ -37,7 +37,7 @@ resultadoParser parseConsole(char* mensaje){
 
 		char * timestamp = strsep(&mensaje," ");
 		if(timestamp == '\0') {
-			cont->timestamp = (long)time(NULL);
+			cont->timestamp = 0;
 		} else {
 			cont->timestamp = atol(timestamp);
 		}
