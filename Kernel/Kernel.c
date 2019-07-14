@@ -492,7 +492,7 @@ void realizarMetrics()
 {
 	while(1)
 	{
-		sleep(6);
+		sleep(30);
 		metrics();
 		limpiarEstadisticas();
 	}
@@ -504,7 +504,6 @@ resultado metrics(){
 	mostrarMetrics(&sc);
 	mostrarMetrics(&ec);
 	mostrarMetrics(&shc);
-	list_iterate(pool,mostrarMemoryLoad);
 
 	res.accionEjecutar=METRICS;
 	res.contenido=NULL;
@@ -516,35 +515,36 @@ resultado metrics(){
 
 void mostrarMetrics(Criterio* crit)
 {
+	// Memory Load
+	printf("------------------------------------------------------------------------\n");
+	list_iterate(crit->memorias,mostrarMemoryLoad);
+
+	// Metricas de read and writes
 	log_info(g_logger, "Métricas del criterio: %s", mostrarConsistencia(crit->tipo));
 	int reads = sumarReads(crit->memorias);
 	int writes = sumarWrites(crit->memorias);
 	int readLatency = obtenerLatency(crit->reads);
 	int writeLateny = obtenerLatency(crit->writes);
 
-	log_info(g_logger, "Cantidad de INSERTS en los ultimos 30s del criterio %s: %d", mostrarConsistencia(crit->tipo), writes);
-	log_info(g_logger, "Cantidad de SELECTS en los ultimos 30s del criterio %s: %d", mostrarConsistencia(crit->tipo), reads);
-	log_info(g_logger, "Tiempo promedio de ejecucion de un INSERT del criterio %s: %d", mostrarConsistencia(crit->tipo), readLatency);
-	log_info(g_logger, "Tiempo promedio de ejecucion de un SELECT del criterio %s: %d", mostrarConsistencia(crit->tipo), writeLateny);
+	log_info(g_logger, "Reads / 30s %s: %d", mostrarConsistencia(crit->tipo), reads);
+	log_info(g_logger, "Writes / 30s %s: %d", mostrarConsistencia(crit->tipo), writes);
+	log_info(g_logger, "Read Latency / 30s %s: %d ms", mostrarConsistencia(crit->tipo), writeLateny);
+	log_info(g_logger, "Write Latency / 30s %s: %d ms", mostrarConsistencia(crit->tipo), readLatency);
 }
 
 void mostrarMemoryLoad(void* elem)
 {
-	int select, insert;
+	int load;
 	Memoria* mem = (Memoria*)elem;
 	if(mem->totalOperaciones > 0)
 	{
-		select = (mem->selectsTotales * 100) / mem->totalOperaciones;
-		insert = (mem->insertsTotales * 100) / mem->totalOperaciones;
+		load = (((mem->insertsTotales) + (mem->selectsTotales)) * 100) + mem->totalOperaciones;
 	}
 	else
 	{
-		select = 0;
-		insert = 0;
+		load = 0;
 	}
-	log_info(g_logger,"Memory Load de la memoria ID: %d", mem->id);
-	log_info(g_logger,"El %d%% de las operaciones totales son SELECTS",select);
-	log_info(g_logger,"El %d%% de las operaciones totales son INSERTS",insert);
+	log_info(g_logger,"Memory Load (Memoria %zu): %d%%", mem->id, load);
 }
 
 int sumarReads(t_list* memorias)

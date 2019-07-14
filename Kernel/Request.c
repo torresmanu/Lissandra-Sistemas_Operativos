@@ -165,7 +165,7 @@ resultado enviarRequest(Memoria* mem, resultadoParser* request)
 resultado ejecutarScript(Script *s){
 
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
-	printf("Va por la request N°: %d\n", s->pc);
+	printf(" Va por la request N°: %d\n", s->pc);
 	resultado estado = ejecutarRequest(r);
 
 	(s->pc)++;
@@ -186,7 +186,6 @@ resultado ejecutarRequest(resultadoParser *r)
 			if(r->accionEjecutar == SELECT || r->accionEjecutar == INSERT)
 			{
 				tInicio = (long)time(NULL);
-				printf("PRUEBA DE tINICIO: %d", tInicio);
 			}
 			estado = ejecutar(cons,r); // EJECUTO
 
@@ -194,7 +193,7 @@ resultado ejecutarRequest(resultadoParser *r)
 			{
 				tFinal = (long)time(NULL);
 				tTotal = tFinal - tInicio;
-				log_warning(g_logger,"Tiempo requerido: %d segundos", tTotal);
+				log_warning(g_logger,"Tiempo requerido: %d segundos", tTotal/1000);
 			}
 		}
 		else{
@@ -276,6 +275,7 @@ metadataTabla* obtenerTabla(resultadoParser* r){
 		default:
 			return NULL;
 	}
+	printf("PRUEBA DE tINICIO: %zu", tInicio);
 }
 
 metadataTabla* buscarTabla(char* nom)
