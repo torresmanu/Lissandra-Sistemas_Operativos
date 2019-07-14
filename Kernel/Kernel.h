@@ -82,6 +82,7 @@ int sumarReads(t_list*);
 int sumarWrites(t_list*);
 void setearEstadisticas(void*);
 int obtenerLatency();
+void* sumarTiempos(void*, void*);
 
 
 #endif /* KERNEL_H_ */

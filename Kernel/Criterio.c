@@ -98,8 +98,8 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 			aux="SHC";
 			if(r->accionEjecutar == SELECT || r->accionEjecutar == INSERT)
 			{
-				memoriaElegida = obtenerHash(r)+1;
-				mem = buscarMemoriaPorID(memoriaElegida,shc.memorias);
+				memoriaElegida = obtenerHash(r);
+				mem = list_get(shc.memorias,memoriaElegida);
 			}
 			else
 			{

@@ -249,6 +249,7 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 			}
 
 			if (terminoScript(s)) {
+				printf("\n");
 				log_info(g_logger, "Termino script");
 				mandarAexit(s);
 				break;
@@ -582,6 +583,13 @@ void setearEstadisticas(void* elem)
 
 int obtenerLatency(t_list* tiempos)
 {
+	return list_fold(tiempos,0,sumarTiempos);
+}
+
+
+void* sumarTiempos(void* elem1, void* elem2)
+{
 
 }
+
 
