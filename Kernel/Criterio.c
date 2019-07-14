@@ -12,13 +12,26 @@ void iniciarCriterios(){
 	sc.tipo = SC;
 	sc.memorias = list_create();
 	//list_add(sc.memorias,criterioSC());  Directamente la inicializo con la unica memoria que puede tener y asignada por archivo de configuración?
+	iniciarEstadisticas(sc);
 
 	shc.tipo = SHC;
 	shc.memorias = list_create();
+	iniciarEstadisticas(shc);
 
 	ec.tipo = EC;
 	ec.memorias = list_create();
+	iniciarEstadisticas(ec);
+
 	srand(time(NULL));
+}
+
+void iniciarEstadisticas(Criterio c)
+{
+	c.amountReads = 0;
+	c.amountTotales = 0;
+	c.amountWrites = 0;
+	c.timeTotalReads = 0;
+	c.timeTotalWrites = 0;
 }
 
 void liberarCriterios(){

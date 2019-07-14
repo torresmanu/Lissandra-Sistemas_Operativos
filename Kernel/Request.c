@@ -90,9 +90,11 @@ resultado ejecutar(Criterio* criterio, resultadoParser* request){
 	// Para las metricas
 	if(resultado.resultado == OK && request->accionEjecutar == SELECT){
 		(mem->selectsTotales)++;
+		(criterio->amountReads)++;
 	}
 	else if(resultado.resultado == OK && request->accionEjecutar == INSERT){
 		(mem->insertsTotales)++;
+		(criterio->amountWrites)++;
 	}
 
 	(mem->totalOperaciones)++;
@@ -198,6 +200,7 @@ resultado ejecutarRequest(resultadoParser *r)
 			if(r->accionEjecutar == SELECT || r->accionEjecutar == INSERT)
 			{
 				tInicio = (long)time(NULL);
+				log_warning(g_logger, "Tiempo de inicio: %ld", tInicio);
 			}
 			if(r->accionEjecutar == INSERT && ((contenidoInsert*)(r->contenido))->timestamp == 0){
 				((contenidoInsert*)(r->contenido))->timestamp = (long)time(NULL);
@@ -207,8 +210,9 @@ resultado ejecutarRequest(resultadoParser *r)
 			if(estado.resultado == OK && (r->accionEjecutar == SELECT || r->accionEjecutar == INSERT))
 			{
 				tFinal = (long)time(NULL);
+				log_warning(g_logger, "Tiempo de cuanto termino: %ld", tFinal);
 				tTotal = tFinal - tInicio;
-				log_warning(g_logger,"Tiempo requerido: %d segundos", tTotal/1000);
+				log_warning(g_logger,"Tiempo requerido: %ld ms", tTotal);
 				contabilizarTiempo(cons,r, tTotal);
 			}
 		}
