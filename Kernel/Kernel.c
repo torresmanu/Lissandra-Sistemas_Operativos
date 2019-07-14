@@ -492,7 +492,7 @@ void realizarMetrics()
 {
 	while(1)
 	{
-		sleep(6);
+		sleep(30);
 		metrics();
 		limpiarEstadisticas();
 	}
