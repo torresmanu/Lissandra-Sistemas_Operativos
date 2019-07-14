@@ -25,7 +25,7 @@ int main(void) {
 	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 	pthread_create(&gossipingAutomatico,NULL,(void*)realizarGossipingAutomatico,NULL);
 	pthread_create(&monitoreador,NULL,(void*)controlConfig,NULL);
-	//pthread_create(&metricas,NULL,(void*)realizarMetrics,NULL);
+	pthread_create(&metricas,NULL,(void*)realizarMetrics,NULL);
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
@@ -33,7 +33,7 @@ int main(void) {
 	{
 		pthread_join(plp,NULL);
 		pthread_join(describeGlobal,NULL);
-		//pthread_join(metricas,NULL);
+		pthread_join(metricas,NULL);
 		pthread_join(monitoreador,NULL);
 
 		for(int i=0; i<nivelMultiprocesamiento; i++)
