@@ -335,14 +335,14 @@ int conectarAlKernel(int conexion_servidor){
 
 void journalConRetardo(){
 	while(ejecutando){
-		sleep(retardoJournaling/1000);
+		usleep(retardoJournaling*1000);
 		journal();
 	}
 }
 
 void gossipingConRetardo(){
 	while(ejecutando){
-		sleep(retardoGossiping/1000);
+		usleep(retardoGossiping*1000);
 
 		gossiping();
 	}
@@ -521,7 +521,7 @@ bool handshake(){
 
 	int size_to_send;
 
-	sleep(retardoLFS/1000);
+	usleep(retardoLFS*1000);
 	char* pi = serializarPaquete(&resParser, &size_to_send);
 	send(serverSocket, pi, size_to_send, 0);
 
@@ -588,7 +588,7 @@ resultado mandarALFS(resultadoParser resParser){
 
 	int size_to_send;
 
-	sleep(retardoLFS/1000);
+	usleep(retardoLFS*1000);
 	char* pi = serializarPaquete(&resParser, &size_to_send);
 	pthread_mutex_lock(&mConexion);
 
@@ -640,7 +640,7 @@ resultado select_t(char *nombre_tabla, int key){
 
 		int posicion=(pagina->indice_registro)*offset;
 
-		sleep(retardoMemoria/1000);
+		usleep(retardoMemoria*1000);
 
 		registro = malloc(sizeof(Registro));
 
@@ -908,7 +908,7 @@ void enviarInsert(void *element){ //ver los casos de error
 		cont->nombreTabla = malloc(strlen(((NodoTablaPaginas*)element)->segmento->nombre_tabla)+1);
 		strcpy(cont->nombreTabla,((NodoTablaPaginas*)element)->segmento->nombre_tabla);
 
-		sleep(retardoMemoria/1000);
+		usleep(retardoMemoria*1000);
 
 		pthread_mutex_lock(&mMemPrincipal);
 		memcpy(&cont->key,&(memoria[(indice*offset)+tamValue]),sizeof(uint16_t));
@@ -954,7 +954,7 @@ void enviarInsert(void *element){ //ver los casos de error
 
 void guardarEnMemoria(Registro registro, int posLibre){
 
-	sleep(retardoMemoria/1000);
+	usleep(retardoMemoria*1000);
 
 	pthread_mutex_lock(&mMemPrincipal);
 	memcpy(&memoria[(posLibre*offset)],registro.value,tamValue);
@@ -1015,7 +1015,7 @@ bool encuentraPagina(Segmento* segmento,uint16_t key, Pagina** pagina){
 
 		int posicion=(((Pagina *)elemento)->indice_registro)*offset;
 		int i=0;
-		sleep(retardoMemoria/1000);
+		usleep(retardoMemoria*1000);
 
 		pthread_mutex_lock(&mMemPrincipal);
 		memcpy(&i,&(memoria[posicion+tamValue]),sizeof(uint16_t));
@@ -1173,7 +1173,7 @@ void drop(char* nombre_tabla){
 void actualizarRegistro(Pagina *pagina,char *value,long timestamp){
 
 	int posicion=(pagina->indice_registro)*offset;
-	sleep(retardoMemoria/1000);
+	usleep(retardoMemoria*1000);
 
 	long ts;
 
