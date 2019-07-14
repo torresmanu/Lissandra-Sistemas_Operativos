@@ -6,6 +6,7 @@
  */
 
 #include "Criterio.h"
+#include <inttypes.h>
 
 
 void iniciarCriterios(){

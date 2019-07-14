@@ -8,6 +8,8 @@
 #ifndef REQUEST_H_
 #define REQUEST_H_
 
+
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -38,9 +40,9 @@ typedef struct{
 
 t_list* tablas;
 
-long tTotal; // Tiempo de ejecucion de la request
-long tInicio;
-long tFinal;
+uint64_t tTotal; // Tiempo de ejecucion de la request
+uint64_t tInicio;
+uint64_t tFinal;
 sem_t sRequest;
 
 // EJECUTAR ARCHIVOS LQL //
