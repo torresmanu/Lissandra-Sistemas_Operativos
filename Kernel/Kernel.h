@@ -8,6 +8,7 @@
 #ifndef KERNEL_H_
 #define KERNEL_H_
 
+#include <unistd.h>
 #include <commons/collections/queue.h>
 #include <commons/parser.h>
 #include <commons/serializacion.h>

@@ -73,7 +73,7 @@ void iniciar_programa(void)
 	//Tasa de refresh de la metada
 	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
 
-	//Tiempo de pausa en la ejecucion (NO USADA AUN)
+	//Tiempo de pausa en la ejecucion
 	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
 
 	//Pongo el WATCH en el directorio del kernel
@@ -252,6 +252,7 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 				mandarAexit(s);
 				break;
 			}
+			usleep(sleepEjecucion*1000);
 		}
 		if(e.resultado == OK && !terminoScript(s)){
 			log_info(g_logger,"Fin de quantum, vuelvo a ready");
@@ -286,16 +287,16 @@ void realizarDescribeGlobal()
 	while(1)
 	{
 		sem_wait(&sDescribe);
-		printf("La metadata refresh es: %d\n", metadataRefresh);
+		//printf("La metadata refresh es: %d\n", metadataRefresh);
 		describe(NULL);
-		sleep(metadataRefresh/1000); // Lo paso a ms
+		usleep(metadataRefresh*1000); // Lo paso a ms
 		sem_post(&sDescribe);
 	}
 }
 
 void realizarGossipingAutomatico(){
 	while(1){
-		sleep(retardoGossiping/1000);
+		usleep(retardoGossiping*1000);
 		gossiping();
 	}
 }
@@ -359,12 +360,12 @@ resultado describe(char* nombreTabla)
 					list_clean(tablas);						// Para no agregar repetidas
 					list_add_all(tablas,tablaLFS);
 					log_info(g_logger,"Describe global realizado con éxito");
-					log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
+					/*log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
 
 					for(int i = 0; i<tablas->elements_count; i++)
 					{
 						log_info(g_logger,"Tablas indexada n°:%d -> %s", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
-					}
+					}*/
 				}
 				else
 					log_info(g_logger,"No hay tablas");
