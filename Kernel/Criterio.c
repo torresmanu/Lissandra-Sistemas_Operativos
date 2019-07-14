@@ -36,7 +36,7 @@ void destroy_nodo_memoria(void* elem){
 	free(nodo_tabla_elem);
 }
 
-Memoria* buscarMemoriaPorID(int id, t_list* lista)
+Memoria* buscarMemoriaPorID(uint32_t id, t_list* lista)
 {
 	bool coincideID(void* element)		//Subfunción de busqueda
 	{
@@ -53,6 +53,30 @@ Criterio* toConsistencia(char* cadena)
 		return &shc;
 	else
 		return &ec;
+}
+
+char* mostrarConsistencia(t_consist consist)
+{
+	char* tipo;
+	switch(consist)
+	{
+		case SC:
+		{
+			tipo = string_duplicate("SC");
+			break;
+		}
+		case SHC:
+		{
+			tipo = string_duplicate("SHC");
+			break;
+		}
+		case EC:
+		{
+			tipo = string_duplicate("EC");
+			break;
+		}
+	}
+	return tipo;
 }
 
 Memoria* masApropiada(Criterio* c, resultadoParser* r){
@@ -81,7 +105,6 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 			{
 				mem = (Memoria*)list_get(shc.memorias,0); // Elijo la primera y listo
 			}
-			printf("Elegi la memoria ID: %d\n", mem->id);
 			break;
 		}
 		case EC:
@@ -106,7 +129,6 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 //Agrego la memoria en la lista de memorias del criterio
 void add(Memoria *memoria,Criterio *cons)
 {
-	log_info(g_logger,"Entre a agregar la memoria");
 	list_add(cons->memorias,memoria);
 	log_info(g_logger,"Agrege memoria N°:%d al criterio %d",memoria->id,cons->tipo);
 }

@@ -38,9 +38,9 @@ typedef struct{
 
 t_list* tablas;
 
-int tTotal; // Tiempo de ejecucion de la request
-int tInicio;
-int tFinal;
+long tTotal; // Tiempo de ejecucion de la request
+long tInicio;
+long tFinal;
 sem_t sRequest;
 
 // EJECUTAR ARCHIVOS LQL //

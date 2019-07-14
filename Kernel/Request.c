@@ -84,7 +84,7 @@ bool terminoScript(Script *s){
 resultado ejecutar(Criterio* criterio, resultadoParser* request){
 
 	Memoria* mem = masApropiada(criterio, request);
-	log_info(g_logger,"Numero de memoria elegida:%d",mem->id);
+	log_info(g_logger, "Elegida la memoria ID: %zu", mem->id);
 	resultado resultado = enviarRequest(mem, request);
 
 	// Para las metricas
@@ -185,14 +185,16 @@ resultado ejecutarRequest(resultadoParser *r)
 
 			if(r->accionEjecutar == SELECT || r->accionEjecutar == INSERT)
 			{
-				tInicio = time(NULL);
+				tInicio = (long)time(NULL);
+				printf("PRUEBA DE tINICIO: %d", tInicio);
 			}
 			estado = ejecutar(cons,r); // EJECUTO
 
 			if(estado.resultado == OK && (r->accionEjecutar == SELECT || r->accionEjecutar == INSERT))
 			{
-				tFinal = time(NULL);
+				tFinal = (long)time(NULL);
 				tTotal = tFinal - tInicio;
+				log_warning(g_logger,"Tiempo requerido: %d segundos", tTotal);
 			}
 		}
 		else{

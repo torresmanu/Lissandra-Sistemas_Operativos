@@ -27,11 +27,12 @@ void liberarCriterios();
 void liberarMemorias();
 void destroy_nodo_memoria(void*);
 Criterio* toConsistencia(char*);
+char* mostrarConsistencia(t_consist);
 Memoria* masApropiada(Criterio*, resultadoParser*);
 void add(Memoria*,Criterio*);
 
 // MANEJO DE MEMORIAS
-Memoria* buscarMemoriaPorID(int, t_list*);
+Memoria* buscarMemoriaPorID(uint32_t, t_list*);
 bool coincideID(void*);
 
 //RANDOM (EC)

@@ -492,7 +492,7 @@ void realizarMetrics()
 {
 	while(1)
 	{
-		sleep(30);
+		sleep(6);
 		metrics();
 		limpiarEstadisticas();
 	}
@@ -516,23 +516,32 @@ resultado metrics(){
 
 void mostrarMetrics(Criterio* crit)
 {
-	log_info(g_logger, "Métricas del criterio: %d", crit->tipo);
+	log_info(g_logger, "Métricas del criterio: %s", mostrarConsistencia(crit->tipo));
 	int reads = sumarReads(crit->memorias);
 	int writes = sumarWrites(crit->memorias);
 	int readLatency = obtenerLatency(crit->reads);
 	int writeLateny = obtenerLatency(crit->writes);
 
-	log_info(g_logger, "Cantidad de INSERTS en los ultimos 30s del criterio %d: %d", crit->tipo, writes);
-	log_info(g_logger, "Cantidad de SELECTS en los ultimos 30s del criterio %d: %d", crit->tipo, reads);
-	log_info(g_logger, "Tiempo promedio de ejecucion de un INSERT %d: %d", crit->tipo, readLatency);
-	log_info(g_logger, "Tiempo promedio de ejecucion de un SELECT %d: %d", crit->tipo, writeLateny);
+	log_info(g_logger, "Cantidad de INSERTS en los ultimos 30s del criterio %s: %d", mostrarConsistencia(crit->tipo), writes);
+	log_info(g_logger, "Cantidad de SELECTS en los ultimos 30s del criterio %s: %d", mostrarConsistencia(crit->tipo), reads);
+	log_info(g_logger, "Tiempo promedio de ejecucion de un INSERT del criterio %s: %d", mostrarConsistencia(crit->tipo), readLatency);
+	log_info(g_logger, "Tiempo promedio de ejecucion de un SELECT del criterio %s: %d", mostrarConsistencia(crit->tipo), writeLateny);
 }
 
 void mostrarMemoryLoad(void* elem)
 {
+	int select, insert;
 	Memoria* mem = (Memoria*)elem;
-	int select = (mem->selectsTotales * 100) / mem->totalOperaciones;
-	int insert = (mem->insertsTotales * 100) / mem->totalOperaciones;
+	if(mem->totalOperaciones > 0)
+	{
+		select = (mem->selectsTotales * 100) / mem->totalOperaciones;
+		insert = (mem->insertsTotales * 100) / mem->totalOperaciones;
+	}
+	else
+	{
+		select = 0;
+		insert = 0;
+	}
 	log_info(g_logger,"Memory Load de la memoria ID: %d", mem->id);
 	log_info(g_logger,"El %d%% de las operaciones totales son SELECTS",select);
 	log_info(g_logger,"El %d%% de las operaciones totales son INSERTS",insert);
