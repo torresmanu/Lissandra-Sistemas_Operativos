@@ -33,6 +33,7 @@ Criterio* toConsistencia(char*);
 char* mostrarConsistencia(t_consist);
 Memoria* masApropiada(Criterio*, resultadoParser*);
 void add(Memoria*,Criterio*);
+void iniciarEstadisticas(Criterio);
 
 //RANDOM (EC)
 int memoriaRandom();

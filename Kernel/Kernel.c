@@ -516,7 +516,6 @@ void mostrarMetrics(Criterio* crit)
 	// Memory Load
 	printf("------------------------------------------------------------------------\n");
 	list_iterate(crit->memorias,mostrarMemoryLoad);
-	list_iterate(crit->memorias,limpiarMetricasMemoria);
 
 	// Metricas de read and writes
 	log_info(g_logger, "Métricas del criterio: %s", mostrarConsistencia(crit->tipo));
@@ -543,6 +542,8 @@ void mostrarMetrics(Criterio* crit)
 
 	// Dejo en cero todooo
 	limpiarMetricasCriterio(crit);
+	list_iterate(crit->memorias,limpiarMetricasMemoria);
+
 }
 
 void mostrarMemoryLoad(void* elem)
@@ -550,7 +551,7 @@ void mostrarMemoryLoad(void* elem)
 	Memoria* mem = (Memoria*)elem;
 	if(mem->totalOperaciones > 0)
 	{
-		int load = (mem->insertsTotales + mem->selectsTotales) / mem->totalOperaciones;
+		int load = ((mem->insertsTotales + mem->selectsTotales) * 100) / mem->totalOperaciones;
 		log_info(g_logger, "Memory Load (Memoria %zu): %d%%", mem->id, load);
 	}
 	else

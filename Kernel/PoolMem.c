@@ -47,6 +47,7 @@ int obtenerMemorias(int socket){
 		if(status != sizeof(uint32_t)) return -2;
 
 		log_info(g_logger,"Recibi memoria:%d",memNueva->id);
+		//Inicializo valores
 		memNueva->insertsTotales = 0;
 		memNueva->selectsTotales = 0;
 		memNueva->totalOperaciones = 0;

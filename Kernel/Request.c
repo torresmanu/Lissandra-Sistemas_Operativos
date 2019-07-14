@@ -90,9 +90,11 @@ resultado ejecutar(Criterio* criterio, resultadoParser* request){
 	// Para las metricas
 	if(resultado.resultado == OK && request->accionEjecutar == SELECT){
 		(mem->selectsTotales)++;
+		(criterio->amountReads)++;
 	}
 	else if(resultado.resultado == OK && request->accionEjecutar == INSERT){
 		(mem->insertsTotales)++;
+		(criterio->amountWrites)++;
 	}
 
 	(mem->totalOperaciones)++;
