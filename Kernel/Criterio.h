@@ -15,8 +15,8 @@ typedef enum{SC, SHC, EC} t_consist;
 typedef struct{
 	t_consist tipo;
 	t_list *memorias;
-	long timeTotalReads;
-	long timeTotalWrites;
+	uint64_t timeTotalReads;
+	uint64_t timeTotalWrites;
 	int amountReads;
 	int amountWrites;
 	int amountTotales;

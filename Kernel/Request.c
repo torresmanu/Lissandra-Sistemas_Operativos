@@ -252,6 +252,7 @@ resultado ejecutarRequest(resultadoParser *r)
 				contenidoCreate* cont = (contenidoCreate*)(r->contenido);
 				Criterio* cons = toConsistencia(cont->consistencia);
 				estado = ejecutar(cons,r);
+				describe();
 				break;
 			}
 			case DESCRIBE:

@@ -23,6 +23,8 @@
 sem_t sNuevo; // Semáforo para el estado NEW
 sem_t sListo; // Semáforo para el estado READY
 sem_t sDescribe;
+
+// MUTEX
 pthread_mutex_t mNew;
 pthread_mutex_t mReady;
 pthread_mutex_t mExit;

@@ -25,7 +25,7 @@ int main(void) {
 	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 	pthread_create(&gossipingAutomatico,NULL,(void*)realizarGossipingAutomatico,NULL);
 	pthread_create(&monitoreador,NULL,(void*)controlConfig,NULL);
-	pthread_create(&metricas,NULL,(void*)realizarMetrics,NULL);
+	//pthread_create(&metricas,NULL,(void*)realizarMetrics,NULL);
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
@@ -33,8 +33,8 @@ int main(void) {
 	{
 		pthread_join(plp,NULL);
 		pthread_join(describeGlobal,NULL);
-		pthread_join(metricas,NULL);
-		pthread_join(monitoreador,NULL);
+		//pthread_join(metricas,NULL);
+		//pthread_join(monitoreador,NULL);
 
 		for(int i=0; i<nivelMultiprocesamiento; i++)
 		{
@@ -242,6 +242,7 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 			}
 			else if(e.resultado == ERROR){
 				log_error(g_logger, "Error en request n°: %d", s->pc);
+				log_error(g_logger, "Request abortada");
 				mandarAexit(s);
 				break;
 			}
@@ -249,6 +250,7 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 			if (terminoScript(s)) {
 				printf("\n");
 				log_info(g_logger, "Termino script");
+				printf("\n");
 				mandarAexit(s);
 				break;
 			}
@@ -286,11 +288,8 @@ void realizarDescribeGlobal()
 {
 	while(1)
 	{
-		sem_wait(&sDescribe);
-		//printf("La metadata refresh es: %d\n", metadataRefresh);
 		describe(NULL);
 		usleep(metadataRefresh*1000); // Lo paso a ms
-		sem_post(&sDescribe);
 	}
 }
 
@@ -359,13 +358,15 @@ resultado describe(char* nombreTabla)
 				if(list_size(tablaLFS)>0){
 					list_clean(tablas);						// Para no agregar repetidas
 					list_add_all(tablas,tablaLFS);
-					log_info(g_logger,"Describe global realizado con éxito");
+					log_info(g_logger,"Describe realizado con éxito");
+
 					/*log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
 
 					for(int i = 0; i<tablas->elements_count; i++)
 					{
 						log_info(g_logger,"Tablas indexada n°:%d -> %s", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
-					}*/
+					}
+					*/
 				}
 				else
 					log_info(g_logger,"No hay tablas");
@@ -528,7 +529,7 @@ void mostrarMetrics(Criterio* crit)
 	}
 	else
 	{
-		log_info(g_logger, "Read Latency / 30s %s: %ld ms", mostrarConsistencia(crit->tipo), crit->timeTotalReads / crit->amountReads);
+		log_info(g_logger, "Read Latency / 30s %s: %" PRIu64 "ms", mostrarConsistencia(crit->tipo), crit->timeTotalReads / crit->amountReads);
 
 	}
 	if(crit->amountWrites == 0)
@@ -537,7 +538,7 @@ void mostrarMetrics(Criterio* crit)
 	}
 	else
 	{
-		log_info(g_logger, "Write Latency / 30s %s: %ld ms", mostrarConsistencia(crit->tipo), crit->timeTotalWrites / crit->amountWrites);
+		log_info(g_logger, "Write Latency / 30s %s: %" PRIu64 "ms", mostrarConsistencia(crit->tipo), crit->timeTotalWrites / crit->amountWrites);
 	}
 
 	// Dejo en cero todooo
