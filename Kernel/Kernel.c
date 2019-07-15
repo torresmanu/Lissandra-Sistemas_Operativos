@@ -358,13 +358,15 @@ resultado describe(char* nombreTabla)
 				if(list_size(tablaLFS)>0){
 					list_clean(tablas);						// Para no agregar repetidas
 					list_add_all(tablas,tablaLFS);
-					log_info(g_logger,"Describe global realizado con éxito");
+					log_info(g_logger,"Describe realizado con éxito");
+
 					/*log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
 
 					for(int i = 0; i<tablas->elements_count; i++)
 					{
 						log_info(g_logger,"Tablas indexada n°:%d -> %s", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
-					}*/
+					}
+					*/
 				}
 				else
 					log_info(g_logger,"No hay tablas");
