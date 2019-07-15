@@ -54,8 +54,8 @@ void journalConRetardo();
 void gossipingConRetardo();
 void consola();
 void enviarInsert(void *element);
-resultado insert(char *nombre_tabla,uint16_t key,char *value,long timestamp);
-void actualizarRegistro(Pagina *pagina,char *value,long timestamp);
+resultado insert(char *nombre_tabla,uint16_t key,char *value,uint64_t timestamp);
+void actualizarRegistro(Pagina *pagina,char *value,uint64_t timestamp);
 resultado parsear_mensaje(resultadoParser*);
 
 void escucharConexiones();

@@ -39,7 +39,7 @@ resultadoParser parseConsole(char* mensaje){
 		if(timestamp == '\0') {
 			cont->timestamp = 0;
 		} else {
-			cont->timestamp = atol(timestamp);
+			sscanf(timestamp, "%" SCNu64, &cont->timestamp);
 		}
 		/*
 		resParser.accionEjecutar=INSERT;

@@ -330,7 +330,7 @@ int recibirYDeserializarPaquete(int socketCliente, resultadoParser* rp) {
 	switch(rp->accionEjecutar) {
 	case(INSERT): {
 		contenidoInsert* ci = malloc(sizeof(contenidoInsert));
-		char* bufferTimestamp = malloc(sizeof(long));
+		char* bufferTimestamp = malloc(sizeof(uint64_t));
 		int valueSize;
 		int nombreTablaSize;
 
@@ -970,7 +970,7 @@ int recibirYDeserializarRespuesta(int socketCliente, resultado* res) {
 		break;
 	}
 	case(SELECT): {
-		char* bufferTimestamp = malloc(sizeof(long));
+		char* bufferTimestamp = malloc(sizeof(uint64_t));
 		int valueSize;
 
 		//Recibo el tamanio total

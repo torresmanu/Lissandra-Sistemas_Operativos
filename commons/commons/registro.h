@@ -8,13 +8,14 @@
 #ifndef COMMONS_REGISTRO_H_
 #define COMMONS_REGISTRO_H_
 
+#include <inttypes.h>
 #include "stdint.h"
 
 typedef struct
 {
 	char* value;
 	uint16_t key;
-	long timestamp;
+	uint64_t timestamp;
 } registro;
 
 

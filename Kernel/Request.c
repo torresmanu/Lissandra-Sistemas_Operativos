@@ -203,7 +203,9 @@ resultado ejecutarRequest(resultadoParser *r)
 				tInicio = te.tv_sec*1000LL + te.tv_usec/1000;
 			}
 			if(r->accionEjecutar == INSERT && ((contenidoInsert*)(r->contenido))->timestamp == 0){
-				((contenidoInsert*)(r->contenido))->timestamp = (long)time(NULL);
+				gettimeofday(&te, NULL);
+				((contenidoInsert*)(r->contenido))->timestamp = te.tv_sec*1000LL + te.tv_usec/1000;
+				printf("TIMESTAMP insertado %"PRIu64"\n",((contenidoInsert*)(r->contenido))->timestamp);
 			}
 			estado = ejecutar(cons,r); // EJECUTO
 			if(estado.resultado == OK && (r->accionEjecutar == SELECT || r->accionEjecutar == INSERT))

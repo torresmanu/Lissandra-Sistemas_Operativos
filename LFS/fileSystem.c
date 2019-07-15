@@ -386,7 +386,6 @@ int fs_create_tmp(char* tabla,t_list* regList){
 		sprintf(strReg, "%ld;%i;%s\n",reg->timestamp,reg->key,reg->value);
 		fprintf(file, "%s",strReg);*/
 		//Escribo el archivo en el FS propio
-		log_info(g_logger,"Inserto registro %i;%s;%ld",reg->key,reg->value,reg->timestamp);
 		int status = fs_fprint(file,reg);
 		if(status != 0){
 			fs_fclose(file);
@@ -560,11 +559,12 @@ void compactarTabla(char* tabla){
 		}
 	}
 	closedir(tabledir);
-	log_info(g_logger,"Comienzo bloqueo tabla %s",tabla);
 	//Bloqueo la tabla
 	bloquearTabla(tabla);
 	//sleep(1);
-	long inicioBloqueo = (long)time(NULL);
+	struct timeval te;
+	gettimeofday(&te, NULL);
+	uint64_t inicioBloqueo = te.tv_sec*1000LL + te.tv_usec/1000;
 
 	//Borro los archivos temporales y los binarios
 	tabledir = opendir(tablesPath);
@@ -631,10 +631,10 @@ void compactarTabla(char* tabla){
 	list_destroy_and_destroy_elements(list,destroy_nodo_tabla);
 
 	//Libero el bloqueo
-	long finBloqueo = (long)time(NULL);
-	log_info(g_logger,"Termino bloqueo tabla %s",tabla);
+	gettimeofday(&te, NULL);
+	uint64_t finBloqueo = te.tv_sec*1000LL + te.tv_usec/1000;
 	liberarBloqueoTabla(tabla);
-	log_info(g_logger,"Tabla %s compactada exitosamente en %ld ms",tabla,finBloqueo-inicioBloqueo);
+	log_info(g_logger,"Tabla %s compactada exitosamente en %"PRIu64" ms",tabla,finBloqueo-inicioBloqueo);
 }
 
 void compactar(){

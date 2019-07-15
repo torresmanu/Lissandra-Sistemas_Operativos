@@ -149,7 +149,6 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		case INSERT:
 		{
 			contenidoInsert* contIns = resParser->contenido;
-			log_info(g_logger, "Llego INSERT %i;%s;%ld", contIns->key, contIns->value, contIns->timestamp);
 			res = insert(contIns->nombreTabla,contIns->key,contIns->value,contIns->timestamp);
 			break;
 		}
@@ -243,14 +242,14 @@ resultado select_acc(char* tabla,uint16_t key)
 		log_info(g_logger,"No se encontro el registro");
 	}else if(regMemTable == NULL && regFs != NULL){
 		res.contenido = regFs;
-		log_info(g_logger,"Registro obtenido FS: %i;%s;%ld",regFs->key,regFs->value,regFs->timestamp);
+		log_info(g_logger,"Registro obtenido FS: %i;%s;%"PRIu64"",regFs->key,regFs->value,regFs->timestamp);
 	}else if(regMemTable != NULL && regFs == NULL){
 		res.contenido = regMemTable;
-		log_info(g_logger,"Registro obtenido memtable: %i;%s;%ld",regMemTable->key,regMemTable->value,regMemTable->timestamp);
+		log_info(g_logger,"Registro obtenido memtable: %i;%s;%"PRIu64"",regMemTable->key,regMemTable->value,regMemTable->timestamp);
 	}else{
 		if(regMemTable->timestamp > regFs->timestamp){
 			res.contenido = regMemTable;
-			log_info(g_logger,"Registro obtenido memtable: %i;%s;%ld",regMemTable->key,regMemTable->value,regMemTable->timestamp);
+			log_info(g_logger,"Registro obtenido memtable: %i;%s;%"PRIu64"",regMemTable->key,regMemTable->value,regMemTable->timestamp);
 		}else{
 			res.contenido = regFs;
 			log_info(g_logger,"Registro obtenido FS: %i;%s;%ld",regFs->key,regFs->value,regFs->timestamp);
@@ -261,10 +260,12 @@ resultado select_acc(char* tabla,uint16_t key)
 	return res;
 }
 
-resultado insert(char* tabla,uint16_t key,char* value,long timestamp)
+resultado insert(char* tabla,uint16_t key,char* value,uint64_t timestamp)
 {
 	if(timestamp == 0){
-		timestamp = (long)time(NULL);
+		struct timeval te;
+		gettimeofday(&te, NULL);
+		timestamp = te.tv_sec*1000LL + te.tv_usec/1000;
 	}
 	resultado res;
 	//Verifico que el tamaño del value sea correcto, caso contrario falla

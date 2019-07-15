@@ -8,6 +8,7 @@
 #ifndef LFS_H_
 #define LFS_H_
 
+#include <inttypes.h>
 #include <unistd.h>
 #include <semaphore.h>
 #include <commons/log.h>
@@ -53,7 +54,7 @@ t_log* g_logger;
 
 resultado parsear_mensaje(resultadoParser *);
 resultado select_acc(char *,uint16_t);
-resultado insert(char*,uint16_t,char*,long);
+resultado insert(char*,uint16_t,char*,uint64_t);
 resultado create(char*,char*,int,int);
 resultado describe(char*);
 resultado drop(char*);
