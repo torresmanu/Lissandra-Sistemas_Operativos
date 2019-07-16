@@ -63,6 +63,8 @@ typedef struct{
 	char* puerto;
 	int socket;
 	uint32_t numero;
+	uint16_t estado;
+	uint64_t timestamp;
 }Memoria;
 
 t_log* g_logger;

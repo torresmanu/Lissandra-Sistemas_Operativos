@@ -8,6 +8,8 @@ int main(int argc, char* argv[]) {
 	if(!estado)
 		return 0;
 
+	gossiping();
+
 	/*pthread_t journalAutomatico;
 	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
 
@@ -46,7 +48,6 @@ int main(int argc, char* argv[]) {
 	pthread_t monitoreador;
 	pthread_create(&monitoreador,NULL,(void*) monitorearConfig,NULL);
 
-	gossiping();
 
 	consola();
 
@@ -63,33 +64,6 @@ int main(int argc, char* argv[]) {
 
 
 }
-
-void correrScript() {
-	printf("CORRO SCRIPTS\n");
-
-	FILE* file = fopen("../../prueba.lql","r");
-	if(file == NULL){
-		printf("ERROR AL OBTENER EL SCRIPT\n");
-		return;
-	}
-	char linea[1024];
-	int i=1;
-	while(fgets(linea,1024,(FILE*)file)){
-		printf("Linea ejecutada #%i\n",i);
-		resultadoParser resParser = parseConsole(linea);
-		resultado res = parsear_mensaje(&resParser);
-		if(res.resultado == OK){
-		}else{
-			log_info(g_logger,"ERROR");
-		}
-		usleep(100000);
-		i++;
-	}
-	fclose(file);
-
-	printf("TERMINO CORRER SCRIPTS\n");
-}
-
 
 void escucharConexiones(){
 	int conexion_servidor = iniciarServidor();
@@ -128,6 +102,8 @@ void escucharConexiones(){
 			}
 			else if(*tipoCliente==0){
 				log_info(g_logger, "Nueva conexion de una memoria");
+				int memoryNumber = config_get_int_value(g_config, "MEMORY_NUMBER");
+				send(*conexion_cliente,&memoryNumber,sizeof(memoryNumber),0);
 				iniciarHiloMemoria(&cliente,&longc,conexion_cliente);
 			}
 			else{
@@ -226,6 +202,7 @@ void escucharKernel(int* conexion_cliente){
 		else if(res.resultado == SALIR)
 		{
 			log_error(g_logger,"El kernel se desconecto");
+			close(*conexion_cliente);
 		}
 		else if(res.resultado == FULL){
 			log_warning(g_logger,"Memoria FULL");
@@ -471,7 +448,9 @@ bool iniciar_programa()
 
 	posLibres= cantidadFrames;
 
+	pthread_mutex_lock(&mMemoriasConocidas);
 	memoriasConocidas = list_create();
+	pthread_mutex_unlock(&mMemoriasConocidas);
 
 	yo = malloc(sizeof(Memoria));
 
@@ -479,10 +458,14 @@ bool iniciar_programa()
 	yo->puerto=config_get_string_value(g_config,"PUERTO");
 	yo->numero = config_get_int_value(g_config,"MEMORY_NUMBER");
 	yo->socket=-1;
+	yo->estado = 1;
+	ponerTimestampActual(yo);
 
 	iniciarTablaSeeds();
 
+	pthread_mutex_lock(&mMemoriasConocidas);
 	list_add(memoriasConocidas,yo);
+	pthread_mutex_unlock(&mMemoriasConocidas);
 
 	iniciar_tablas();
 
@@ -502,7 +485,9 @@ void iniciarTablaSeeds(){
 		mem->puerto = puertos[i];
 		mem->numero = -1;
 		mem->socket = -1;
-		conectarMemoria(mem);
+		mem->estado = 0;
+		ponerTimestampActual(mem);
+		bool res = conectarMemoria(mem);
 
 		list_add(memoriasSeeds,mem);
 
@@ -1196,9 +1181,6 @@ void terminar_programa()
 	//Destruyo el logger
 	log_destroy(g_logger);
 
-	//Destruyo las configs
-	config_destroy(g_config);
-
 	//Destruyo la tabla de segmentos
 	pthread_mutex_lock(&mTabSeg);
 	list_destroy_and_destroy_elements(tabla_segmentos, destroy_nodo_segmento);
@@ -1226,8 +1208,11 @@ void terminar_programa()
 
 	//Destruyo la lista de memorias conocidas
 	pthread_mutex_lock(&mMemoriasConocidas);
-	list_destroy_and_destroy_elements(memoriasConocidas, destroy_nodo_memoria);
+	list_destroy_and_destroy_elements(memoriasConocidas, destroy_nodo_memoria_conocida);
 	pthread_mutex_unlock(&mMemoriasConocidas);
+
+	//Destruyo las configs
+	config_destroy(g_config);
 
 	destruirMutexs();
 }
@@ -1269,13 +1254,6 @@ void iniciar_tablas(){
 	tabla_segmentos = list_create();
 	pthread_mutex_unlock(&mTabSeg);
 	tabla_paginas_global = list_create();
-}
-
-void destroy_nodo_memoria(void* elem){
-	Memoria* mem = (Memoria*) elem;
-//	free(mem->ip);
-//	free(mem->puerto);
-	free(mem);
 }
 
 void destroy_nodo_pagina(void * elem){

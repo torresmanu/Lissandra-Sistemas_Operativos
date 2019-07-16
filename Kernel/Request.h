@@ -54,10 +54,10 @@ Script* crearScript(resultadoParser*);
 bool terminoScript(Script *s);
 
 // EJECUCION DE REQUESTS
-resultado ejecutarRequest(resultadoParser*);
-resultado ejecutarScript(Script*);
-resultado ejecutar(Criterio*, resultadoParser*);
-resultado enviarRequest(Memoria*,resultadoParser*);
+resultado ejecutarRequest(resultadoParser*,char* id);
+resultado ejecutarScript(Script*,char* id);
+resultado ejecutar(Criterio*, resultadoParser*,char* id);
+resultado enviarRequest(Memoria*,resultadoParser*,char* id);
 
 metadataTabla* buscarTabla(char*);
 metadataTabla* obtenerTabla(resultadoParser*);
@@ -68,6 +68,6 @@ resultado recibir(int conexion);
 resultado describe();
 resultado journal();
 resultado metrics();
-void enviarJournal(void*);
+void enviarJournal(void*,char* id);
 
 #endif /* REQUEST_H_ */

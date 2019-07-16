@@ -18,32 +18,13 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <semaphore.h>
+#include <unistd.h>
 #include <pthread.h>
+#include "Globales.h"
+#include <sys/time.h>
 
-// Semaforos
-t_dictionary* mutexsConexiones;
-pthread_mutex_t usoConfig;
 
-//las puse aca para que no me rompa, buscar un lugar mejor
-t_log* g_logger;
-t_config* g_config;
 
-int memoriaSocket;			// Almaceno el socket de la memoria para usarlo posteriormente
-t_list* socketsPool;
-
-typedef struct{
-	char* ipMemoria;
-	char* puerto;
-	uint32_t id;
-	int socket;
-	int totalOperaciones;
-	int selectsTotales;
-	int insertsTotales;
-}Memoria;
-
-// Pool de Memorias
-t_list *pool;
-Memoria* MemDescribe;
 
 // MANEJO DE MEMORIAS
 void establecerConexionPool();
@@ -54,7 +35,7 @@ Memoria obtenerMemoria(t_config* config);
 Memoria *buscarMemoria(int numero);
 void obtenerMemoriaDescribe();
 bool tengoMemoria(Memoria* memNueva);
-bool estoyConectado(Memoria* mem);
+bool estoyConectado(int* conexion);
 
 void agregarMutex(Memoria* mem);
 void liberarMutexs();
@@ -62,6 +43,19 @@ void liberarMutex(void*);
 pthread_mutex_t* obtenerMutex(Memoria* mem);
 void bloquearConexion(Memoria* mem);
 void desbloquearConexion(Memoria* mem);
-void gestionarConexionAMemoria(Memoria *mem);
+int gestionarConexionAMemoria(Memoria *mem,char* id);
+void destroy_nodo_memoria(void*);
+void sacarMemoria(Memoria* mem);
+void conectarMemorias(void* id);
+void cerrarConexion(char* key, void* value);
+void conectarEjecutadores();
+void conectarGossiping();
+bool sigueConectada(Memoria* memVieja, t_list* memoriasRecibidas);
+
+bool agregarMemoria(Memoria* mem);
+bool coincideIPyPuerto(Memoria* mem1,Memoria* mem2);
+void inicializarMemoria(Memoria* memNueva);
+void inicializarConexiones(Memoria* mem);
+void ponerTimestampActual(Memoria* mem);
 
 #endif /* POOLMEM_H_ */

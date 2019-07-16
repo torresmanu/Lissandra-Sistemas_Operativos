@@ -13,14 +13,10 @@ int obtenerMemorias(int socket){
 
 	accion pedido = GOSSIPING;
 	send(socket,&pedido,sizeof(int),0);
-	log_info(g_logger,"Gossiping en proceso..");
 
 	char* buffer = malloc(sizeof(uint32_t));
 	status = recv(socket,buffer,sizeof(uint32_t),0);
-	if(status==-1)
-		log_error(g_logger,"Error en el gossiping");
-	else if(status == 0)
-		log_error(g_logger,"Se desconectó la memoria del config. Se procede a la desconexión de kernel..");
+
 	if(status != sizeof(uint32_t)) return -2;
 	int cantElem = *(int*)buffer;
 
@@ -46,22 +42,92 @@ int obtenerMemorias(int socket){
 		status = recv(socket,&memNueva->id,sizeof(uint32_t),0);
 		if(status != sizeof(uint32_t)) return -2;
 
-		log_info(g_logger,"Recibi memoria:%d",memNueva->id);
-		memNueva->insertsTotales = 0;
-		memNueva->selectsTotales = 0;
-		memNueva->totalOperaciones = 0;
+		status = recv(socket,&memNueva->estado,sizeof(memNueva->estado),0);
+		if(status != sizeof(memNueva->estado)) return -2;
 
-		if(!tengoMemoria(memNueva)){
-			memNueva->socket=-1;
+		status = recv(socket,&memNueva->timestamp,sizeof(memNueva->timestamp),0);
+		if(status != sizeof(memNueva->timestamp)) return -2;
 
-			list_add(pool,memNueva);
-			log_info(g_logger,"Agregue memoria nueva numero:%d",memNueva->id);
+
+		log_info(g_logger,"Recibi memoria:%d, ESTADO: %d",memNueva->id,memNueva->estado);
+
+		bool laTenia = agregarMemoria(memNueva);
+
+		if(laTenia){
+			free(memNueva->ipMemoria);
+			free(memNueva->puerto);
+			free(memNueva);
 		}
 	}
 
 	free(buffer);
-	log_info(g_logger,"Gossiping completado.");
 	return status;
+}
+
+bool agregarMemoria(Memoria* mem){
+
+	for(int i=0;i<pool->elements_count;i++){
+		Memoria* memConocida = list_get(pool,i);
+		if(coincideIPyPuerto(mem,memConocida)){
+			if(mem->timestamp > memConocida->timestamp){
+				memConocida->estado=mem->estado;
+				memConocida->timestamp=mem->timestamp;
+			}
+
+			return true;
+		}
+	}
+
+	inicializarMemoria(mem);
+
+	list_add(pool,mem);
+	return false;
+}
+
+bool coincideIPyPuerto(Memoria* mem1,Memoria* mem2){
+	return strcmp(mem1->ipMemoria,mem2->ipMemoria)==0 && strcmp(mem1->puerto,mem2->puerto)==0;
+}
+
+void inicializarMemoria(Memoria* memNueva){
+	memNueva->insertsTotales = 0;
+	memNueva->selectsTotales = 0;
+	memNueva->totalOperaciones = 0;
+	pthread_mutex_init(&(memNueva->mutex),NULL);
+	memNueva->conexiones = dictionary_create();
+
+	int centinela=-1;
+	int* conexion = malloc(sizeof(centinela));
+	memcpy(conexion,&centinela,sizeof(centinela));
+	dictionary_put(memNueva->conexiones,idGossiping,conexion);
+
+	inicializarConexiones(memNueva);
+
+	log_info(g_logger,"Agregue memoria nueva numero:%d",memNueva->id);
+}
+
+void inicializarConexiones(Memoria* mem){
+
+	void setearConexiones(void* elem){
+		char* id = elem;
+		int centinela=-1;
+		int* conexion = malloc(sizeof(centinela));
+		memcpy(conexion,&centinela,sizeof(centinela));
+		dictionary_put(mem->conexiones,id,conexion);
+	}
+
+
+	list_iterate(idsEjecutadores,setearConexiones);
+
+	setearConexiones(idGossiping);
+}
+
+bool sigueConectada(Memoria* memVieja, t_list* memoriasRecibidas){
+	bool coincideId(void* elem){
+		Memoria* mem = elem;
+		return mem->id == memVieja->id;
+	}
+
+	return list_any_satisfy(memoriasRecibidas,coincideId);
 }
 
 bool tengoMemoria(Memoria* memNueva){
@@ -73,21 +139,31 @@ bool tengoMemoria(Memoria* memNueva){
 	return list_any_satisfy(pool,coincideId);
 }
 
-bool estoyConectado(Memoria* mem){
-	return mem->socket != -1;
+bool estoyConectado(int* conexion){
+	return  *conexion!= -1;
 }
 
 void obtenerMemoriaDescribe()
 {
+
 	MemDescribe = malloc(sizeof(Memoria));
 	MemDescribe->id = 22;
 	MemDescribe->ipMemoria = config_get_string_value(g_config,"IP_MEMORIA");
 	MemDescribe->puerto = config_get_string_value(g_config, "PUERTO_MEMORIA");
-	MemDescribe->socket = -1;
 	MemDescribe->insertsTotales = 0;
 	MemDescribe->selectsTotales = 0;
 	MemDescribe->totalOperaciones = 0;
+	pthread_mutex_init(&(MemDescribe->mutex),NULL);
+	MemDescribe->conexiones = dictionary_create();
+	MemDescribe->estado=1;
+	ponerTimestampActual(MemDescribe);
+	inicializarConexiones(MemDescribe);
+
 	list_add(pool,MemDescribe);
+
+	conectarEjecutadores();
+	conectarGossiping();
+
 }
 
 Memoria *buscarMemoria(int numero){
@@ -98,23 +174,136 @@ Memoria *buscarMemoria(int numero){
 }
 
 void gossiping(){
-	establecerConexionPool();
+	Memoria* mem = NULL;
+	int status=-1;
 
-	bloquearConexion(MemDescribe);
-	int status = obtenerMemorias(MemDescribe->socket);
-	desbloquearConexion(MemDescribe);
+	log_info(g_logger,"Gossiping en proceso..");
+
+	for(int i=0;i<pool->elements_count;i++){
+		mem = list_get(pool,i);
+		int* conexion = dictionary_get(mem->conexiones,idGossiping);
+
+		status = obtenerMemorias(*conexion);
+
+		if(status>=0){
+			log_info(g_logger,"Gossiping completado con memoria %d.",mem->id);
+
+			conectarEjecutadores();
+			conectarGossiping();
+
+			break;
+		}
+		else
+			*conexion=-1;
+	}
+	if(status<0)
+		log_info(g_logger,"No hay memorias activas para hacer gossiping");
+}
+
+void conectarGossiping(){
+	conectarMemorias(idGossiping);
+}
+
+void conectarEjecutadores(){
+	list_iterate(idsEjecutadores,conectarMemorias);
+}
+
+void desconectarEjecutadores(Memoria* mem){
+
+	dictionary_iterator(mem->conexiones,cerrarConexion);
+}
+
+void conectarMemorias(void* elem){
+	char* id=elem;
+
+	void conectarAsociadas(void* elem){
+		Criterio* crit = elem;
+
+		void conectar(void* elem){
+			Memoria* mem = elem;
+			if(mem->estado==1){
+				int resultado = gestionarConexionAMemoria(mem,id);
+				if(resultado<0)
+					sacarMemoria(mem);
+			}
+			else
+				sacarMemoria(mem);
+		}
+
+		list_iterate(crit->memorias,conectar);
+
+	}
+
+	list_iterate(criterios,conectarAsociadas);
+}
+
+void desconectarMemoria(Memoria* mem,char* id){
+	int* conexion = dictionary_get(mem->conexiones,id);
+	close(*conexion);
+	free(conexion);
+}
+
+void cerrarConexion(char* key, void* value){
+	int* conexion = value;
+
+	if(*conexion != -1)
+		close(*conexion);
+
+	*conexion=-1;
 
 }
 
-void establecerConexionPool()
+void sacarMemoria(Memoria* mem){
+	bool coincideId(void* elem){
+		Memoria* memN = elem;
+		return memN->id == mem->id;
+	}
+
+	mem->estado=0;
+	ponerTimestampActual(mem);
+
+	desconectarEjecutadores(mem);
+
+	list_remove_by_condition(sc.memorias,coincideId);
+	list_remove_by_condition(shc.memorias,coincideId);
+	list_remove_by_condition(ec.memorias,coincideId);
+}
+
+//Memoria* obtenerMemoriaActiva(char* idG){
+//	Memoria* mem;
+//
+//	for(int i=0;i<pool->elements_count;i++){
+//		mem = list_get(pool,i);
+//
+//		if(estaActiva(mem))
+//			break;
+//		else
+//			mem=NULL;
+//	}
+//
+//	return mem;
+//}
+//
+//bool estaActiva(Memoria* mem,char* idG){
+//	int* conexion = dictionary_get(mem->conexiones,idG);
+//
+//	send(*conexion,)
+//}
+
+void establecerConexionPool(char* id)
 {
 	Memoria* mem;
 
 	for(int i = 0; i<pool->elements_count; i++)
 	{
 		mem = list_get(pool,i);
-		if(!estoyConectado(mem))
-			gestionarConexionAMemoria(mem);
+		int* conexion=dictionary_get(mem->conexiones,id);
+
+		if(!estoyConectado(conexion)){
+			int res = gestionarConexionAMemoria(mem,id);
+			if(res<0)
+				sacarMemoria(mem);
+		}
 	}
 }
 
@@ -151,5 +340,11 @@ void desbloquearConexion(Memoria* mem){
 	pthread_mutex_t* mConexion = obtenerMutex(mem);
 
 	pthread_mutex_unlock(mConexion);
+}
+
+void ponerTimestampActual(Memoria* mem){
+	struct timeval te;
+	gettimeofday(&te, NULL);
+	mem->timestamp = te.tv_sec*1000LL + te.tv_usec/1000;
 }
 

@@ -18,6 +18,12 @@ void iniciarCriterios(){
 
 	ec.tipo = EC;
 	ec.memorias = list_create();
+
+	criterios = list_create();
+	list_add(criterios,&sc);
+	list_add(criterios,&shc);
+	list_add(criterios,&ec);
+
 	srand(time(NULL));
 }
 
@@ -31,9 +37,18 @@ void liberarMemorias(){
 	list_destroy(pool);
 }
 
+void destroy_nodo_diccionario(void* elem){
+	int* conexion = elem;
+	close(*conexion);
+	free(conexion);
+}
+
 void destroy_nodo_memoria(void* elem){
-	Memoria* nodo_tabla_elem = (Memoria*) elem;
-	free(nodo_tabla_elem);
+	Memoria* mem = (Memoria*) elem;
+	free(mem->ipMemoria);
+	free(mem->puerto);
+	dictionary_destroy_and_destroy_elements(mem->conexiones,destroy_nodo_diccionario);
+	free(mem);
 }
 
 Memoria* buscarMemoriaPorID(uint32_t id, t_list* lista)
@@ -120,7 +135,7 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 	}
 	if(mem	== NULL){
 		log_warning(g_logger,"No hay memorias asociadas al criterio %s",aux);
-		mem = MemDescribe;
+		mem = (Memoria*)list_get(sc.memorias,0); //tendriamos que obtener cualquiera
 	}
 	return mem;
 }

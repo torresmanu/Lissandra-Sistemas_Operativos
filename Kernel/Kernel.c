@@ -14,18 +14,30 @@ int main(void) {
 	iniciar_programa();
 
 	//Lanzamos tantos hilos como nivelMultiprocesamiento haya
+	idsEjecutadores = list_create();
+
 	executer = malloc(nivelMultiprocesamiento * sizeof(pthread_t));
 	for(int i=0; i<nivelMultiprocesamiento; i++ )
 	{
-	    pthread_create(&executer[i], NULL, (void*)ejecutador, NULL);
+		char* idEjecutador = malloc(sizeof(i));
+		memcpy(idEjecutador,&i,sizeof(i));
+		list_add(idsEjecutadores,idEjecutador);
+
+	    pthread_create(&executer[i], NULL, (void*)ejecutador, idEjecutador);
 	}
+
+	obtenerMemoriaDescribe();
+	establecerConexionPool(idGossiping);
+	add(MemDescribe,&sc);
+
+	gossiping();
 
 	pthread_create(&plp,NULL,(void*)planificadorLargoPlazo,NULL);
 
 	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 	pthread_create(&gossipingAutomatico,NULL,(void*)realizarGossipingAutomatico,NULL);
 	pthread_create(&monitoreador,NULL,(void*)controlConfig,NULL);
-	pthread_create(&metricas,NULL,(void*)realizarMetrics,NULL);
+//	pthread_create(&metricas,NULL,(void*)realizarMetrics,NULL);
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
@@ -88,12 +100,12 @@ void iniciar_programa(void)
 	tTotal = malloc(sizeof(int));
 
 	// Todoo para el describe
-	obtenerMemoriaDescribe();
 
-	gossiping();
+	idGossiping = malloc(sizeof(nivelMultiprocesamiento));
+	memcpy(idGossiping,&nivelMultiprocesamiento,sizeof(nivelMultiprocesamiento));
 
 	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
-	add(MemDescribe,&sc);
+
 }
 
 void terminar_programa()
@@ -221,7 +233,7 @@ void planificadorLargoPlazo(){
 	}
 }
 
-void ejecutador(){ // ACTUA COMO ESTADO EXEC
+void ejecutador(char* idEjecutador){ // ACTUA COMO ESTADO EXEC
 	resultado e;
 	while(1){
 
@@ -236,7 +248,7 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 
 		for(int i=0; i < quantum ;i++) //ver caso en que falla, ejecutarS podria retornar un estado
 		{
-			e = ejecutarScript(s);
+			e = ejecutarScript(s,idEjecutador);
 
 			//Logueo el resultado
 			if (e.resultado == OK){
@@ -258,7 +270,6 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 			log_info(g_logger,"Fin de quantum, vuelvo a ready");
 			mandarAready(s);
 		}
-
 	}
 }
 
@@ -286,22 +297,24 @@ void realizarDescribeGlobal()
 {
 	while(1)
 	{
-		sem_wait(&sDescribe);
+//		bloquearConexion(mem);
 		printf("La metadata refresh es: %d\n", metadataRefresh);
-		describe(NULL);
+		describe(NULL,idGossiping);
 		sleep(metadataRefresh/1000); // Lo paso a ms
-		sem_post(&sDescribe);
+//		desbloquearConexion(mem);
 	}
 }
 
 void realizarGossipingAutomatico(){
+
 	while(1){
 		sleep(retardoGossiping/1000);
+		establecerConexionPool(idGossiping);
 		gossiping();
 	}
 }
 
-resultado describe(char* nombreTabla)
+resultado describe(char* nombreTabla,char* id)
 {
 	t_list* tablaLFS = list_create();
 	int size;
@@ -316,37 +329,41 @@ resultado describe(char* nombreTabla)
 	cd->nombreTabla = nombreTabla;
 	describe->contenido = cd;
 
-	Memoria* mem = list_get(pool,0);
-
+	Memoria* mem;
+	if(cd->nombreTabla!=NULL){
+		metadataTabla* tabla = buscarTabla(cd->nombreTabla);
+		Criterio* criterio = toConsistencia(tabla->consistency);
+		mem = masApropiada(criterio,describe);
+	}
+	else{
+		mem = masApropiada(&sc,describe);
+	}
 	char* msg = serializarPaquete(describe,&size);
 
-	bloquearConexion(mem);
+	int *conexion = dictionary_get(mem->conexiones,id);
 
-	send(mem->socket, msg, size, 0);
+	send(*conexion, msg, size, 0);
 	// Pido el describe a la memoria
 	char* buffer = malloc(sizeof(int));
-	valueResponse = recv(mem->socket,buffer,sizeof(int),0);
+	valueResponse = recv(*conexion,buffer,sizeof(int),0);
 
 	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
 
 	if(valueResponse < 0)
 	{
 		log_error(g_logger,strerror(errno));
-		desbloquearConexion(mem);
 		res.resultado = ERROR;
 	}
 	else if(valueResponse == 0)
 	{
 		log_error(g_logger,"Posiblemente la memoria se desconectó.");
-		desbloquearConexion(mem);
-		res.resultado = ERROR;
+		res.resultado = MEMORIA_CAIDA;
+		sacarMemoria(mem);
 	}
 	else
 	{
 		res.accionEjecutar=acc;
-		statusRespuesta = recibirYDeserializarRespuesta(mem->socket,&res); // Recibo la lista de tablas
-
-		desbloquearConexion(mem);
+		statusRespuesta = recibirYDeserializarRespuesta(*conexion,&res); // Recibo la lista de tablas
 
 		if(statusRespuesta<0 || res.resultado == ERROR)
 			{
@@ -382,8 +399,15 @@ resultado describe(char* nombreTabla)
 	return res;
 }
 
-void gestionarConexionAMemoria(Memoria* mem)
+int gestionarConexionAMemoria(Memoria* mem,char* id)
 {
+	int* conex = dictionary_get(mem->conexiones,id);
+
+	if(*conex!=-1)
+		return *conex;
+
+	if(mem->estado==0)
+		return -1;
 
 	struct addrinfo hints;
 	struct addrinfo* serverInfo;
@@ -394,36 +418,48 @@ void gestionarConexionAMemoria(Memoria* mem)
 
 	getaddrinfo(mem->ipMemoria,mem->puerto, &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
 
-	mem->socket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+	int sock = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 
-	agregarMutex(mem);
+	int res =connect(sock, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
 
-	bloquearConexion(mem);
-
-	int res =connect(mem->socket, serverInfo->ai_addr, serverInfo->ai_addrlen); // Me conecto al socket
+	freeaddrinfo(serverInfo); // Libero
 
 	if(res == -1)
 	{
-		log_error(g_logger, "Memoria inaccesible: %s", strerror(errno));
+		log_error(g_logger, "Memoria N° %d inaccesible: %s",mem->id, strerror(errno));
 	}
 	else
 	{
+
 		log_info(g_logger, "Conectado con IP: %s:%s",mem->ipMemoria, mem->puerto);
 
 		// Envio un 1
 		uint32_t codigo = 1;
-		send(mem->socket,&codigo,sizeof(uint32_t),0);
+		send(sock,&codigo,sizeof(uint32_t),0);
 		int status = 0;
-		status = recv(mem->socket,&(mem->id),sizeof(mem->id),0);
+		status = recv(sock,&(mem->id),sizeof(mem->id),0);
 
 
-		if(status != sizeof(uint32_t))
+		if(status != sizeof(uint32_t)){
 			log_info(g_logger, "Error al recibir id de memoria");
+			close(sock);
+
+			mem->estado=0;
+			ponerTimestampActual(mem);
+			return -1;
+		}
 		log_info(g_logger, "ID Memoria: %i", mem->id);
 
+		int* conexion = malloc(sizeof(sock));
+		memcpy(conexion,&sock,sizeof(sock));
+		dictionary_put(mem->conexiones,id,conexion);
+
+		mem->estado=1;
+		ponerTimestampActual(mem);
+
 	}
-	freeaddrinfo(serverInfo); // Libero
-	desbloquearConexion(mem);
+//	desbloquearConexion(mem);
+	return res;
 }
 
 ////////////////////////////////////////////////////

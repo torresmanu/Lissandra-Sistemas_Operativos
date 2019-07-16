@@ -81,33 +81,42 @@ bool terminoScript(Script *s){
 	return s->pc == list_size(s->instrucciones);
 }
 
-resultado ejecutar(Criterio* criterio, resultadoParser* request){
+resultado ejecutar(Criterio* criterio, resultadoParser* request,char* id){
 
+	resultado res;
 	Memoria* mem = masApropiada(criterio, request);
-	log_info(g_logger, "Elegida la memoria ID: %zu", mem->id);
-	resultado resultado = enviarRequest(mem, request);
-
-	// Para las metricas
-	if(resultado.resultado == OK && request->accionEjecutar == SELECT){
-		(mem->selectsTotales)++;
+	if(mem == NULL){
+		log_info(g_logger, "No hay memorias disponibles");
+		res.resultado = ERROR;
 	}
-	else if(resultado.resultado == OK && request->accionEjecutar == INSERT){
-		(mem->insertsTotales)++;
-	}
+	else{
+		log_info(g_logger, "Elegida la memoria ID: %zu", mem->id);
+		res = enviarRequest(mem, request,id);
 
-	(mem->totalOperaciones)++;
+		// Para las metricas
+		if(res.resultado == OK && request->accionEjecutar == SELECT){
+			(mem->selectsTotales)++;
+		}
+		else if(res.resultado == OK && request->accionEjecutar == INSERT){
+			(mem->insertsTotales)++;
+		}
 
-	// Si esta llena..
-	if(resultado.resultado==FULL){
-		enviarJournal(mem);
-		resultado = enviarRequest(mem, request);
-	}
+		(mem->totalOperaciones)++;
+
+		// Si esta llena..
+		if(res.resultado==FULL){
+			enviarJournal(mem,id);
+			res = enviarRequest(mem, request,id);
+		}
+		if(res.resultado == MEMORIA_CAIDA){
+			enviarRequest(mem,request,id);
+		}
 //	if(resultado.resultado==EnJOURNAL){
 //		log_warning(g_logger,"Vuelvo a enviar la request");
 //		resultado = ejecutar(criterio, request);
 //	}
-
-	return resultado;
+	}
+	return res;
 }
 
 resultado recibir(int conexion){
@@ -126,7 +135,7 @@ resultado recibir(int conexion){
 		log_error(g_logger,"Error al recibir los datos.");
 	}
 	else if(valueResponse == 0)
-	{
+	{	res.resultado = MEMORIA_CAIDA;
 		log_error(g_logger, "Posible desconexión de memoria.");
 	}
 	else
@@ -147,32 +156,43 @@ resultado recibir(int conexion){
 	return res;
 }
 
-resultado enviarRequest(Memoria* mem, resultadoParser* request)
+int obtenerConexion(Memoria* mem,char* id){
+	int *conexion = dictionary_get(mem->conexiones,id);
+	return *conexion;
+}
+
+resultado enviarRequest(Memoria* mem, resultadoParser* request,char* id)
 {
 	resultado res;
 	int size;
 
 	char* msg = serializarPaquete(request,&size);
 
-	bloquearConexion(mem);
-	send(mem->socket, msg, size, 0);
-	res = recibir(mem->socket);
-	desbloquearConexion(mem);
+	int conexion = obtenerConexion(mem,id);
 
+	int enviado = send(conexion, msg, size, 0);
+	if(enviado<=0){
+		res.resultado = MEMORIA_CAIDA;
+	}
+	res = recibir(conexion);
+
+	if(res.resultado == MEMORIA_CAIDA){
+		sacarMemoria(mem);
+	}
 	return res;
 }
 
-resultado ejecutarScript(Script *s){
+resultado ejecutarScript(Script *s,char* id){
 
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
 	printf("Va por la request N°: %d\n", s->pc);
-	resultado estado = ejecutarRequest(r);
+	resultado estado = ejecutarRequest(r,id);
 
 	(s->pc)++;
 	return estado;
 }
 
-resultado ejecutarRequest(resultadoParser *r)
+resultado ejecutarRequest(resultadoParser *r,char* id)
 {
 	resultado estado;
 
@@ -188,7 +208,7 @@ resultado ejecutarRequest(resultadoParser *r)
 				tInicio = (long)time(NULL);
 				printf("PRUEBA DE tINICIO: %d", tInicio);
 			}
-			estado = ejecutar(cons,r); // EJECUTO
+			estado = ejecutar(cons,r,id); // EJECUTO
 
 			if(estado.resultado == OK && (r->accionEjecutar == SELECT || r->accionEjecutar == INSERT))
 			{
@@ -206,7 +226,7 @@ resultado ejecutarRequest(resultadoParser *r)
 		switch (r->accionEjecutar)
 		{
 			case JOURNAL:
-				estado = journal();
+				estado = journal(id);
 				break;
 			case METRICS:
 				estado = metrics();
@@ -223,6 +243,9 @@ resultado ejecutarRequest(resultadoParser *r)
 				printf("Criterio: %s\n",contenido->criterio);//OJO CRITERIO
 				Criterio* cons = toConsistencia(contenido->criterio);
 				add(mem,cons);
+
+				conectarEjecutadores();
+
 				estado.resultado = OK;
 				estado.mensaje = string_duplicate("Memoria agregado al criterio exitosamente");
 				break;
@@ -231,19 +254,23 @@ resultado ejecutarRequest(resultadoParser *r)
 			{
 				contenidoCreate* cont = (contenidoCreate*)(r->contenido);
 				Criterio* cons = toConsistencia(cont->consistencia);
-				estado = ejecutar(cons,r);
+				estado = ejecutar(cons,r,id);
 				break;
 			}
 			case DESCRIBE:
 			{
 				contenidoDescribe* cont = r->contenido;
-				estado = describe(cont->nombreTabla);
+				estado = describe(cont->nombreTabla,id);
+				if(estado.resultado == MEMORIA_CAIDA)
+					ejecutarRequest(r,id);
+
 				break;
 			}
 			default:
 				break;
 		}
 	}
+
 	return estado;
 }
 
@@ -307,7 +334,7 @@ void reemplazarMetadata(metadataTabla* tablaNueva){
 		log_info(g_logger,"Metadata de %s agregada con exito",tablaNueva->nombreTabla);
 }
 
-void enviarJournal(void* element){
+void enviarJournal(void* element,char* id){
 
 	Memoria* mem = (Memoria*)element;
 	resultadoParser resParser;
@@ -316,27 +343,35 @@ void enviarJournal(void* element){
 	int size_to_send;
 	char* pi = serializarPaquete(&resParser, &size_to_send);
 
-	bloquearConexion(mem);
-	send(mem->socket, pi, size_to_send, 0);
-	resultado res = recibir(mem->socket);
-	desbloquearConexion(mem);
+	int conexion = obtenerConexion(mem,id);
+
+//	bloquearConexion(mem);
+	send(conexion, pi, size_to_send, 0);
+	resultado res = recibir(conexion);
+//	desbloquearConexion(mem);
+
+	if(res.resultado==MEMORIA_CAIDA)
+		sacarMemoria(mem);
 
 	free(res.mensaje);
 	if(res.contenido!=NULL)
 		free(res.contenido);
 
-//	free(pi);
-
-
 }
-resultado journal(){
-	list_iterate(sc.memorias,enviarJournal);
+
+resultado journal(char* id){
+
+	void enviarJournal2(void* elem){
+		enviarJournal(elem,id);
+	}
+
+	list_iterate(sc.memorias,enviarJournal2);
 	log_info(g_logger,"Se hizo JOURNAL en las memorias SC.");
 
-	list_iterate(shc.memorias,enviarJournal);
+	list_iterate(shc.memorias,enviarJournal2);
 	log_info(g_logger,"Se hizo JOURNAL en las memorias SHC.");
 
-	list_iterate(ec.memorias,enviarJournal);
+	list_iterate(ec.memorias,enviarJournal2);
 	log_info(g_logger,"Se hizo JOURNAL en las memorias EC.");
 
 	resultado res;

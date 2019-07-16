@@ -39,7 +39,8 @@ typedef enum
 	ERROR,
 	EnJOURNAL,
 	ENVIADO,
-	FULL
+	FULL,
+	MEMORIA_CAIDA
 }estado;
 
 typedef struct

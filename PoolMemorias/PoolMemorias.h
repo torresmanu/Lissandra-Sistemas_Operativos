@@ -27,8 +27,8 @@ bool gestionarConexionALFS(void);
 void destroy_nodo_pagina(void *);
 void destroy_nodo_segmento(void *);
 void destroy_nodo_pagina_global(void * elem);
-void destroy_nodo_memoria(void * elem);
 void iniciar_tablas();
+void iniciarTablaSeeds();
 
 resultado select_t(char *nombre_tabla,int key);
 int contieneRegistro(char *nombre_tabla,uint16_t key, Pagina** pagina);

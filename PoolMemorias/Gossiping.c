@@ -8,18 +8,64 @@
 
 void gossiping(){
 	log_info(g_logger,"Comienza el gossiping");
-	list_iterate(memoriasSeeds,gossipear);
+	t_list* memoriasGossiping = obtenerMemoriasGossiping();
+	list_iterate(memoriasGossiping,gossipear);
+//	list_iterate(memoriasSeeds,gossipear);
+	log_info(g_logger,"Termino el gossiping");
+}
 
+t_list* obtenerMemoriasGossiping(){
+	pthread_mutex_lock(&mMemoriasConocidas);
+	t_list* memoriasGossiping = list_filter(memoriasConocidas,noSoyYo);
+	pthread_mutex_unlock(&mMemoriasConocidas);
+
+	agregarSeeds(memoriasGossiping);
+	return memoriasGossiping;
+}
+
+void agregarSeeds(t_list* memoriasGossiping){
+
+	void veoSiLaAgrego(void* elem){
+		Memoria* mem = elem;
+
+		bool mismaMemoria(void* elem2){
+			return coincideIPyPuerto((Memoria*)elem2,mem);
+		}
+
+		if(list_any_satisfy(memoriasGossiping,mismaMemoria))
+			return;
+		else
+			list_add(memoriasGossiping,mem);
+	}
+
+	list_iterate(memoriasSeeds,veoSiLaAgrego);
+}
+
+bool coincideIPyPuerto(Memoria* mem1,Memoria* mem2){
+	return strcmp(mem1->ip,mem2->ip)==0 && strcmp(mem1->puerto,mem2->puerto)==0;
+}
+
+bool noSoyYo(void* elem){
+	Memoria* mem=elem;
+	return mem->numero != yo->numero;
 }
 
 void gossipear(void* elem){
 	int estado;
 	Memoria* mem = (Memoria*)elem;
 
+	bool mismaMemoria(void* elem2){
+		return coincideIPyPuerto((Memoria*)elem2,mem);
+	}
+
 	if(estaConectada(mem)){
 		estado = mandarYrecibir(mem);
 		if(estado<0){
+			pthread_mutex_lock(&mMemoriasConocidas);
 			mem->socket=-1;
+			mem->estado=0;
+			ponerTimestampActual(mem);
+			pthread_mutex_unlock(&mMemoriasConocidas);
 		}
 	}
 }
@@ -39,23 +85,40 @@ bool conectarMemoria(Memoria* mem){
 	hints.ai_family = AF_UNSPEC;		// Permite que la maquina se encargue de verificar si usamos IPv4 o IPv6
 	hints.ai_socktype = SOCK_STREAM;	// Indica que usaremos el protocolo TCP
 
-	int estado = getaddrinfo(mem->ip, mem->puerto, &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
+	getaddrinfo(mem->ip, mem->puerto, &hints, &serverInfo);	// Carga en serverInfo los datos de la conexion
 
 
 	mem->socket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 
 	int status = connect((int)mem->socket, serverInfo->ai_addr, serverInfo->ai_addrlen);
 	uint32_t codigo = 0;
-	if(status!=-1)
-		estado = send(mem->socket,&codigo,sizeof(uint32_t),0);
+	if(status!=-1){
+		send(mem->socket,&codigo,sizeof(uint32_t),0);
+		status = recv(mem->socket,&(mem->numero),sizeof(mem->numero),0);
+	}
 	freeaddrinfo(serverInfo);	// No lo necesitamos mas
 
-	if((mem->socket==-1) || (status ==-1)){
+	if(status ==-1){
 		close(mem->socket);
 		mem->socket=-1;
+		mem->estado=0;
+		ponerTimestampActual(mem);
 		return false;
 	}
+
+	pthread_mutex_lock(&mMemoriasConocidas);
+	mem->estado=1;
+	ponerTimestampActual(mem);
+	agregarMemoria(mem);
+	pthread_mutex_unlock(&mMemoriasConocidas);
+
 	return true;
+}
+
+void ponerTimestampActual(Memoria* mem){
+	struct timeval te;
+	gettimeofday(&te, NULL);
+	mem->timestamp = te.tv_sec*1000LL + te.tv_usec/1000;
 }
 
 int mandarYrecibir(Memoria* mem){
@@ -74,23 +137,24 @@ int mandarYrecibir(Memoria* mem){
 int recibirYmandar(int socket){
 
 	int status2 = recibirTablas(socket);
+	if(status2<0){
+		log_info(g_logger,"Fallo al recibir tabla");
+		return status2;
+	}
+
 	int status1 = mandarTabla(socket);
-
-
 	if(status1<0)
 		log_info(g_logger,"Fallo al mandar tabla");
-
-	if(status2<0)
-		log_info(g_logger,"Fallo al recibir tabla");
-
-	return status2;
+	return status1;
 }
 
 int mandarTabla(int socket){
 	uint32_t totalSize;
 
+	ponerTimestampActual(yo);
+
 	pthread_mutex_lock(&mMemoriasConocidas);
-	char *tablaSerializada = serializarTabla(memoriasConocidas,&totalSize);
+	char *tablaSerializada = serializarTabla(&totalSize);
 	pthread_mutex_unlock(&mMemoriasConocidas);
 
 	int status = send(socket,tablaSerializada,totalSize,0);
@@ -109,11 +173,12 @@ void* sumarTamanios(void* seed,void* elem){
 	uint32_t* valor = (uint32_t*) seed;
 	Memoria* memoria = (Memoria*) elem;
 
-	*valor = *valor + strlen(memoria->ip)+1 + strlen(memoria->puerto)+1 + sizeof(uint32_t)*3;
+	*valor = *valor + strlen(memoria->ip)+1 + strlen(memoria->puerto)+1 + sizeof(uint32_t)*3
+			+ sizeof(memoria->estado) + sizeof(memoria->timestamp);
 	return valor;
 }
 
-char* serializarTabla(t_list* memoriasConocidas,uint32_t *totalSize){
+char* serializarTabla(uint32_t *totalSize){
 	uint32_t size_to_send, offset=0;
 	uint32_t seed=0;
 	uint32_t cantElementos = memoriasConocidas->elements_count;
@@ -148,8 +213,16 @@ char* serializarTabla(t_list* memoriasConocidas,uint32_t *totalSize){
 		memcpy(tablaSerializada+offset,elem->puerto,size_to_send);
 		offset += size_to_send;
 
-		size_to_send = sizeof(uint32_t);
+		size_to_send = sizeof(elem->numero);
 		memcpy(tablaSerializada+offset,&elem->numero,size_to_send);
+		offset += size_to_send;
+
+		size_to_send = sizeof(elem->estado);
+		memcpy(tablaSerializada+offset,&elem->estado,size_to_send);
+		offset += size_to_send;
+
+		size_to_send = sizeof(elem->timestamp);
+		memcpy(tablaSerializada+offset,&elem->timestamp,size_to_send);
 		offset += size_to_send;
 	}
 
@@ -189,32 +262,81 @@ int recibirTablas(int socket){
 		status = recv(socket,&memNueva->numero,sizeof(uint32_t),0);
 		if(status != sizeof(uint32_t)) return -2;
 
+		status = recv(socket,&memNueva->estado,sizeof(memNueva->estado),0);
+		if(status != sizeof(memNueva->estado)) return -2;
+
+		status = recv(socket,&memNueva->timestamp,sizeof(memNueva->timestamp),0);
+		if(status != sizeof(memNueva->timestamp)) return -2;
+
 		memNueva->socket=-1;
 
-		agregarMemoria(memNueva);
-		log_info(g_logger,"Recibi memoria numero:%d",memNueva->numero);
+		pthread_mutex_lock(&mMemoriasConocidas);
+		bool laTenia = agregarMemoria(memNueva);
+		pthread_mutex_unlock(&mMemoriasConocidas);
+
+		log_info(g_logger,"Recibi memoria numero:%d, ESTADO= %d",memNueva->numero,memNueva->estado);
+
+		if(laTenia){
+			free(memNueva->ip);
+			free(memNueva->puerto);
+			free(memNueva);
+		}
 	}
+
 	free(buffer);
-	log_info(g_logger,"Recibi tabla");
 	return status;
 }
 
-void agregarMemoria(Memoria* mem){
-
-	bool memoriasIguales(void* elem){
-		return ((Memoria*)elem)->numero == mem->numero;
+void sacarMemoria(Memoria* mem){
+	bool mismaMemoria(void* elem2){
+		return coincideIPyPuerto((Memoria*)elem2,mem);
 	}
 
-	if(list_any_satisfy(memoriasConocidas,memoriasIguales)){
-		free(mem);
-		return;
+	list_remove_and_destroy_by_condition(memoriasConocidas,mismaMemoria,destroy_nodo_memoria);
+}
+
+bool estaEnElPool(Memoria* mem, t_list* memoriasRecibidas){
+
+	bool mismaMemoria(void* elem2){
+		return coincideIPyPuerto((Memoria*)elem2,mem);
+	}
+
+	return list_any_satisfy(memoriasRecibidas,mismaMemoria);
+}
+
+bool agregarMemoria(Memoria* mem){
+
+	for(int i=0;i<memoriasConocidas->elements_count;i++){
+		Memoria* memConocida = list_get(memoriasConocidas,i);
+		if(coincideIPyPuerto(mem,memConocida)){
+			if(mem->timestamp > memConocida->timestamp){
+				memConocida->estado=mem->estado;
+				memConocida->timestamp=mem->timestamp;
+			}
+			return true;
+		}
 	}
 
 	list_add(memoriasConocidas,mem);
+	return false;
 }
+
+
 
 void cerrarConexion(Memoria* mem){
 	close(mem->socket);
 }
 
+void destroy_nodo_memoria(void* elem){
+	Memoria* mem = (Memoria*) elem;
+	free(mem->ip);
+	free(mem->puerto);
+	free(mem);
+	mem=NULL;
+}
 
+void destroy_nodo_memoria_conocida(void* elem){
+	Memoria* mem = (Memoria*) elem;
+	if(mem!=NULL)
+		destroy_nodo_memoria(elem);
+}
