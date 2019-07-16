@@ -236,6 +236,12 @@ void ejecutador(){ // ACTUA COMO ESTADO EXEC
 		{
 			e = ejecutarScript(s);
 
+			// Describe automatico post create
+			if(e.accionEjecutar == CREATE)
+			{
+				describe(NULL);
+			}
+
 			//Logueo el resultado
 			if (e.resultado == OK){
 				log_info(g_logger,"%s", e.mensaje);
