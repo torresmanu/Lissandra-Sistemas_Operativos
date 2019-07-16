@@ -6,25 +6,38 @@
  */
 
 #include "Criterio.h"
+#include <inttypes.h>
 
 
 void iniciarCriterios(){
 	sc.tipo = SC;
 	sc.memorias = list_create();
 	//list_add(sc.memorias,criterioSC());  Directamente la inicializo con la unica memoria que puede tener y asignada por archivo de configuración?
+	iniciarEstadisticas(sc);
 
 	shc.tipo = SHC;
 	shc.memorias = list_create();
+	iniciarEstadisticas(shc);
 
 	ec.tipo = EC;
 	ec.memorias = list_create();
+	iniciarEstadisticas(ec);
+
 
 	criterios = list_create();
 	list_add(criterios,&sc);
 	list_add(criterios,&shc);
 	list_add(criterios,&ec);
-
 	srand(time(NULL));
+}
+
+void iniciarEstadisticas(Criterio c)
+{
+	c.amountReads = 0;
+	c.amountTotales = 0;
+	c.amountWrites = 0;
+	c.timeTotalReads = 0;
+	c.timeTotalWrites = 0;
 }
 
 void liberarCriterios(){
@@ -49,15 +62,6 @@ void destroy_nodo_memoria(void* elem){
 	free(mem->puerto);
 	dictionary_destroy_and_destroy_elements(mem->conexiones,destroy_nodo_diccionario);
 	free(mem);
-}
-
-Memoria* buscarMemoriaPorID(uint32_t id, t_list* lista)
-{
-	bool coincideID(void* element)		//Subfunción de busqueda
-	{
-		return ((Memoria*)element)->id == id;
-	}
-	return list_find(lista,coincideID);
 }
 
 Criterio* toConsistencia(char* cadena)
@@ -113,8 +117,8 @@ Memoria* masApropiada(Criterio* c, resultadoParser* r){
 			aux="SHC";
 			if(r->accionEjecutar == SELECT || r->accionEjecutar == INSERT)
 			{
-				memoriaElegida = obtenerHash(r)+1;
-				mem = buscarMemoriaPorID(memoriaElegida,shc.memorias);
+				memoriaElegida = obtenerHash(r);
+				mem = list_get(shc.memorias,memoriaElegida);
 			}
 			else
 			{

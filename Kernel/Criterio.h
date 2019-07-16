@@ -10,7 +10,6 @@
 
 #include "PoolMem.h"
 
-
 // MANEJO DE CRITERIOS
 void iniciarCriterios();
 void liberarCriterios();
@@ -19,10 +18,7 @@ Criterio* toConsistencia(char*);
 char* mostrarConsistencia(t_consist);
 Memoria* masApropiada(Criterio*, resultadoParser*);
 void add(Memoria*,Criterio*);
-
-// MANEJO DE MEMORIAS
-Memoria* buscarMemoriaPorID(uint32_t, t_list*);
-bool coincideID(void*);
+void iniciarEstadisticas(Criterio);
 
 //RANDOM (EC)
 int memoriaRandom();

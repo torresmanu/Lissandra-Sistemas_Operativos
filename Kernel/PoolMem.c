@@ -269,27 +269,6 @@ void sacarMemoria(Memoria* mem){
 	list_remove_by_condition(ec.memorias,coincideId);
 }
 
-//Memoria* obtenerMemoriaActiva(char* idG){
-//	Memoria* mem;
-//
-//	for(int i=0;i<pool->elements_count;i++){
-//		mem = list_get(pool,i);
-//
-//		if(estaActiva(mem))
-//			break;
-//		else
-//			mem=NULL;
-//	}
-//
-//	return mem;
-//}
-//
-//bool estaActiva(Memoria* mem,char* idG){
-//	int* conexion = dictionary_get(mem->conexiones,idG);
-//
-//	send(*conexion,)
-//}
-
 void establecerConexionPool(char* id)
 {
 	Memoria* mem;
@@ -306,8 +285,6 @@ void establecerConexionPool(char* id)
 		}
 	}
 }
-
-
 
 void agregarMutex(Memoria* mem){
 	pthread_mutex_t* mutex = malloc(sizeof(pthread_mutex_t));

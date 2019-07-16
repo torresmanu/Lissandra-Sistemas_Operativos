@@ -37,7 +37,8 @@ int main(void) {
 	pthread_create(&describeGlobal,NULL,(void*)realizarDescribeGlobal,NULL);
 	pthread_create(&gossipingAutomatico,NULL,(void*)realizarGossipingAutomatico,NULL);
 	pthread_create(&monitoreador,NULL,(void*)controlConfig,NULL);
-//	pthread_create(&metricas,NULL,(void*)realizarMetrics,NULL);
+
+	//pthread_create(&metricas,NULL,(void*)realizarMetrics,NULL);
 
 	leerConsola();											/// ACA COMIENZA A ITERAR Y LEER DE STDIN /////
 
@@ -45,8 +46,8 @@ int main(void) {
 	{
 		pthread_join(plp,NULL);
 		pthread_join(describeGlobal,NULL);
-		pthread_join(metricas,NULL);
-		pthread_join(monitoreador,NULL);
+		//pthread_join(metricas,NULL);
+		//pthread_join(monitoreador,NULL);
 
 		for(int i=0; i<nivelMultiprocesamiento; i++)
 		{
@@ -85,7 +86,7 @@ void iniciar_programa(void)
 	//Tasa de refresh de la metada
 	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
 
-	//Tiempo de pausa en la ejecucion (NO USADA AUN)
+	//Tiempo de pausa en la ejecucion
 	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
 
 	//Pongo el WATCH en el directorio del kernel
@@ -96,8 +97,6 @@ void iniciar_programa(void)
 
 //	socketsPool = list_create();	// SOCKETS DE TODO EL POOL
 
-	// Tiempos de requests
-	tTotal = malloc(sizeof(int));
 
 	// Todoo para el describe
 
@@ -250,21 +249,31 @@ void ejecutador(char* idEjecutador){ // ACTUA COMO ESTADO EXEC
 		{
 			e = ejecutarScript(s,idEjecutador);
 
+			// Describe automatico post create
+			if(e.accionEjecutar == CREATE)
+			{
+				describe(NULL,idEjecutador);
+			}
+
 			//Logueo el resultado
 			if (e.resultado == OK){
 				log_info(g_logger,"%s", e.mensaje);
 			}
 			else if(e.resultado == ERROR){
 				log_error(g_logger, "Error en request n°: %d", s->pc);
+				log_error(g_logger, "Request abortada");
 				mandarAexit(s);
 				break;
 			}
 
 			if (terminoScript(s)) {
+				printf("\n");
 				log_info(g_logger, "Termino script");
+				printf("\n");
 				mandarAexit(s);
 				break;
 			}
+			usleep(sleepEjecucion*1000);
 		}
 		if(e.resultado == OK && !terminoScript(s)){
 			log_info(g_logger,"Fin de quantum, vuelvo a ready");
@@ -297,18 +306,15 @@ void realizarDescribeGlobal()
 {
 	while(1)
 	{
-//		bloquearConexion(mem);
-		printf("La metadata refresh es: %d\n", metadataRefresh);
 		describe(NULL,idGossiping);
-		sleep(metadataRefresh/1000); // Lo paso a ms
-//		desbloquearConexion(mem);
+		usleep(metadataRefresh*1000); // Lo paso a ms
 	}
 }
 
 void realizarGossipingAutomatico(){
 
 	while(1){
-		sleep(retardoGossiping/1000);
+		usleep(retardoGossiping*1000);
 		establecerConexionPool(idGossiping);
 		gossiping();
 	}
@@ -376,13 +382,15 @@ resultado describe(char* nombreTabla,char* id)
 				if(list_size(tablaLFS)>0){
 					list_clean(tablas);						// Para no agregar repetidas
 					list_add_all(tablas,tablaLFS);
-					log_info(g_logger,"Describe global realizado con éxito");
-					log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
+					log_info(g_logger,"Describe realizado con éxito");
+
+					/*log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
 
 					for(int i = 0; i<tablas->elements_count; i++)
 					{
 						log_info(g_logger,"Tablas indexada n°:%d -> %s", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
 					}
+					*/
 				}
 				else
 					log_info(g_logger,"No hay tablas");
@@ -519,7 +527,6 @@ void actualizarRetardos()
 	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
 	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
 
-
 }
 
 ////////////////////////////////////////////////////
@@ -530,7 +537,6 @@ void realizarMetrics()
 	{
 		sleep(30);
 		metrics();
-		limpiarEstadisticas();
 	}
 }
 
@@ -540,7 +546,6 @@ resultado metrics(){
 	mostrarMetrics(&sc);
 	mostrarMetrics(&ec);
 	mostrarMetrics(&shc);
-	list_iterate(pool,mostrarMemoryLoad);
 
 	res.accionEjecutar=METRICS;
 	res.contenido=NULL;
@@ -552,72 +557,67 @@ resultado metrics(){
 
 void mostrarMetrics(Criterio* crit)
 {
-	log_info(g_logger, "Métricas del criterio: %s", mostrarConsistencia(crit->tipo));
-	int reads = sumarReads(crit->memorias);
-	int writes = sumarWrites(crit->memorias);
-	int readLatency = obtenerLatency(crit->reads);
-	int writeLateny = obtenerLatency(crit->writes);
+	// Memory Load
+	printf("------------------------------------------------------------------------\n");
+	list_iterate(crit->memorias,mostrarMemoryLoad);
 
-	log_info(g_logger, "Cantidad de INSERTS en los ultimos 30s del criterio %s: %d", mostrarConsistencia(crit->tipo), writes);
-	log_info(g_logger, "Cantidad de SELECTS en los ultimos 30s del criterio %s: %d", mostrarConsistencia(crit->tipo), reads);
-	log_info(g_logger, "Tiempo promedio de ejecucion de un INSERT del criterio %s: %d", mostrarConsistencia(crit->tipo), readLatency);
-	log_info(g_logger, "Tiempo promedio de ejecucion de un SELECT del criterio %s: %d", mostrarConsistencia(crit->tipo), writeLateny);
+	// Metricas de read and writes
+	log_info(g_logger, "Métricas del criterio: %s", mostrarConsistencia(crit->tipo));
+	log_info(g_logger, "Reads / 30s %s: %d", mostrarConsistencia(crit->tipo), crit->amountReads);
+	log_info(g_logger, "Writes / 30s %s: %d", mostrarConsistencia(crit->tipo), crit->amountWrites);
+	if(crit->amountReads == 0)
+	{
+		// Evitar la division por cero
+		log_info(g_logger, "Read Latency / 30s %s: %d ms", mostrarConsistencia(crit->tipo), 0);
+	}
+	else
+	{
+		log_info(g_logger, "Read Latency / 30s %s: %" PRIu64 "ms", mostrarConsistencia(crit->tipo), crit->timeTotalReads / crit->amountReads);
+
+	}
+	if(crit->amountWrites == 0)
+	{
+		log_info(g_logger, "Write Latency / 30s %s: %d ms", mostrarConsistencia(crit->tipo), 0);
+	}
+	else
+	{
+		log_info(g_logger, "Write Latency / 30s %s: %" PRIu64 "ms", mostrarConsistencia(crit->tipo), crit->timeTotalWrites / crit->amountWrites);
+	}
+
+	// Dejo en cero todooo
+	limpiarMetricasCriterio(crit);
+	list_iterate(crit->memorias,limpiarMetricasMemoria);
+
 }
 
 void mostrarMemoryLoad(void* elem)
 {
-	int select, insert;
 	Memoria* mem = (Memoria*)elem;
 	if(mem->totalOperaciones > 0)
 	{
-		select = (mem->selectsTotales * 100) / mem->totalOperaciones;
-		insert = (mem->insertsTotales * 100) / mem->totalOperaciones;
+		int load = ((mem->insertsTotales + mem->selectsTotales) * 100) / mem->totalOperaciones;
+		log_info(g_logger, "Memory Load (Memoria %zu): %d%%", mem->id, load);
 	}
 	else
 	{
-		select = 0;
-		insert = 0;
+		log_info(g_logger, "Memory Load (Memoria %zu): %d%%", mem->id, 0);
 	}
-	log_info(g_logger,"Memory Load de la memoria ID: %d", mem->id);
-	log_info(g_logger,"El %d%% de las operaciones totales son SELECTS",select);
-	log_info(g_logger,"El %d%% de las operaciones totales son INSERTS",insert);
 }
 
-int sumarReads(t_list* memorias)
+void limpiarMetricasCriterio(Criterio* c)
 {
-	int total = 0;
-	for(int i = 0; i<list_size(memorias); i++)
-	{
-		total += ((Memoria*)list_get(memorias,i))->selectsTotales;
-	}
-	return total;
+	c->amountReads = 0;
+	c->amountWrites = 0;
+	c->timeTotalReads = 0;
+	c->timeTotalWrites = 0;
+	c->amountTotales = 0;
 }
 
-int sumarWrites(t_list* memorias)
-{
-	int total = 0;
-	for(int i = 0; i<list_size(memorias); i++)
-	{
-		total += ((Memoria*)list_get(memorias,i))->insertsTotales;
-	}
-	return total;
-}
-
-void limpiarEstadisticas()
-{
-	list_iterate(pool,setearEstadisticas);
-}
-
-void setearEstadisticas(void* elem)
+void limpiarMetricasMemoria(void * elem)
 {
 	Memoria* mem = (Memoria*)elem;
 	mem->insertsTotales = 0;
 	mem->selectsTotales = 0;
 	mem->totalOperaciones = 0;
-}
-
-int obtenerLatency(t_list* tiempos)
-{
-
 }
 

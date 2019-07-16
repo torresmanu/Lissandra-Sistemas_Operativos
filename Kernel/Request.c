@@ -88,6 +88,7 @@ resultado ejecutar(Criterio* criterio, resultadoParser* request,char* id){
 	if(mem == NULL){
 		log_info(g_logger, "No hay memorias disponibles");
 		res.resultado = ERROR;
+
 	}
 	else{
 		log_info(g_logger, "Elegida la memoria ID: %zu", mem->id);
@@ -96,11 +97,12 @@ resultado ejecutar(Criterio* criterio, resultadoParser* request,char* id){
 		// Para las metricas
 		if(res.resultado == OK && request->accionEjecutar == SELECT){
 			(mem->selectsTotales)++;
+			(criterio->amountReads)++;
 		}
 		else if(res.resultado == OK && request->accionEjecutar == INSERT){
 			(mem->insertsTotales)++;
+			(criterio->amountWrites)++;
 		}
-
 		(mem->totalOperaciones)++;
 
 		// Si esta llena..
@@ -111,10 +113,6 @@ resultado ejecutar(Criterio* criterio, resultadoParser* request,char* id){
 		if(res.resultado == MEMORIA_CAIDA){
 			enviarRequest(mem,request,id);
 		}
-//	if(resultado.resultado==EnJOURNAL){
-//		log_warning(g_logger,"Vuelvo a enviar la request");
-//		resultado = ejecutar(criterio, request);
-//	}
 	}
 	return res;
 }
@@ -185,11 +183,24 @@ resultado enviarRequest(Memoria* mem, resultadoParser* request,char* id)
 resultado ejecutarScript(Script *s,char* id){
 
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
+
 	printf("Va por la request N°: %d\n", s->pc);
 	resultado estado = ejecutarRequest(r,id);
 
 	(s->pc)++;
 	return estado;
+}
+
+void contabilizarTiempo(Criterio* c, resultadoParser* r, long tiempo)
+{
+	if(r->accionEjecutar == SELECT)
+	{
+		c->timeTotalReads += tiempo;
+	}
+	if(r->accionEjecutar == INSERT)
+	{
+		c->timeTotalWrites += tiempo;
+	}
 }
 
 resultado ejecutarRequest(resultadoParser *r,char* id)
@@ -202,19 +213,27 @@ resultado ejecutarRequest(resultadoParser *r,char* id)
 		if(tabla != NULL){
 			log_info(g_logger,"Uso la tabla: %s",tabla->nombreTabla);
 			Criterio* cons = toConsistencia(tabla->consistency);
-
+			struct timeval te;
 			if(r->accionEjecutar == SELECT || r->accionEjecutar == INSERT)
 			{
-				tInicio = (long)time(NULL);
-				printf("PRUEBA DE tINICIO: %d", tInicio);
+				gettimeofday(&te, NULL);
+				tInicio = te.tv_sec*1000LL + te.tv_usec/1000;
 			}
+			if(r->accionEjecutar == INSERT && ((contenidoInsert*)(r->contenido))->timestamp == 0){
+				gettimeofday(&te, NULL);
+				((contenidoInsert*)(r->contenido))->timestamp = te.tv_sec*1000LL + te.tv_usec/1000;
+				printf("TIMESTAMP insertado %"PRIu64"\n",((contenidoInsert*)(r->contenido))->timestamp);
+			}
+
 			estado = ejecutar(cons,r,id); // EJECUTO
 
 			if(estado.resultado == OK && (r->accionEjecutar == SELECT || r->accionEjecutar == INSERT))
 			{
-				tFinal = (long)time(NULL);
+				gettimeofday(&te, NULL);
+				tFinal = te.tv_sec*1000LL + te.tv_usec/1000;
 				tTotal = tFinal - tInicio;
-				log_warning(g_logger,"Tiempo requerido: %d segundos", tTotal);
+				log_warning(g_logger,"Tiempo requerido: %"PRIu64" ms", tTotal);
+				contabilizarTiempo(cons,r, tTotal);
 			}
 		}
 		else{

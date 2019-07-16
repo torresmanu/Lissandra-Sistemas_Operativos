@@ -37,8 +37,11 @@ typedef enum{SC, SHC, EC} t_consist;
 typedef struct{
 	t_consist tipo;
 	t_list *memorias;
-	t_list* reads;
-	t_list* writes;
+	uint64_t timeTotalReads;
+	uint64_t timeTotalWrites;
+	int amountReads;
+	int amountWrites;
+	int amountTotales;
 }Criterio;
 
 Criterio sc,shc,ec;

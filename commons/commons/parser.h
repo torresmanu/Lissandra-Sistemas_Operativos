@@ -8,6 +8,7 @@
 #ifndef PARSER_H_
 #define PARSER_H_
 
+#include <inttypes.h>
 #include "string.h"
 #include <stddef.h>
 #include <time.h>
@@ -65,7 +66,7 @@ typedef struct
 	char* nombreTabla;
 	uint16_t key;
 	char* value;
-	long timestamp;
+	uint64_t timestamp;
 } contenidoInsert;
 
 typedef struct

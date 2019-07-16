@@ -23,9 +23,6 @@
 #include "Globales.h"
 #include <sys/time.h>
 
-
-
-
 // MANEJO DE MEMORIAS
 void establecerConexionPool();
 

@@ -8,6 +8,7 @@
 #ifndef KERNEL_H_
 #define KERNEL_H_
 
+#include <unistd.h>
 #include <commons/collections/queue.h>
 #include <commons/parser.h>
 #include <commons/serializacion.h>
@@ -22,6 +23,8 @@
 sem_t sNuevo; // Semáforo para el estado NEW
 sem_t sListo; // Semáforo para el estado READY
 sem_t sDescribe;
+
+// MUTEX
 pthread_mutex_t mNew;
 pthread_mutex_t mReady;
 pthread_mutex_t mExit;
@@ -76,12 +79,9 @@ void actualizarRetardos();
 //////////// METRICS ////////////
 void realizarMetrics();
 void mostrarMetrics(Criterio*);
-void limpiarEstadisticas();
 void mostrarMemoryLoad(void*);
-int sumarReads(t_list*);
-int sumarWrites(t_list*);
-void setearEstadisticas(void*);
-int obtenerLatency();
+void limpiarMetricasMemoria(void*);
+void limpiarMetricasCriterio(Criterio*);
 
 
 #endif /* KERNEL_H_ */

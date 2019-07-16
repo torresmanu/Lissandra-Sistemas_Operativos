@@ -312,14 +312,14 @@ int conectarAlKernel(int conexion_servidor){
 
 void journalConRetardo(){
 	while(ejecutando){
-		sleep(retardoJournaling/1000);
+		usleep(retardoJournaling*1000);
 		journal();
 	}
 }
 
 void gossipingConRetardo(){
 	while(ejecutando){
-		sleep(retardoGossiping/1000);
+		usleep(retardoGossiping*1000);
 
 		gossiping();
 	}
@@ -438,7 +438,7 @@ bool iniciar_programa()
 		return false;
 	}
 
-	offset = sizeof(uint16_t)+sizeof(long)+tamValue;
+	offset = sizeof(uint16_t)+sizeof(uint64_t)+tamValue;
 
 	cantidadFrames = TAM_MEMORIA_PRINCIPAL / offset;
 
@@ -506,7 +506,7 @@ bool handshake(){
 
 	int size_to_send;
 
-	sleep(retardoLFS/1000);
+	usleep(retardoLFS*1000);
 	char* pi = serializarPaquete(&resParser, &size_to_send);
 	send(serverSocket, pi, size_to_send, 0);
 
@@ -573,7 +573,7 @@ resultado mandarALFS(resultadoParser resParser){
 
 	int size_to_send;
 
-	sleep(retardoLFS/1000);
+	usleep(retardoLFS*1000);
 	char* pi = serializarPaquete(&resParser, &size_to_send);
 	pthread_mutex_lock(&mConexion);
 
@@ -625,14 +625,14 @@ resultado select_t(char *nombre_tabla, int key){
 
 		int posicion=(pagina->indice_registro)*offset;
 
-		sleep(retardoMemoria/1000);
+		usleep(retardoMemoria*1000);
 
 		registro = malloc(sizeof(Registro));
 
 		pthread_mutex_lock(&mMemPrincipal);
 		registro->value = strdup(&memoria[posicion]);
 		memcpy(&registro->key,(&memoria[posicion+tamValue]),sizeof(uint16_t));
-		memcpy(&registro->timestamp,(&memoria[posicion+tamValue+sizeof(uint16_t)]),sizeof(long));
+		memcpy(&registro->timestamp,(&memoria[posicion+tamValue+sizeof(uint16_t)]),sizeof(uint64_t));
 		pthread_mutex_unlock(&mMemPrincipal);
 
 		res.mensaje= strdup(registro->value);
@@ -893,7 +893,7 @@ void enviarInsert(void *element){ //ver los casos de error
 		cont->nombreTabla = malloc(strlen(((NodoTablaPaginas*)element)->segmento->nombre_tabla)+1);
 		strcpy(cont->nombreTabla,((NodoTablaPaginas*)element)->segmento->nombre_tabla);
 
-		sleep(retardoMemoria/1000);
+		usleep(retardoMemoria*1000);
 
 		pthread_mutex_lock(&mMemPrincipal);
 		memcpy(&cont->key,&(memoria[(indice*offset)+tamValue]),sizeof(uint16_t));
@@ -939,12 +939,12 @@ void enviarInsert(void *element){ //ver los casos de error
 
 void guardarEnMemoria(Registro registro, int posLibre){
 
-	sleep(retardoMemoria/1000);
+	usleep(retardoMemoria*1000);
 
 	pthread_mutex_lock(&mMemPrincipal);
 	memcpy(&memoria[(posLibre*offset)],registro.value,tamValue);
 	memcpy(&memoria[(posLibre*offset)+tamValue],&(registro.key),sizeof(uint16_t));
-	memcpy(&memoria[(posLibre*offset)+tamValue+sizeof(uint16_t)],&(registro.timestamp),sizeof(long));
+	memcpy(&memoria[(posLibre*offset)+tamValue+sizeof(uint16_t)],&(registro.timestamp),sizeof(uint64_t));
 	pthread_mutex_unlock(&mMemPrincipal);
 
 	pthread_mutex_lock(&mBitmap);
@@ -1000,7 +1000,7 @@ bool encuentraPagina(Segmento* segmento,uint16_t key, Pagina** pagina){
 
 		int posicion=(((Pagina *)elemento)->indice_registro)*offset;
 		int i=0;
-		sleep(retardoMemoria/1000);
+		usleep(retardoMemoria*1000);
 
 		pthread_mutex_lock(&mMemPrincipal);
 		memcpy(&i,&(memoria[posicion+tamValue]),sizeof(uint16_t));
@@ -1023,13 +1023,19 @@ bool encuentraPagina(Segmento* segmento,uint16_t key, Pagina** pagina){
 	return true;
 }
 
-resultado insert(char *nombre_tabla,uint16_t key,char *value,long timestamp){
+resultado insert(char *nombre_tabla,uint16_t key,char *value,uint64_t timestamp){
 	Segmento* segmento;
 
 	Pagina* pagina;
 
 	Registro registro;
-	registro.timestamp=timestamp;
+	if(timestamp == 0){
+		struct timeval te;
+		gettimeofday(&te, NULL);
+		registro.timestamp = te.tv_sec*1000LL + te.tv_usec/1000;
+	}else{
+		registro.timestamp=timestamp;
+	}
 	registro.key=key;
 	registro.value=value;
 
@@ -1155,21 +1161,21 @@ void drop(char* nombre_tabla){
 }
 
 
-void actualizarRegistro(Pagina *pagina,char *value,long timestamp){
+void actualizarRegistro(Pagina *pagina,char *value,uint64_t timestamp){
 
 	int posicion=(pagina->indice_registro)*offset;
-	sleep(retardoMemoria/1000);
+	usleep(retardoMemoria*1000);
 
-	long ts;
+	uint64_t ts;
 
 	pthread_mutex_lock(&mMemPrincipal);
-	memcpy(&ts,&(memoria[posicion+tamValue+sizeof(uint16_t)]),sizeof(long));
+	memcpy(&ts,&(memoria[posicion+tamValue+sizeof(uint16_t)]),sizeof(uint64_t));
 	pthread_mutex_unlock(&mMemPrincipal);
 
 	if(timestamp>=ts){
 		pthread_mutex_lock(&mMemPrincipal);
 		memcpy(&(memoria[posicion]),value,tamValue);
-		memcpy(&(memoria[posicion+tamValue+sizeof(uint16_t)]),&timestamp,sizeof(long));
+		memcpy(&(memoria[posicion+tamValue+sizeof(uint16_t)]),&timestamp,sizeof(uint64_t));
 		pthread_mutex_unlock(&mMemPrincipal);
 
 		pagina->flag_modificado=1;

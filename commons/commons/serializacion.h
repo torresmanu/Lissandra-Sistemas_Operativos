@@ -26,7 +26,7 @@ typedef struct {
 	int nombreTabla_size;
 	char* nombreTabla;
 
-	long timestamp;
+	uint64_t timestamp;
 } paqueteInsert;
 
 typedef struct {

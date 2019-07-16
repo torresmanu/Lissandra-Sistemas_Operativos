@@ -70,7 +70,7 @@ void memtable_insert(char* nombre_tabla, registro reg){
 			if(reg_aux->timestamp <= reg.timestamp){
 				reg_aux->value=string_duplicate(reg.value);
 				reg_aux->timestamp = reg.timestamp;
-				log_info(g_logger,"Valor actualizado en memtable %s;%i;%s,%ld",nodo->nombre_tabla,reg_aux->key,reg_aux->value,reg_aux->timestamp);
+				log_info(g_logger,"Valor actualizado en memtable");
 				sem_post(&semaforoMemtable);
 				return;
 			}else{
@@ -84,7 +84,7 @@ void memtable_insert(char* nombre_tabla, registro reg){
 	registro * reg_aux = malloc(sizeof(registro));
 	memcpy(reg_aux,&reg,sizeof(registro));
 	list_add(nodo->lista_registros,reg_aux);
-	log_info(g_logger,"Valor insertado en memtable %s;%i;%s,%ld",nodo->nombre_tabla,reg_aux->key,reg_aux->value,reg_aux->timestamp);
+	log_info(g_logger,"Valor insertado en memtable");
 	sem_post(&semaforoMemtable);
 }
 

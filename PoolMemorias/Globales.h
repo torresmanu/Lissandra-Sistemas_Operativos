@@ -30,7 +30,7 @@ typedef struct
 {
 	char* value;
 	uint16_t key;
-	long timestamp;
+	uint64_t timestamp;
 } Registro;
 
 
