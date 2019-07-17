@@ -156,9 +156,7 @@ resultado recibir(int conexion){
 
 int obtenerConexion(Memoria* mem,char* id){
 
-	pthread_mutex_lock(&(mem->mutexConex));
 	int *conexion = dictionary_get(mem->conexiones,id);
-	pthread_mutex_unlock(&(mem->mutexConex));
 
 	return *conexion;
 }
@@ -170,6 +168,7 @@ resultado enviarRequest(Memoria* mem, resultadoParser* request,char* id)
 
 	char* msg = serializarPaquete(request,&size);
 
+
 	int conexion = obtenerConexion(mem,id);
 
 	int enviado = send(conexion, msg, size, 0);
@@ -179,7 +178,10 @@ resultado enviarRequest(Memoria* mem, resultadoParser* request,char* id)
 	res = recibir(conexion);
 
 	if(res.resultado == MEMORIA_CAIDA){
+		pthread_mutex_lock(&(mem->mEstado));
 		sacarMemoria(mem);
+		pthread_mutex_unlock(&(mem->mEstado));
+
 	}
 	return res;
 }
@@ -382,15 +384,19 @@ void enviarJournal(void* element,char* id){
 	int size_to_send;
 	char* pi = serializarPaquete(&resParser, &size_to_send);
 
+	pthread_mutex_lock(&(mem->mutexConex));
 	int conexion = obtenerConexion(mem,id);
+	pthread_mutex_unlock(&(mem->mutexConex));
 
-//	bloquearConexion(mem);
 	send(conexion, pi, size_to_send, 0);
 	resultado res = recibir(conexion);
-//	desbloquearConexion(mem);
 
-	if(res.resultado==MEMORIA_CAIDA)
+
+	if(res.resultado==MEMORIA_CAIDA){
+		pthread_mutex_lock(&(mem->mEstado));
 		sacarMemoria(mem);
+		pthread_mutex_unlock(&(mem->mEstado));
+	}
 
 	free(res.mensaje);
 	if(res.contenido!=NULL)

@@ -77,6 +77,8 @@ void destroy_nodo_memoria(void* elem){
 	pthread_mutex_unlock(&(mem->mutexConex));
 
 	pthread_mutex_destroy(&(mem->mutexConex));
+	pthread_mutex_destroy(&(mem->mEstado));
+
 	free(mem);
 }
 

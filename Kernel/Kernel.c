@@ -381,7 +381,11 @@ resultado describe(char* nombreTabla,char* id)
 	{
 		log_error(g_logger,"Posiblemente la memoria se desconectó.");
 		res.resultado = MEMORIA_CAIDA;
+
+		pthread_mutex_lock(&(mem->mEstado));
 		sacarMemoria(mem);
+		pthread_mutex_unlock(&(mem->mEstado));
+
 	}
 	else
 	{
@@ -402,7 +406,6 @@ resultado describe(char* nombreTabla,char* id)
 					pthread_mutex_lock(&mTablas);
 					list_add_all(tablas,tablaLFS);
 					log_info(g_logger,"Describe realizado con éxito");
-					pthread_mutex_unlock(&mTablas);
 
 					log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
 
@@ -410,13 +413,14 @@ resultado describe(char* nombreTabla,char* id)
 					{
 						log_info(g_logger,"Tablas indexada n°:%d -> %s", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
 					}
+					pthread_mutex_unlock(&mTablas);
+
 
 				}
 				else if(list_size(tablaLFS)==1){
 
 					pthread_mutex_lock(&mTablas);
 					agregarTabla(tablaLFS);
-					pthread_mutex_unlock(&mTablas);
 
 
 					log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
@@ -425,6 +429,8 @@ resultado describe(char* nombreTabla,char* id)
 					{
 						log_info(g_logger,"Tablas indexada n°:%d -> %s", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
 					}
+					pthread_mutex_unlock(&mTablas);
+
 
 				}
 				else

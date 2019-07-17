@@ -69,10 +69,12 @@ bool agregarMemoria(Memoria* mem){
 	for(int i=0;i<pool->elements_count;i++){
 		Memoria* memConocida = list_get(pool,i);
 		if(coincideIPyPuerto(mem,memConocida)){
+			pthread_mutex_lock(&(memConocida->mEstado));
 			if(mem->timestamp > memConocida->timestamp){
 				memConocida->estado=mem->estado;
 				memConocida->timestamp=mem->timestamp;
 			}
+			pthread_mutex_unlock(&(memConocida->mEstado));
 
 			return true;
 		}
@@ -93,6 +95,7 @@ void inicializarMemoria(Memoria* memNueva){
 	memNueva->selectsTotales = 0;
 	memNueva->totalOperaciones = 0;
 	pthread_mutex_init(&(memNueva->mutexConex),NULL);
+	pthread_mutex_init(&(memNueva->mEstado),NULL);
 	memNueva->conexiones = dictionary_create();
 
 	int centinela=-1;
@@ -166,9 +169,13 @@ void obtenerMemoriaDescribe()
 	MemDescribe->selectsTotales = 0;
 	MemDescribe->totalOperaciones = 0;
 	pthread_mutex_init(&(MemDescribe->mutexConex),NULL);
+	pthread_mutex_init(&(MemDescribe->mEstado),NULL);
 	MemDescribe->conexiones = dictionary_create();
+	pthread_mutex_lock(&(MemDescribe->mEstado));
 	MemDescribe->estado=1;
 	ponerTimestampActual(MemDescribe);
+	pthread_mutex_unlock(&(MemDescribe->mEstado));
+
 	inicializarConexiones(MemDescribe);
 
 	list_add(pool,MemDescribe);
@@ -245,6 +252,8 @@ void conectarMemorias(void* elem){
 
 		void conectar(void* elem){
 			Memoria* mem = elem;
+
+			pthread_mutex_lock(&(mem->mEstado));
 			if(mem->estado==1){
 				int resultado = gestionarConexionAMemoria(mem,id);
 				if(resultado<0)
@@ -252,6 +261,8 @@ void conectarMemorias(void* elem){
 			}
 			else
 				sacarMemoria(mem);
+			pthread_mutex_unlock(&(mem->mEstado));
+
 		}
 
 		pthread_mutex_lock(&(crit->mutex));
@@ -318,11 +329,14 @@ void establecerConexionPool(char* id)
 		int* conexion=dictionary_get(mem->conexiones,id);
 		pthread_mutex_unlock(&(mem->mutexConex));
 
+		pthread_mutex_lock(&(mem->mEstado));
 		if(!estoyConectado(conexion)){
 			int res = gestionarConexionAMemoria(mem,id);
 			if(res<0)
 				sacarMemoria(mem);
 		}
+		pthread_mutex_unlock(&(mem->mEstado));
+
 	}
 }
 

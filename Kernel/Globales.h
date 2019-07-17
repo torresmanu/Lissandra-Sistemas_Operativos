@@ -28,6 +28,7 @@ typedef struct{
 	int selectsTotales;
 	int insertsTotales;
 	pthread_mutex_t mutexConex;
+	pthread_mutex_t mEstado;
 	uint16_t estado;
 	uint64_t timestamp;
 }Memoria;
