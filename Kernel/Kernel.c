@@ -10,6 +10,7 @@ int main(void) {
 	pthread_mutex_init(&mNew,NULL);
 	pthread_mutex_init(&mReady,NULL);
 	pthread_mutex_init(&mExit,NULL);
+	pthread_mutex_init(&mTablas,NULL);
 
 	iniciar_programa();
 
@@ -28,6 +29,7 @@ int main(void) {
 
 	obtenerMemoriaDescribe();
 	establecerConexionPool(idGossiping);
+	establecerConexionPool(idDescribe);
 //	add(MemDescribe,&sc);
 
 	gossiping();
@@ -97,6 +99,10 @@ void iniciar_programa(void)
 
 	idGossiping = malloc(sizeof(nivelMultiprocesamiento));
 	memcpy(idGossiping,&nivelMultiprocesamiento,sizeof(nivelMultiprocesamiento));
+
+	idDescribe = malloc(sizeof(nivelMultiprocesamiento));
+	int i = nivelMultiprocesamiento+1;
+	memcpy(idDescribe,&i,sizeof(nivelMultiprocesamiento));
 
 	iniciarCriterios();				/// INICIALIZO LISTAS DE CRITERIOS ///
 
@@ -301,8 +307,9 @@ void realizarDescribeGlobal()
 {
 	while(1)
 	{
-		describe(NULL,idGossiping);
 		usleep(metadataRefresh*1000); // Lo paso a ms
+		establecerConexionPool(idDescribe);
+		describe(NULL,idDescribe);
 	}
 }
 
@@ -332,7 +339,11 @@ resultado describe(char* nombreTabla,char* id)
 
 	Memoria* mem;
 	if(cd->nombreTabla!=NULL){
+
+		pthread_mutex_lock(&mTablas);
 		metadataTabla* tabla = buscarTabla(cd->nombreTabla);
+		pthread_mutex_unlock(&mTablas);
+
 		Criterio* criterio = toConsistencia(tabla->consistency);
 		mem = masApropiada(criterio,describe);
 	}
@@ -374,18 +385,37 @@ resultado describe(char* nombreTabla,char* id)
 			{
 				tablaLFS = (t_list*)res.contenido;
 
-				if(list_size(tablaLFS)>0){
+
+				if(list_size(tablaLFS)>1){
+
+					pthread_mutex_lock(&mTablas);
 					list_clean(tablas);						// Para no agregar repetidas
 					list_add_all(tablas,tablaLFS);
 					log_info(g_logger,"Describe realizado con éxito");
+					pthread_mutex_unlock(&mTablas);
 
-					/*log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
+					log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
 
 					for(int i = 0; i<tablas->elements_count; i++)
 					{
 						log_info(g_logger,"Tablas indexada n°:%d -> %s", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
 					}
-					*/
+
+				}
+				else if(list_size(tablaLFS)==1){
+
+					pthread_mutex_lock(&mTablas);
+					agregarTabla(tablaLFS);
+					pthread_mutex_unlock(&mTablas);
+
+
+					log_info(g_logger,"Cantidad de tablas indexadas: %d", tablas->elements_count);
+
+					for(int i = 0; i<tablas->elements_count; i++)
+					{
+						log_info(g_logger,"Tablas indexada n°:%d -> %s", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
+					}
+
 				}
 				else
 					log_info(g_logger,"No hay tablas");
@@ -400,6 +430,27 @@ resultado describe(char* nombreTabla,char* id)
 	list_destroy(tablaLFS);
 
 	return res;
+}
+
+void agregarTabla(t_list* tablasLFS){
+
+	metadataTabla* tabla = list_get(tablasLFS,0);
+
+	bool mismaTabla(void* element)					//Subfunción de busqueda
+	{
+		bool e = strcmp(tabla->nombreTabla,((metadataTabla*)element)->nombreTabla) == 0;
+		return e;
+	}
+
+	list_remove_and_destroy_by_condition(tablas,mismaTabla,destruirTabla);
+	list_add(tablas, tabla);
+}
+
+void destruirTabla(void* elem){
+	metadataTabla* tabla = (metadataTabla*) elem;
+	free(tabla->consistency);
+	free(tabla->nombreTabla);
+	free(tabla);
 }
 
 int gestionarConexionAMemoria(Memoria* mem,char* id)

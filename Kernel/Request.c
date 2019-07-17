@@ -307,17 +307,30 @@ metadataTabla* obtenerTabla(resultadoParser* r){
 		case SELECT:
 		{
 			contenidoSelect* c = (contenidoSelect*)r->contenido;
-			return buscarTabla(c->nombreTabla);
+			pthread_mutex_lock(&mTablas);
+			metadataTabla* tabla = buscarTabla(c->nombreTabla);
+			pthread_mutex_unlock(&mTablas);
+
+			return tabla;
 		}
 		case INSERT:
 		{
 			contenidoInsert* c = (contenidoInsert*)r->contenido;
-			return buscarTabla(c->nombreTabla);
+
+			pthread_mutex_lock(&mTablas);
+			metadataTabla* tabla = buscarTabla(c->nombreTabla);
+			pthread_mutex_unlock(&mTablas);
+
+			return tabla;
 		}
 		case DROP:
 		{
 			contenidoDrop* c = (contenidoDrop*)r->contenido;
-			return buscarTabla(c->nombreTabla);
+			pthread_mutex_lock(&mTablas);
+			metadataTabla* tabla = buscarTabla(c->nombreTabla);
+			pthread_mutex_unlock(&mTablas);
+
+			return tabla;
 		}
 		default:
 			return NULL;
@@ -334,6 +347,7 @@ metadataTabla* buscarTabla(char* nom)
 	}
 
 	return list_find(tablas,coincideNombre);
+
 }
 
 void reemplazarMetadata(metadataTabla* tablaNueva){
@@ -343,9 +357,11 @@ void reemplazarMetadata(metadataTabla* tablaNueva){
 		bool e = strcmp(tablaNueva->nombreTabla,((metadataTabla*)element)->nombreTabla) == 0;
 		return e;
 	}
-
+	pthread_mutex_lock(&mTablas);
 	metadataTabla* vieja = list_remove_by_condition(tablas,coincideNombre);
 	list_add(tablas,tablaNueva);
+	pthread_mutex_unlock(&mTablas);
+
 
 	if(vieja!=NULL)
 		log_info(g_logger,"Metadata de %s reemplazada con exito",tablaNueva->nombreTabla);
