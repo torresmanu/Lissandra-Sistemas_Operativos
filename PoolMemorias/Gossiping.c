@@ -10,6 +10,7 @@ void gossiping(){
 	log_info(g_logger,"Comienza el gossiping");
 	t_list* memoriasGossiping = obtenerMemoriasGossiping();
 	list_iterate(memoriasGossiping,gossipear);
+	list_destroy(memoriasGossiping);
 //	list_iterate(memoriasSeeds,gossipear);
 	log_info(g_logger,"Termino el gossiping");
 }
@@ -235,9 +236,12 @@ int recibirTablas(int socket){
 
 	char* buffer = malloc(sizeof(uint32_t));
 	status = recv(socket,buffer,sizeof(uint32_t),0);
-	if(status==-1)
-		perror("Error recv");
-	if(status != sizeof(uint32_t)) return -2;
+	if(status<=0)
+		log_info(g_logger,"Error recv");
+	if(status != sizeof(uint32_t)){
+		free(buffer);
+		return -2;
+	}
 	int cantElem = *(int*)buffer;
 
 	for(int i=0;i < cantElem;i++){
@@ -328,11 +332,12 @@ void cerrarConexion(Memoria* mem){
 }
 
 void destroy_nodo_memoria(void* elem){
-	Memoria* mem = (Memoria*) elem;
-	free(mem->ip);
-	free(mem->puerto);
-	free(mem);
-	mem=NULL;
+//	Memoria* mem = (Memoria*) elem;
+//	free(mem->ip);
+//	free(mem->puerto);
+	free(elem);
+	int i = 1;
+	elem=NULL;
 }
 
 void destroy_nodo_memoria_conocida(void* elem){

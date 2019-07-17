@@ -1,5 +1,8 @@
 #include "PoolMemorias.h"
 
+	pthread_t threadJournal;
+	pthread_t threadGossiping;
+
 int main(int argc, char* argv[]) {
 
 	pathConfig = argv[1];
@@ -10,14 +13,7 @@ int main(int argc, char* argv[]) {
 
 	gossiping();
 
-	/*pthread_t journalAutomatico;
-	pthread_create(&journalAutomatico,NULL,(void*) journalConRetardo,NULL);
-
-	pthread_t gossipingAutomatico;
-	pthread_create(&gossipingAutomatico,NULL,(void*) gossipingConRetardo,NULL);*/
-
 	pthread_attr_t attr;
-	pthread_t threadJournal;
 
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
@@ -30,7 +26,6 @@ int main(int argc, char* argv[]) {
 	pthread_attr_destroy(&attr);
 
 	//pthread_attr_t attr;
-	pthread_t threadGossiping;
 
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
@@ -50,15 +45,6 @@ int main(int argc, char* argv[]) {
 
 
 	consola();
-
-	//ver si esta bien que este aca
-	//van a hacer falta mutex para la memoria
-//	pthread_join(journalAutomatico,NULL);
-	//pthread_join(gossipingAutomatico,NULL);
-//	pthread_join(conexionKernel,NULL);
-
-//	pthread_join(monitoreador,NULL); //NO VA CON JOIN CREO XQ SI NO SE QUEDA ESPERANDO UN CAMBIO EN ARCHIVO
-
 
 	terminar_programa();
 
@@ -139,6 +125,7 @@ void escucharMemoria(int *conexion_cliente){
 	do{
 		estado = recibirYmandar(*conexion_cliente);
 	}while(estado>0);
+	close(*conexion_cliente);
 }
 
 void iniciarHiloKernel(struct sockaddr_in *cliente, socklen_t *longc, int* conexion_cliente){
@@ -164,25 +151,13 @@ void escucharKernel(int* conexion_cliente){
 	res.resultado = OK;
 
 	while(res.resultado!=SALIR){
-//		pthread_mutex_lock(&mConexionKernel);
 
 		resultadoParser resParser = recibirRequest(*conexion_cliente);
 
-//		pthread_mutex_lock(&mJournal);
-//		if(estaHaciendoJournal){
-//			pthread_mutex_unlock(&mJournal);
-//			res.accionEjecutar=resParser.accionEjecutar;
-//			res.resultado=EnJOURNAL;
-//			char* aux = "En Journal";
-//			res.mensaje= string_duplicate(aux);
-//			res.contenido=NULL;
-//		}
-//		else{
 		pthread_mutex_lock(&mJournal);
 		res = parsear_mensaje(&resParser);
 		pthread_mutex_unlock(&mJournal);
 
-//		}
 		if(res.resultado == OK)
 		{
 			log_info(g_logger,res.mensaje);
@@ -209,9 +184,6 @@ void escucharKernel(int* conexion_cliente){
 		}
 
 		avisarResultado(res,*conexion_cliente);
-
-
-//		pthread_mutex_unlock(&mConexionKernel);
 
 		if(res.mensaje!=NULL)
 			free(res.mensaje);
@@ -509,6 +481,7 @@ bool handshake(){
 	usleep(retardoLFS*1000);
 	char* pi = serializarPaquete(&resParser, &size_to_send);
 	send(serverSocket, pi, size_to_send, 0);
+	free(pi);
 
 	accion acc;
 	char* buffer = malloc(sizeof(int));
@@ -530,6 +503,7 @@ bool handshake(){
 			tamValue=((resultadoHandshake*)(res.contenido))->tamanioValue;
 			estado = true;
 		}
+		free(res.mensaje);
 	}
 	free(buffer);
 	return estado;
@@ -580,6 +554,8 @@ resultado mandarALFS(resultadoParser resParser){
 	send(serverSocket, pi, size_to_send, 0);
 	resultado res = recibir();
 	pthread_mutex_unlock(&mConexion);
+
+	free(pi);
 
 	return res;
 }
@@ -942,7 +918,7 @@ void guardarEnMemoria(Registro registro, int posLibre){
 	usleep(retardoMemoria*1000);
 
 	pthread_mutex_lock(&mMemPrincipal);
-	memcpy(&memoria[(posLibre*offset)],registro.value,tamValue);
+	memcpy(&memoria[(posLibre*offset)],registro.value,strlen(registro.value)+1);
 	memcpy(&memoria[(posLibre*offset)+tamValue],&(registro.key),sizeof(uint16_t));
 	memcpy(&memoria[(posLibre*offset)+tamValue+sizeof(uint16_t)],&(registro.timestamp),sizeof(uint64_t));
 	pthread_mutex_unlock(&mMemPrincipal);
@@ -1184,6 +1160,11 @@ void actualizarRegistro(Pagina *pagina,char *value,uint64_t timestamp){
 
 void terminar_programa()
 {
+
+	pthread_cancel(threadJournal);
+	pthread_cancel(threadGossiping);
+
+
 	//Destruyo el logger
 	log_destroy(g_logger);
 
@@ -1302,9 +1283,17 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		case INSERT:
 		{
 			contenidoInsert* contenido = resParser->contenido;
-			res = insert(contenido->nombreTabla,contenido->key,contenido->value,contenido->timestamp);
+			if(strlen(contenido->value)<=tamValue){
+				res = insert(contenido->nombreTabla,contenido->key,contenido->value,contenido->timestamp);
+			}
+			else{
+				res.accionEjecutar=INSERT;
+				res.contenido=NULL;
+				char *aux = "Tamaño value mayor al permitido.";
+				res.mensaje=strdup(aux);
+				res.resultado=ERROR;
+			}
 			break;
-
 		}
 		case JOURNAL:
 		{
@@ -1350,6 +1339,7 @@ resultado parsear_mensaje(resultadoParser* resParser)
 		{
 			res.resultado = MENSAJE_MAL_FORMATEADO;
 			res.mensaje = NULL;
+			resParser->contenido = NULL;
 			break;
 		}
 		case SALIR_CONSOLA:

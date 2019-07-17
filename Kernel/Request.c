@@ -390,7 +390,7 @@ void enviarJournal(void* element,char* id){
 
 	send(conexion, pi, size_to_send, 0);
 	resultado res = recibir(conexion);
-
+	free(pi);
 
 	if(res.resultado==MEMORIA_CAIDA){
 		pthread_mutex_lock(&(mem->mEstado));
