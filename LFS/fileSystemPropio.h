@@ -36,6 +36,10 @@ int obtenerSiguienteBloque();
 //Funciones inicializacion
 int inicializarFSPropio();
 
+//Serializacion
+char* serializarRegistro(registro* reg);
+void deserializarRegistro(char* strReg,registro* reg);
+
 sem_t semaforo;
 
 #endif /* FILESYSTEM_H_ */
