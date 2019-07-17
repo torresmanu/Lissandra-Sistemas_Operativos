@@ -354,6 +354,14 @@ resultado describe(char* nombreTabla,char* id)
 	}
 	else{
 		mem = masApropiada(&sc,describe);
+		if(mem==NULL){
+			log_warning(g_logger, "Asociar una memoria al criterio SC para realizar describe.");
+			res.accionEjecutar=DESCRIBE;
+			res.contenido=NULL;
+			res.mensaje=NULL;
+			res.resultado=ERROR;
+			return res;
+		}
 	}
 	char* msg = serializarPaquete(describe,&size);
 
