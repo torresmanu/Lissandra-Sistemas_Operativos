@@ -349,6 +349,10 @@ resultado describe(char* nombreTabla,char* id)
 	}
 	else{
 		mem = masApropiada(&sc,describe);
+		pthread_mutex_lock(&mTablas);
+		list_clean(tablas);
+		pthread_mutex_unlock(&mTablas);
+
 		if(mem==NULL){
 			log_warning(g_logger, "Asociar una memoria al criterio SC para realizar describe.");
 			res.accionEjecutar=DESCRIBE;
@@ -397,7 +401,6 @@ resultado describe(char* nombreTabla,char* id)
 				if(list_size(tablaLFS)>1){
 
 					pthread_mutex_lock(&mTablas);
-					list_clean(tablas);						// Para no agregar repetidas
 					list_add_all(tablas,tablaLFS);
 					log_info(g_logger,"Describe realizado con éxito");
 					pthread_mutex_unlock(&mTablas);
