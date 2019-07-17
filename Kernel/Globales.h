@@ -42,6 +42,7 @@ typedef struct{
 	int amountReads;
 	int amountWrites;
 	int amountTotales;
+	pthread_mutex_t mutex;
 }Criterio;
 
 Criterio sc,shc,ec;

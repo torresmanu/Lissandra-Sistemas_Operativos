@@ -26,5 +26,6 @@ int memoriaRandom();
 //HASHEO (SHC)
 int hash(resultadoParser*);
 int obtenerHash(resultadoParser*);
+void destroy_criterio(void* elem);
 
 #endif /* CRITERIO_H_ */
