@@ -277,8 +277,34 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 			return;
 		}
 		fseek(fBloqueFinal, 0, SEEK_SET );
-		fread(buffer+tamanioBloque-posBloqueInicialRel,size-(tamanioBloque-posBloqueInicialRel),1,fBloqueFinal);
+		if(size>tamanioBloque*2-posBloqueInicialRel){
+			fread(buffer+tamanioBloque-posBloqueInicialRel,tamanioBloque,1,fBloqueFinal);
+		}else{
+			fread(buffer+tamanioBloque-posBloqueInicialRel,size-(tamanioBloque-posBloqueInicialRel),1,fBloqueFinal);
+		}
 		fclose(fBloqueFinal);
+	}
+	if(size>tamanioBloque*2-posBloqueInicialRel){
+		for(int i= 0;i<=posBloqueInicial+2;i++){
+			bloque = string_duplicate(fs->bloques[i]);
+		}
+		//Abro el archivo bloque
+		char* bloquePathFinal2 = string_duplicate(puntoMontaje);
+		string_append(&bloquePathFinal2,"/");
+		string_append(&bloquePathFinal2,magicNumber);
+		string_append(&bloquePathFinal2,"/bloques/");
+		string_append(&bloquePathFinal2,bloque);
+		string_append(&bloquePathFinal2,".bin");
+		FILE* fBloqueFinal2 = fopen(bloquePathFinal2,"r");
+		if(fBloqueFinal2 == NULL){
+			resultado = NULL;
+			log_error(g_logger,"[fs_fread]Devuelvo NULL");
+			sem_post(&semaforo);
+			return;
+		}
+		fseek(fBloqueFinal2, 0, SEEK_SET );
+		fread(buffer+tamanioBloque*2-posBloqueInicialRel,size-(tamanioBloque*2-posBloqueInicialRel),1,fBloqueFinal2);
+		fclose(fBloqueFinal2);
 	}
 	deserializarRegistro(buffer,resultado);
 	sem_post(&semaforo);
@@ -368,9 +394,62 @@ int fs_fprint(fs_file* fs, registro* obj){
 			sem_post(&semaforo);
 			return -2;
 		}
-		//Escribo lo que tengo restante
-		fwrite(buffer+tamanoDisponible,tamanoRestante,1,fBloqueFinal);
+		//Escribo lo que tengo restante fijandome si entra en un bloque
+		if(tamanoRestante > tamanioBloque){
+			fwrite(buffer+tamanoDisponible,tamanioBloque,1,fBloqueFinal);
+		}else{
+			fwrite(buffer+tamanoDisponible,tamanoRestante,1,fBloqueFinal);
+		}
 		fclose(fBloqueFinal);
+	}
+	if(tamanoRestante>tamanioBloque){
+		//Pido un nuevo bloque
+		ultimoBloque = obtenerSiguienteBloque();
+		//Si el ultimo bloque es menor a cero entonces hay algun error
+		if(ultimoBloque < 0){
+			sem_post(&semaforo);
+			return ultimoBloque;
+		}
+		//Actualizo el archivo con el nuevo bloque
+		t_config* f = config_create(fs->name);
+		if(f == NULL){
+			sem_post(&semaforo);
+			return -2;
+		}
+		char** bloques2 = config_get_array_value(f,"BLOCKS");
+		char* strBloques2 = string_duplicate("[");
+		int i = 0;
+		while(bloques2[i] != 0){
+			string_append(&strBloques2,bloques2[i]);
+			string_append(&strBloques2,",");
+			i++;
+		}
+		char strUltimoBloque[20];
+		sprintf(strUltimoBloque, "%i", ultimoBloque);
+		string_append(&strBloques2,strUltimoBloque);
+		string_append(&strBloques2,"]");
+		config_set_value(f,"BLOCKS",strBloques2);
+		fs->bloques = config_get_array_value(f,"BLOCKS");
+		config_save(f);
+		config_destroy(f);
+
+		//Abro el ultimo bloque
+		char* bloquePathFinal2 = string_duplicate(puntoMontaje);
+		string_append(&bloquePathFinal2,"/");
+		string_append(&bloquePathFinal2,magicNumber);
+		string_append(&bloquePathFinal2,"/bloques/");
+		char strUltimoBloqueFinal2[20];
+		sprintf(strUltimoBloqueFinal2, "%i", ultimoBloque);
+		string_append(&bloquePathFinal2,strUltimoBloque);
+		string_append(&bloquePathFinal2,".bin");
+		FILE* fBloqueFinal2 = fopen(bloquePathFinal2,"a");
+		if(fBloqueFinal2 == NULL){
+			sem_post(&semaforo);
+			return -2;
+		}
+		//Escribo lo que tengo restante fijandome si entra en un bloque
+		fwrite(buffer+tamanoDisponible+tamanioBloque,tamanoRestante-tamanioBloque,1,fBloqueFinal2);
+		fclose(fBloqueFinal2);
 	}
 
 
