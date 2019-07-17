@@ -100,6 +100,11 @@ void inicializarMemoria(Memoria* memNueva){
 	memcpy(conexion,&centinela,sizeof(centinela));
 	dictionary_put(memNueva->conexiones,idGossiping,conexion);
 
+	int centi=-1;
+	int* conex = malloc(sizeof(centi));
+	memcpy(conex,&centi,sizeof(centi));
+	dictionary_put(memNueva->conexiones,idDescribe,conex);
+
 	inicializarConexiones(memNueva);
 
 	log_info(g_logger,"Agregue memoria nueva numero:%d",memNueva->id);
@@ -118,6 +123,7 @@ void inicializarConexiones(Memoria* mem){
 
 	list_iterate(idsEjecutadores,setearConexiones);
 
+	setearConexiones(idDescribe);
 	setearConexiones(idGossiping);
 }
 
@@ -163,6 +169,7 @@ void obtenerMemoriaDescribe()
 
 	conectarEjecutadores();
 	conectarGossiping();
+	conectarDescribe();
 
 }
 
@@ -203,6 +210,11 @@ void gossiping(){
 void conectarGossiping(){
 	conectarMemorias(idGossiping);
 }
+
+void conectarDescribe(){
+	conectarMemorias(idDescribe);
+}
+
 
 void conectarEjecutadores(){
 	list_iterate(idsEjecutadores,conectarMemorias);

@@ -47,6 +47,7 @@ void conectarMemorias(void* id);
 void cerrarConexion(char* key, void* value);
 void conectarEjecutadores();
 void conectarGossiping();
+void conectarDescribe();
 bool sigueConectada(Memoria* memVieja, t_list* memoriasRecibidas);
 
 bool agregarMemoria(Memoria* mem);

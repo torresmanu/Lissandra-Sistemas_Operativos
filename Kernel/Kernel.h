@@ -69,6 +69,11 @@ bool deboSalir(Script *s);
 //////////// DESCRIBE GLOBAL ////////////
 void realizarDescribeGlobal();
 
+
+void agregarTabla(t_list* tablasLFS);
+void destruirTabla(void* elem);
+
+
 //////////// GOSSIPING ////////////
 void realizarGossipingAutomatico();
 

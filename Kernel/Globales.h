@@ -11,6 +11,7 @@
 // Semaforos
 t_dictionary* mutexsConexiones;
 pthread_mutex_t usoConfig;
+pthread_mutex_t mTablas;
 
 //las puse aca para que no me rompa, buscar un lugar mejor
 t_log* g_logger;
@@ -51,6 +52,7 @@ t_list *pool;
 Memoria* MemDescribe;
 
 char* idGossiping;
+char* idDescribe;
 
 t_list* idsEjecutadores;
 
