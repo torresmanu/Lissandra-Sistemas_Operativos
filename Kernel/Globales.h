@@ -9,7 +9,6 @@
 #define GLOBALES_H_
 
 // Semaforos
-t_dictionary* mutexsConexiones;
 pthread_mutex_t usoConfig;
 pthread_mutex_t mTablas;
 
@@ -28,7 +27,7 @@ typedef struct{
 	int totalOperaciones;
 	int selectsTotales;
 	int insertsTotales;
-	pthread_mutex_t mutex;
+	pthread_mutex_t mutexConex;
 	uint16_t estado;
 	uint64_t timestamp;
 }Memoria;

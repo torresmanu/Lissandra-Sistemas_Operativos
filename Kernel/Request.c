@@ -155,7 +155,11 @@ resultado recibir(int conexion){
 }
 
 int obtenerConexion(Memoria* mem,char* id){
+
+	pthread_mutex_lock(&(mem->mutexConex));
 	int *conexion = dictionary_get(mem->conexiones,id);
+	pthread_mutex_unlock(&(mem->mutexConex));
+
 	return *conexion;
 }
 

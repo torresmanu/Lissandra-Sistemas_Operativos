@@ -34,12 +34,6 @@ void obtenerMemoriaDescribe();
 bool tengoMemoria(Memoria* memNueva);
 bool estoyConectado(int* conexion);
 
-void agregarMutex(Memoria* mem);
-void liberarMutexs();
-void liberarMutex(void*);
-pthread_mutex_t* obtenerMutex(Memoria* mem);
-void bloquearConexion(Memoria* mem);
-void desbloquearConexion(Memoria* mem);
 int gestionarConexionAMemoria(Memoria *mem,char* id);
 void destroy_nodo_memoria(void*);
 void sacarMemoria(Memoria* mem);

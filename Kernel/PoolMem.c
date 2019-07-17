@@ -92,18 +92,22 @@ void inicializarMemoria(Memoria* memNueva){
 	memNueva->insertsTotales = 0;
 	memNueva->selectsTotales = 0;
 	memNueva->totalOperaciones = 0;
-	pthread_mutex_init(&(memNueva->mutex),NULL);
+	pthread_mutex_init(&(memNueva->mutexConex),NULL);
 	memNueva->conexiones = dictionary_create();
 
 	int centinela=-1;
 	int* conexion = malloc(sizeof(centinela));
 	memcpy(conexion,&centinela,sizeof(centinela));
+	pthread_mutex_lock(&(memNueva->mutexConex));
 	dictionary_put(memNueva->conexiones,idGossiping,conexion);
+	pthread_mutex_unlock(&(memNueva->mutexConex));
 
 	int centi=-1;
 	int* conex = malloc(sizeof(centi));
 	memcpy(conex,&centi,sizeof(centi));
+	pthread_mutex_lock(&(memNueva->mutexConex));
 	dictionary_put(memNueva->conexiones,idDescribe,conex);
+	pthread_mutex_unlock(&(memNueva->mutexConex));
 
 	inicializarConexiones(memNueva);
 
@@ -117,7 +121,9 @@ void inicializarConexiones(Memoria* mem){
 		int centinela=-1;
 		int* conexion = malloc(sizeof(centinela));
 		memcpy(conexion,&centinela,sizeof(centinela));
+		pthread_mutex_lock(&(mem->mutexConex));
 		dictionary_put(mem->conexiones,id,conexion);
+		pthread_mutex_unlock(&(mem->mutexConex));
 	}
 
 
@@ -159,7 +165,7 @@ void obtenerMemoriaDescribe()
 	MemDescribe->insertsTotales = 0;
 	MemDescribe->selectsTotales = 0;
 	MemDescribe->totalOperaciones = 0;
-	pthread_mutex_init(&(MemDescribe->mutex),NULL);
+	pthread_mutex_init(&(MemDescribe->mutexConex),NULL);
 	MemDescribe->conexiones = dictionary_create();
 	MemDescribe->estado=1;
 	ponerTimestampActual(MemDescribe);
@@ -188,7 +194,10 @@ void gossiping(){
 
 	for(int i=0;i<pool->elements_count;i++){
 		mem = list_get(pool,i);
+
+		pthread_mutex_lock(&(mem->mutexConex));
 		int* conexion = dictionary_get(mem->conexiones,idGossiping);
+		pthread_mutex_unlock(&(mem->mutexConex));
 
 		status = obtenerMemorias(*conexion);
 
@@ -222,7 +231,10 @@ void conectarEjecutadores(){
 
 void desconectarEjecutadores(Memoria* mem){
 
+	pthread_mutex_lock(&(mem->mutexConex));
 	dictionary_iterator(mem->conexiones,cerrarConexion);
+	pthread_mutex_unlock(&(mem->mutexConex));
+
 }
 
 void conectarMemorias(void* elem){
@@ -252,9 +264,12 @@ void conectarMemorias(void* elem){
 }
 
 void desconectarMemoria(Memoria* mem,char* id){
+	pthread_mutex_lock(&(mem->mutexConex));
 	int* conexion = dictionary_get(mem->conexiones,id);
 	close(*conexion);
 	free(conexion);
+	pthread_mutex_unlock(&(mem->mutexConex));
+
 }
 
 void cerrarConexion(char* key, void* value){
@@ -298,7 +313,10 @@ void establecerConexionPool(char* id)
 	for(int i = 0; i<pool->elements_count; i++)
 	{
 		mem = list_get(pool,i);
+
+		pthread_mutex_lock(&(mem->mutexConex));
 		int* conexion=dictionary_get(mem->conexiones,id);
+		pthread_mutex_unlock(&(mem->mutexConex));
 
 		if(!estoyConectado(conexion)){
 			int res = gestionarConexionAMemoria(mem,id);
@@ -306,39 +324,6 @@ void establecerConexionPool(char* id)
 				sacarMemoria(mem);
 		}
 	}
-}
-
-void agregarMutex(Memoria* mem){
-	pthread_mutex_t* mutex = malloc(sizeof(pthread_mutex_t));
-	pthread_mutex_init(mutex,NULL);
-
-	dictionary_put(mutexsConexiones,mem->puerto,mutex);
-}
-
-void liberarMutexs(){
-	dictionary_destroy_and_destroy_elements(mutexsConexiones,liberarMutex);
-}
-
-void liberarMutex(void* elem)
-{
-	pthread_mutex_t* mutex = (pthread_mutex_t*)elem;
-	pthread_mutex_destroy(mutex);
-}
-
-pthread_mutex_t* obtenerMutex(Memoria* mem){
-	return dictionary_get(mutexsConexiones,mem->puerto);
-}
-
-void bloquearConexion(Memoria* mem){
-	pthread_mutex_t* mConexion = obtenerMutex(mem);
-
-	pthread_mutex_lock(mConexion);
-}
-
-void desbloquearConexion(Memoria* mem){
-	pthread_mutex_t* mConexion = obtenerMutex(mem);
-
-	pthread_mutex_unlock(mConexion);
 }
 
 void ponerTimestampActual(Memoria* mem){

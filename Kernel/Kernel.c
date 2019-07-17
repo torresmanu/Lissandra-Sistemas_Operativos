@@ -137,10 +137,6 @@ void terminar_programa()
 
 	//Libero el pool de memorias
 	liberarMemorias();
-
-	//Libero el diccionario de mutexs
-	liberarMutexs();
-
 }
 
 
@@ -352,7 +348,10 @@ resultado describe(char* nombreTabla,char* id)
 	}
 	char* msg = serializarPaquete(describe,&size);
 
+	pthread_mutex_lock(&(mem->mutexConex));
 	int *conexion = dictionary_get(mem->conexiones,id);
+	pthread_mutex_unlock(&(mem->mutexConex));
+
 
 	send(*conexion, msg, size, 0);
 	// Pido el describe a la memoria
@@ -455,7 +454,9 @@ void destruirTabla(void* elem){
 
 int gestionarConexionAMemoria(Memoria* mem,char* id)
 {
+	pthread_mutex_lock(&(mem->mutexConex));
 	int* conex = dictionary_get(mem->conexiones,id);
+	pthread_mutex_unlock(&(mem->mutexConex));
 
 	if(*conex!=-1)
 		return *conex;
@@ -506,7 +507,10 @@ int gestionarConexionAMemoria(Memoria* mem,char* id)
 
 		int* conexion = malloc(sizeof(sock));
 		memcpy(conexion,&sock,sizeof(sock));
+
+		pthread_mutex_lock(&(mem->mutexConex));
 		dictionary_put(mem->conexiones,id,conexion);
+		pthread_mutex_unlock(&(mem->mutexConex));
 
 		mem->estado=1;
 		ponerTimestampActual(mem);

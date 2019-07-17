@@ -71,7 +71,12 @@ void destroy_nodo_memoria(void* elem){
 	Memoria* mem = (Memoria*) elem;
 	free(mem->ipMemoria);
 	free(mem->puerto);
+
+	pthread_mutex_lock(&(mem->mutexConex));
 	dictionary_destroy_and_destroy_elements(mem->conexiones,destroy_nodo_diccionario);
+	pthread_mutex_unlock(&(mem->mutexConex));
+
+	pthread_mutex_destroy(&(mem->mutexConex));
 	free(mem);
 }
 
