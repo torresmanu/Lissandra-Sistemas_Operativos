@@ -215,7 +215,8 @@ void fs_fclose(fs_file* f){
 
 void fs_fread(fs_file* fs,registro* resultado,int position){
 	sem_wait(&semaforo);
-	int size = sizeof(registro)+tamValue;
+	int size = sizeof(uint16_t)+sizeof(uint64_t)+tamValue*sizeof(char);
+	char* buffer = malloc(size);
 	//Si el registro que quiero que leer esta por fuera del size retorno null en resultado
 	if(fs->size < (position+size)){
 		resultado = NULL;
@@ -223,14 +224,16 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 		sem_post(&semaforo);
 		return;
 	}
+	int cantBloques=0;
+	while(fs->bloques[cantBloques] != 0){
+		cantBloques++;
+	}
 	//Calculo en que bloque esta el registro
-	int tamBloque = tamanioBloque;
-	int cantPorBloque = tamBloque/size;
-	int posBloque = position/cantPorBloque;
-	int relPosition = position - posBloque * cantPorBloque;
+	int posBloqueInicial = position*size/tamanioBloque;
+	int posBloqueInicialRel = position*size-posBloqueInicial*tamanioBloque;
 	char * bloque;
 	//Obtengo el bloque calculado anteriormente
-	for(int i= 0;i<=posBloque;i++){
+	for(int i= 0;i<=posBloqueInicial;i++){
 		bloque = string_duplicate(fs->bloques[i]);
 	}
 	//Abro el archivo bloque
@@ -247,17 +250,43 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 		sem_post(&semaforo);
 		return;
 	}
-	fseek(fBloque, relPosition*size, SEEK_SET );
-	fread(resultado,sizeof(registro),1,fBloque);
-	resultado->value=malloc(tamValue);
-	fread(resultado->value,tamValue,1,fBloque);
+	fseek(fBloque, posBloqueInicialRel, SEEK_SET );
+	if(posBloqueInicialRel+size>tamanioBloque){
+		fread(buffer,tamanioBloque-posBloqueInicialRel,1,fBloque);
+	}else{
+		fread(buffer,size,1,fBloque);
+	}
 	fclose(fBloque);
+	//Chequeo si me quedo algo por leer
+	if(posBloqueInicialRel+size>tamanioBloque){
+		for(int i= 0;i<=posBloqueInicial+1;i++){
+			bloque = string_duplicate(fs->bloques[i]);
+		}
+		//Abro el archivo bloque
+		char* bloquePathFinal = string_duplicate(puntoMontaje);
+		string_append(&bloquePathFinal,"/");
+		string_append(&bloquePathFinal,magicNumber);
+		string_append(&bloquePathFinal,"/bloques/");
+		string_append(&bloquePathFinal,bloque);
+		string_append(&bloquePathFinal,".bin");
+		FILE* fBloqueFinal = fopen(bloquePathFinal,"r");
+		if(fBloqueFinal == NULL){
+			resultado = NULL;
+			log_error(g_logger,"[fs_fread]Devuelvo NULL");
+			sem_post(&semaforo);
+			return;
+		}
+		fseek(fBloqueFinal, 0, SEEK_SET );
+		fread(buffer+tamanioBloque-posBloqueInicialRel,size-(tamanioBloque-posBloqueInicialRel),1,fBloqueFinal);
+		fclose(fBloqueFinal);
+	}
+	deserializarRegistro(buffer,resultado);
 	sem_post(&semaforo);
 }
 
 int fs_fprint(fs_file* fs, registro* obj){
 	sem_wait(&semaforo);
-	int size = sizeof(registro) + tamValue;
+	int size = sizeof(uint16_t) + sizeof(uint64_t) + sizeof(char) * tamValue;
 	//Veo cuantos bloques hay y me quedo con el ultimo
 	int cantBloques=0;
 	int ultimoBloque=0;
@@ -265,11 +294,36 @@ int fs_fprint(fs_file* fs, registro* obj){
 		ultimoBloque = atoi(fs->bloques[cantBloques]);
 		cantBloques++;
 	}
-	//Me fijo si el ultimo bloque esta ocupado, si no lo esta escribo sobre el ultimo y si lo esta pido otro
-	int tamBloque = tamanioBloque;
-	int cantObjPorBloque = tamBloque / size;
-	int tamanoDisponible = cantObjPorBloque * cantBloques * size;
-	if(tamanoDisponible < (fs->size + size)){
+	//Me fijo si queda espacio disponible en el priber bloque
+	int tamanoDisponible = tamanioBloque*cantBloques - fs->size;
+	int tamanoRestante = size-tamanoDisponible;
+	char* buffer = serializarRegistro(obj);
+
+	if(tamanoDisponible >= 0){
+
+		//Abro el ultimo bloque
+		char* bloquePath = string_duplicate(puntoMontaje);
+		string_append(&bloquePath,"/");
+		string_append(&bloquePath,magicNumber);
+		string_append(&bloquePath,"/bloques/");
+		char strUltimoBloque[20];
+		sprintf(strUltimoBloque, "%i", ultimoBloque);
+		string_append(&bloquePath,strUltimoBloque);
+		string_append(&bloquePath,".bin");
+		FILE* fBloque = fopen(bloquePath,"a");
+		if(fBloque == NULL){
+			sem_post(&semaforo);
+			return -2;
+		}
+		//Escribo lo que tengo disponible
+		if(size > tamanoDisponible){
+			fwrite(buffer,tamanoDisponible,1,fBloque);
+		}else{
+			fwrite(buffer,size,1,fBloque);
+		}
+		fclose(fBloque);
+	}
+	if(tamanoRestante > 0){
 		//Pido un nuevo bloque
 		ultimoBloque = obtenerSiguienteBloque();
 		//Si el ultimo bloque es menor a cero entonces hay algun error
@@ -299,27 +353,28 @@ int fs_fprint(fs_file* fs, registro* obj){
 		fs->bloques = config_get_array_value(f,"BLOCKS");
 		config_save(f);
 		config_destroy(f);
+
+		//Abro el ultimo bloque
+		char* bloquePathFinal = string_duplicate(puntoMontaje);
+		string_append(&bloquePathFinal,"/");
+		string_append(&bloquePathFinal,magicNumber);
+		string_append(&bloquePathFinal,"/bloques/");
+		char strUltimoBloqueFinal[20];
+		sprintf(strUltimoBloqueFinal, "%i", ultimoBloque);
+		string_append(&bloquePathFinal,strUltimoBloque);
+		string_append(&bloquePathFinal,".bin");
+		FILE* fBloqueFinal = fopen(bloquePathFinal,"a");
+		if(fBloqueFinal == NULL){
+			sem_post(&semaforo);
+			return -2;
+		}
+		//Escribo lo que tengo restante
+		fwrite(buffer+tamanoDisponible,tamanoRestante,1,fBloqueFinal);
+		fclose(fBloqueFinal);
 	}
-	//Abro el ultimo bloque
-	char* bloquePath = string_duplicate(puntoMontaje);
-	string_append(&bloquePath,"/");
-	string_append(&bloquePath,magicNumber);
-	string_append(&bloquePath,"/bloques/");
-	char strUltimoBloque[20];
-	sprintf(strUltimoBloque, "%i", ultimoBloque);
-	string_append(&bloquePath,strUltimoBloque);
-	string_append(&bloquePath,".bin");
-	FILE* fBloque = fopen(bloquePath,"a");
-	if(fBloque == NULL){
-		sem_post(&semaforo);
-		return -2;
-	}
-	char * strValue = string_duplicate(obj->value);
-	obj->value = NULL;
-	fwrite(obj,sizeof(registro),1,fBloque);
-	//printf("Valor insertado: %s\n",obj->value);
-	fwrite(strValue,tamValue,1,fBloque);
-	fclose(fBloque);
+
+
+
 	//Actualizo el size
 	fs->size = fs->size + size;
 	t_config* f = config_create(fs->name);
@@ -334,4 +389,41 @@ int fs_fprint(fs_file* fs, registro* obj){
 	config_destroy(f);
 	sem_post(&semaforo);
 	return 0;
+}
+
+char* serializarRegistro(registro* reg){
+	int totalSize = tamValue * sizeof(char) + sizeof(uint16_t) + sizeof (uint64_t);
+	char* paqueteSerializado = (char*) malloc(totalSize);
+	int size_to_send = 0;
+	int offset = 0;
+	size_to_send = sizeof(uint16_t);
+	memcpy(paqueteSerializado + offset, &(reg->key), size_to_send);
+	offset += size_to_send;
+
+	size_to_send = tamValue * sizeof(char);
+	memcpy(paqueteSerializado + offset, reg->value, size_to_send);
+	offset += size_to_send;
+
+	size_to_send = sizeof(uint64_t);
+	memcpy(paqueteSerializado + offset, &(reg->timestamp), size_to_send);
+	return paqueteSerializado;
+}
+
+void deserializarRegistro(char* strReg,registro* reg){
+	int valueSize;
+	int nombreTablaSize;
+	int status;
+	int offset;
+	int totalSize = tamValue * sizeof(char) + sizeof(uint16_t) + sizeof (uint64_t);
+
+	memcpy(&(reg->key), strReg, sizeof(uint16_t));
+	offset = sizeof(uint16_t);
+
+	reg->value = malloc(tamValue*sizeof(char));
+	memcpy(reg->value, strReg+offset, tamValue * sizeof(char));
+	offset += tamValue * sizeof(char);
+
+	memcpy(&(reg->timestamp), strReg+offset, sizeof(uint64_t));
+
+
 }

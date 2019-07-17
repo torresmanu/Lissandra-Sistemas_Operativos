@@ -11,12 +11,15 @@
 registro* obtenerRegistroDeArchivoPropio(fs_file* file, int key){
 
 	//Divido el size del archivo por el peso del registro
-	int cant = file->size/(sizeof(registro) + getIntConfig("TAMANIO_VALUE"));
-	registro* auxReg = malloc (sizeof(registro));
+	int cant = file->size/(sizeof(uint16_t) + sizeof(uint64_t) +sizeof(char)* tamValue);
+	registro* auxReg = malloc(sizeof(registro));
 	registro* reg = NULL;
 	//Leo los archivos
 	for(int i=0;i<cant;i++){
 		fs_fread(file,auxReg,i);
+		if(auxReg == NULL){
+			return NULL;
+		}
 		if(auxReg->key == key){
 			//Si el registro todavia no se habia seteado lo seteo
 			if(reg == NULL){
@@ -473,7 +476,7 @@ void compactarTabla(char* tabla){
 				list_add(nodo->lista_registros,reg_aux);
 			}*/
 			//Itero entre los registros agregandolos a la lsita FS propio
-			int cant = file->size/(sizeof(registro)+getIntConfig("TAMANIO_VALUE"));
+			int cant = file->size/(tamValue*sizeof(char)+sizeof(uint16_t)+sizeof(uint64_t));
 			for(int n = 0; n < cant; n++){
 				registro* auxReg = malloc (sizeof(registro));
 				fs_fread(file,auxReg,n);
@@ -506,7 +509,7 @@ void compactarTabla(char* tabla){
 			//Abro el archivo FS propio
 			fs_file* file = fs_fopen(tempcPath);
 			registro* auxReg = malloc (sizeof(registro));
-			int cant = file->size/(sizeof(registro)+getIntConfig("TAMANIO_VALUE"));
+			int cant = file->size/(tamValue*sizeof(char)+sizeof(uint16_t)+sizeof(uint64_t));
 
 			//Itero entre los registros agregandolos a la lista
 			char linea[1024];

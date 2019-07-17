@@ -252,7 +252,7 @@ resultado select_acc(char* tabla,uint16_t key)
 			log_info(g_logger,"Registro obtenido memtable: %i;%s;%"PRIu64"",regMemTable->key,regMemTable->value,regMemTable->timestamp);
 		}else{
 			res.contenido = regFs;
-			log_info(g_logger,"Registro obtenido FS: %i;%s;%ld",regFs->key,regFs->value,regFs->timestamp);
+			log_info(g_logger,"Registro obtenido FS: %i;%s;%"PRIu64"",regFs->key,regFs->value,regFs->timestamp);
 		}
 	}
 	res.mensaje="Ok.";
@@ -298,6 +298,7 @@ resultado insert(char* tabla,uint16_t key,char* value,uint64_t timestamp)
 	reg.key=key;
 	reg.value= string_duplicate(value);
 	reg.timestamp = timestamp;
+
 	//Llamo al insert
 	memtable_insert(tabla,reg);
 
