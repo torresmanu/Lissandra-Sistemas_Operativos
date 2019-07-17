@@ -71,8 +71,6 @@ void iniciar_programa(void)
 	g_config = config_create("Kernel.config");
 	log_info(g_logger,"Configuraciones inicializadas");
 
-	mutexsConexiones = dictionary_create();
-
 	//Inicializo los estados
 	iniciarEstados();
 
@@ -96,9 +94,6 @@ void iniciar_programa(void)
 
 	pool = list_create();			// POOL DE MEMORIAS
 	tablas = list_create();			// ESTRUCTURA QUE CONTIENE TODAS LAS TABLAS (METADATA)
-
-//	socketsPool = list_create();	// SOCKETS DE TODO EL POOL
-
 
 	// Todoo para el describe
 
@@ -618,7 +613,11 @@ void mostrarMetrics(Criterio* crit)
 {
 	// Memory Load
 	printf("------------------------------------------------------------------------\n");
+
+	pthread_mutex_lock(&(crit->mutex));
 	list_iterate(crit->memorias,mostrarMemoryLoad);
+	pthread_mutex_unlock(&(crit->mutex));
+
 
 	// Metricas de read and writes
 	log_info(g_logger, "Métricas del criterio: %s", mostrarConsistencia(crit->tipo));
@@ -645,7 +644,10 @@ void mostrarMetrics(Criterio* crit)
 
 	// Dejo en cero todooo
 	limpiarMetricasCriterio(crit);
+
+	pthread_mutex_lock(&(crit->mutex));
 	list_iterate(crit->memorias,limpiarMetricasMemoria);
+	pthread_mutex_unlock(&(crit->mutex));
 
 }
 

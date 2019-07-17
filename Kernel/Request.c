@@ -400,13 +400,19 @@ resultado journal(char* id){
 		enviarJournal(elem,id);
 	}
 
+	pthread_mutex_lock(&(sc.mutex));
 	list_iterate(sc.memorias,enviarJournal2);
+	pthread_mutex_unlock(&(sc.mutex));
 	log_info(g_logger,"Se hizo JOURNAL en las memorias SC.");
 
+	pthread_mutex_lock(&(shc.mutex));
 	list_iterate(shc.memorias,enviarJournal2);
+	pthread_mutex_unlock(&(shc.mutex));
 	log_info(g_logger,"Se hizo JOURNAL en las memorias SHC.");
 
+	pthread_mutex_lock(&(ec.mutex));
 	list_iterate(ec.memorias,enviarJournal2);
+	pthread_mutex_unlock(&(ec.mutex));
 	log_info(g_logger,"Se hizo JOURNAL en las memorias EC.");
 
 	resultado res;

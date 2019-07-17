@@ -242,7 +242,9 @@ void conectarMemorias(void* elem){
 				sacarMemoria(mem);
 		}
 
+		pthread_mutex_lock(&(crit->mutex));
 		list_iterate(crit->memorias,conectar);
+		pthread_mutex_unlock(&(crit->mutex));
 
 	}
 
@@ -276,9 +278,17 @@ void sacarMemoria(Memoria* mem){
 
 	desconectarEjecutadores(mem);
 
+	pthread_mutex_lock(&(sc.mutex));
 	list_remove_by_condition(sc.memorias,coincideId);
+	pthread_mutex_unlock(&(sc.mutex));
+
+	pthread_mutex_lock(&(shc.mutex));
 	list_remove_by_condition(shc.memorias,coincideId);
+	pthread_mutex_unlock(&(shc.mutex));
+
+	pthread_mutex_lock(&(ec.mutex));
 	list_remove_by_condition(ec.memorias,coincideId);
+	pthread_mutex_unlock(&(ec.mutex));
 }
 
 void establecerConexionPool(char* id)
