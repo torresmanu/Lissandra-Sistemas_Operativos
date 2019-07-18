@@ -278,7 +278,8 @@ void ejecutador(char* idEjecutador){ // ACTUA COMO ESTADO EXEC
 
 			//Logueo el resultado
 			if (e.resultado == OK){
-				log_info(g_logger,"%s", e.mensaje);
+				if(e.mensaje!=NULL)
+					log_info(g_logger,"%s", e.mensaje);
 			}
 
 //			if(e.mensaje!=NULL)
