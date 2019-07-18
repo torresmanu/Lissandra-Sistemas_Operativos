@@ -480,6 +480,7 @@ void compactarTabla(char* tabla){
 			//FILE * file = fopen(binPath,"r");
 			//Abro el archivo para FS propio
 			fs_file* file = fs_fopen(binPath);
+			free(binPath);
 
 			//Itero entre los registros agregandolos a la lista FS Ubuntu
 			/*char linea[1024];
@@ -521,6 +522,7 @@ void compactarTabla(char* tabla){
 			//FILE * file = fopen(tempcPath,"r");
 			//Abro el archivo FS propio
 			fs_file* file = fs_fopen(tempcPath);
+			free(tempcPath);
 			registro* auxReg = malloc (sizeof(registro));
 			int cant = file->size/(tamValue*sizeof(char)+sizeof(uint16_t)+sizeof(uint64_t));
 
@@ -597,6 +599,7 @@ void compactarTabla(char* tabla){
 
 			//Abro el archivo para el FS propio
 			fs_file* file = fs_fopen(binPath);
+			free(binPath);
 
 			//Borro el archivo para el FS propio
 			fs_fdelete(file);

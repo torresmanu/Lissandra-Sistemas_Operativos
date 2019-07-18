@@ -17,11 +17,13 @@ void finalizar_memtable(){
 void destroy_nodo_tabla(void * elem){
 	nodo_tabla* nodo_tabla_elem = (nodo_tabla *) elem;
 	list_destroy_and_destroy_elements(nodo_tabla_elem->lista_registros,destroy_nodo_registro);
+	free(nodo_tabla_elem->nombre_tabla);
 	free(nodo_tabla_elem);
 }
 
 void destroy_nodo_registro(void * elem){
 	registro* reg = (registro*) elem;
+	free(reg->value);
 	free(reg);
 }
 
@@ -103,7 +105,8 @@ int memtable_dump(){
 		}
 	}
 	log_info(g_logger,"Genere todos los .tmp");
-	list_clean(memtable_list);
+	list_destroy_and_destroy_elements(memtable_list,destroy_nodo_tabla);
+	memtable_list = list_create();
 	log_info(g_logger,"Dump realizado exitosamente");
 	pthread_mutex_unlock(&semaforoMemtable);
 	return 0;
