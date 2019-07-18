@@ -33,7 +33,7 @@ registro* obtenerRegistroDeArchivoPropio(fs_file* file, int key){
 				break;
 			}
 		}
-		free(auxReg->value);
+		//free(auxReg->value);
 	}
 	if(auxReg != NULL){
 		free(auxReg);
