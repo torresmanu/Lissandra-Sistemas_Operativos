@@ -136,13 +136,13 @@ void inicializarConexiones(Memoria* mem){
 	setearConexiones(idGossiping);
 }
 
-bool sigueConectada(Memoria* memVieja, t_list* memoriasRecibidas){
-	bool coincideId(void* elem){
-		Memoria* mem = elem;
-		return mem->id == memVieja->id;
-	}
+bool sigueConectada(void* elem){
 
-	return list_any_satisfy(memoriasRecibidas,coincideId);
+	Memoria* mem = elem;
+	pthread_mutex_lock(&(mem->mEstado));
+	bool conectada = mem->estado == 1;
+	pthread_mutex_unlock(&(mem->mEstado));
+	return conectada;
 }
 
 bool tengoMemoria(Memoria* memNueva){
@@ -220,7 +220,7 @@ void gossiping(){
 			*conexion=-1;
 	}
 	if(status<0)
-		log_info(g_logger,"No hay memorias activas para hacer gossiping");
+		log_warning(g_logger,"No hay memorias activas para hacer gossiping");
 }
 
 void conectarGossiping(){

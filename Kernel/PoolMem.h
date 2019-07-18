@@ -42,8 +42,7 @@ void cerrarConexion(char* key, void* value);
 void conectarEjecutadores();
 void conectarGossiping();
 void conectarDescribe();
-bool sigueConectada(Memoria* memVieja, t_list* memoriasRecibidas);
-
+bool sigueConectada(void* elem);
 bool agregarMemoria(Memoria* mem);
 bool coincideIPyPuerto(Memoria* mem1,Memoria* mem2);
 void inicializarMemoria(Memoria* memNueva);

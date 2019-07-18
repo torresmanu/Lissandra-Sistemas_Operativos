@@ -344,13 +344,14 @@ resultado describe(char* nombreTabla,char* id)
 		mem = masApropiada(criterio,describe);
 	}
 	else{
-		mem = masApropiada(&sc,describe);
+//		mem = masApropiada(&sc,describe);
+		mem = list_find(pool,sigueConectada);
 		pthread_mutex_lock(&mTablas);
 		list_clean(tablas);
 		pthread_mutex_unlock(&mTablas);
 
 		if(mem==NULL){
-			log_warning(g_logger, "Asociar una memoria al criterio SC para realizar describe.");
+			log_warning(g_logger, "No hay memorias disponibles para realizar el describe.");
 			res.accionEjecutar=DESCRIBE;
 			res.contenido=NULL;
 			res.mensaje=NULL;
