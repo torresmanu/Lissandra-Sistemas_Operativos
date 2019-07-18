@@ -18,7 +18,7 @@ t_list* listaBloqueos;
 typedef struct
 {
 	char* tabla;
-	sem_t bloqueo;
+	pthread_mutex_t bloqueo;
 } nodo_bloqueo;
 
 

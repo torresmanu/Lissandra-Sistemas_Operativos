@@ -60,9 +60,9 @@ int iniciar_programa()
 	puntoMontaje = getStringConfig("PUNTO_MONTAJE");
 	magicNumber = getStringConfig("MAGIC_NUMBER");
 
-	sem_init(&semaforo,0,1);
-	sem_init(&semaforoMemtable,0,1);
-	sem_init(&semaforoMetadata,0,1);
+	pthread_mutex_init(&semaforo,NULL);
+	pthread_mutex_init(&semaforoMemtable,NULL);
+	pthread_mutex_init(&semaforoMetadata,NULL);
 
 	//Inicializo el FS Propio
 	int status = inicializarFSPropio();
@@ -346,7 +346,7 @@ resultado describe(char* tabla)
 	res.accionEjecutar = DESCRIBE;
 
 	t_list* listaMetadata;
-	sem_wait(&semaforoMetadata);
+	pthread_mutex_lock(&semaforoMetadata);
 	if(tabla != NULL){
 		if(existeMetadata(tabla) == 0){
 			listaMetadata = list_create();
@@ -381,7 +381,7 @@ resultado describe(char* tabla)
 		res.mensaje = "Ok.";
 		res.resultado = OK;
 	}
-	sem_post(&semaforoMetadata);
+	pthread_mutex_unlock(&semaforoMetadata);
 	return res;
 }
 

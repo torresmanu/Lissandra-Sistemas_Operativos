@@ -143,10 +143,10 @@ void liberarBloque(int bloque){
 }
 
 fs_file* fs_fopen(char* ruta){
-	sem_wait(&semaforo);
+	pthread_mutex_lock(&semaforo);
 	t_config* f = config_create(ruta);
 	if(f == NULL){
-		sem_post(&semaforo);
+		pthread_mutex_unlock(&semaforo);
 		return NULL;
 	}
 	fs_file * fs_f= malloc(sizeof(fs_file));
@@ -154,23 +154,23 @@ fs_file* fs_fopen(char* ruta){
 	fs_f->size = config_get_int_value(f,"SIZE");
 	fs_f->bloques = config_get_array_value(f,"BLOCKS");
 	config_destroy(f);
-	sem_post(&semaforo);
+	pthread_mutex_unlock(&semaforo);
 	return fs_f;
 }
 
 int fs_fcreate(char* ruta){
-	sem_wait(&semaforo);
+	pthread_mutex_lock(&semaforo);
 	//Asigno un bloque
 	int bloque = obtenerSiguienteBloque();
 	if(bloque == -1){
 		log_info(g_logger,"No quedan bloques libres");
-		sem_post(&semaforo);
+		pthread_mutex_unlock(&semaforo);
 		return -1;
 	}
 	//Creo el archivo
 	FILE* f = fopen(ruta,"w");
 	if(f == NULL){
-		sem_post(&semaforo);
+		pthread_mutex_unlock(&semaforo);
 		return -1;
 	}
 	//Escribo en el archivo
@@ -178,12 +178,12 @@ int fs_fcreate(char* ruta){
 	fprintf(f,"BLOCKS=[%i]\n",bloque);
 	fprintf(f,"NAME=%s\n",ruta);
 	fclose(f);
-	sem_post(&semaforo);
+	pthread_mutex_unlock(&semaforo);
 	return 0;
 }
 
 void fs_fdelete(fs_file* fs){
-	sem_wait(&semaforo);
+	pthread_mutex_lock(&semaforo);
 	char* puntoMontura = string_duplicate(puntoMontaje);
 	//Libero los bloques y limpio el archivo de los bloques
 	int i=0;
@@ -206,7 +206,7 @@ void fs_fdelete(fs_file* fs){
 	}
 	//Borro el archivo
 	remove(fs->name);
-	sem_post(&semaforo);
+	pthread_mutex_unlock(&semaforo);
 }
 
 void fs_fclose(fs_file* f){
@@ -214,14 +214,14 @@ void fs_fclose(fs_file* f){
 }
 
 void fs_fread(fs_file* fs,registro* resultado,int position){
-	sem_wait(&semaforo);
+	pthread_mutex_lock(&semaforo);
 	int size = sizeof(uint16_t)+sizeof(uint64_t)+tamValue*sizeof(char);
 	char* buffer = malloc(size);
 	//Si el registro que quiero que leer esta por fuera del size retorno null en resultado
 	if(fs->size < (position+size)){
 		resultado = NULL;
 		log_error(g_logger,"[fs_fread]Devuelvo NULL");
-		sem_post(&semaforo);
+		pthread_mutex_unlock(&semaforo);
 		return;
 	}
 	int cantBloques=0;
@@ -247,7 +247,7 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 	if(fBloque == NULL){
 		resultado = NULL;
 		log_error(g_logger,"[fs_fread]Devuelvo NULL");
-		sem_post(&semaforo);
+		pthread_mutex_unlock(&semaforo);
 		return;
 	}
 	fseek(fBloque, posBloqueInicialRel, SEEK_SET );
@@ -273,7 +273,7 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 		if(fBloqueFinal == NULL){
 			resultado = NULL;
 			log_error(g_logger,"[fs_fread]Devuelvo NULL");
-			sem_post(&semaforo);
+			pthread_mutex_unlock(&semaforo);
 			return;
 		}
 		fseek(fBloqueFinal, 0, SEEK_SET );
@@ -299,7 +299,7 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 		if(fBloqueFinal2 == NULL){
 			resultado = NULL;
 			log_error(g_logger,"[fs_fread]Devuelvo NULL");
-			sem_post(&semaforo);
+			pthread_mutex_unlock(&semaforo);
 			return;
 		}
 		fseek(fBloqueFinal2, 0, SEEK_SET );
@@ -307,11 +307,11 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 		fclose(fBloqueFinal2);
 	}
 	deserializarRegistro(buffer,resultado);
-	sem_post(&semaforo);
+	pthread_mutex_unlock(&semaforo);
 }
 
 int fs_fprint(fs_file* fs, registro* obj){
-	sem_wait(&semaforo);
+	pthread_mutex_lock(&semaforo);
 	int size = sizeof(uint16_t) + sizeof(uint64_t) + sizeof(char) * tamValue;
 	//Veo cuantos bloques hay y me quedo con el ultimo
 	int cantBloques=0;
@@ -338,7 +338,7 @@ int fs_fprint(fs_file* fs, registro* obj){
 		string_append(&bloquePath,".bin");
 		FILE* fBloque = fopen(bloquePath,"a");
 		if(fBloque == NULL){
-			sem_post(&semaforo);
+			pthread_mutex_unlock(&semaforo);
 			return -2;
 		}
 		//Escribo lo que tengo disponible
@@ -354,13 +354,13 @@ int fs_fprint(fs_file* fs, registro* obj){
 		ultimoBloque = obtenerSiguienteBloque();
 		//Si el ultimo bloque es menor a cero entonces hay algun error
 		if(ultimoBloque < 0){
-			sem_post(&semaforo);
+			pthread_mutex_unlock(&semaforo);
 			return ultimoBloque;
 		}
 		//Actualizo el archivo con el nuevo bloque
 		t_config* f = config_create(fs->name);
 		if(f == NULL){
-			sem_post(&semaforo);
+			pthread_mutex_unlock(&semaforo);
 			return -2;
 		}
 		char** bloques = config_get_array_value(f,"BLOCKS");
@@ -391,7 +391,7 @@ int fs_fprint(fs_file* fs, registro* obj){
 		string_append(&bloquePathFinal,".bin");
 		FILE* fBloqueFinal = fopen(bloquePathFinal,"a");
 		if(fBloqueFinal == NULL){
-			sem_post(&semaforo);
+			pthread_mutex_unlock(&semaforo);
 			return -2;
 		}
 		//Escribo lo que tengo restante fijandome si entra en un bloque
@@ -407,13 +407,13 @@ int fs_fprint(fs_file* fs, registro* obj){
 		ultimoBloque = obtenerSiguienteBloque();
 		//Si el ultimo bloque es menor a cero entonces hay algun error
 		if(ultimoBloque < 0){
-			sem_post(&semaforo);
+			pthread_mutex_unlock(&semaforo);
 			return ultimoBloque;
 		}
 		//Actualizo el archivo con el nuevo bloque
 		t_config* f = config_create(fs->name);
 		if(f == NULL){
-			sem_post(&semaforo);
+			pthread_mutex_unlock(&semaforo);
 			return -2;
 		}
 		char** bloques2 = config_get_array_value(f,"BLOCKS");
@@ -444,7 +444,7 @@ int fs_fprint(fs_file* fs, registro* obj){
 		string_append(&bloquePathFinal2,".bin");
 		FILE* fBloqueFinal2 = fopen(bloquePathFinal2,"a");
 		if(fBloqueFinal2 == NULL){
-			sem_post(&semaforo);
+			pthread_mutex_unlock(&semaforo);
 			return -2;
 		}
 		//Escribo lo que tengo restante fijandome si entra en un bloque
@@ -458,7 +458,7 @@ int fs_fprint(fs_file* fs, registro* obj){
 	fs->size = fs->size + size;
 	t_config* f = config_create(fs->name);
 	if(f == NULL){
-		sem_post(&semaforo);
+		pthread_mutex_unlock(&semaforo);
 		return -2;
 	}
 	char strSize[20];
@@ -466,7 +466,7 @@ int fs_fprint(fs_file* fs, registro* obj){
 	config_set_value(f,"SIZE",strSize);
 	config_save(f);
 	config_destroy(f);
-	sem_post(&semaforo);
+	pthread_mutex_unlock(&semaforo);
 	return 0;
 }
 

@@ -40,7 +40,7 @@ int inicializarFSPropio();
 char* serializarRegistro(registro* reg);
 void deserializarRegistro(char* strReg,registro* reg);
 
-sem_t semaforo;
+pthread_mutex_t semaforo;
 
 
 #endif /* FILESYSTEM_H_ */

@@ -15,7 +15,7 @@
 #include <commons/registro.h>
 
 t_list* memtable_list;
-sem_t semaforoMemtable;
+pthread_mutex_t semaforoMemtable;
 typedef struct
 {
 	char* nombre_tabla;

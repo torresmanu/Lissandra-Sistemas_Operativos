@@ -26,7 +26,7 @@ void destroy_nodo_registro(void * elem){
 }
 
 registro* memtable_select(char* nombreTabla, int key){
-	sem_wait(&semaforoMemtable);
+	pthread_mutex_lock(&semaforoMemtable);
 	//Itero para buscar la tabla
 	for(int i = 0; i < list_size(memtable_list); i++){
 		nodo_tabla* nodo = ((nodo_tabla*)list_get(memtable_list,i));
@@ -35,18 +35,18 @@ registro* memtable_select(char* nombreTabla, int key){
 			for(int n = 0; n < list_size(nodo->lista_registros); n++){
 				registro* reg = ((registro*)list_get(nodo->lista_registros,n));
 				if(reg->key == key){
-					sem_post(&semaforoMemtable);
+					pthread_mutex_unlock(&semaforoMemtable);
 					return reg;
 				}
 			}
 		}
 	}
-	sem_post(&semaforoMemtable);
+	pthread_mutex_unlock(&semaforoMemtable);
 	return NULL;
 }
 
 void memtable_insert(char* nombre_tabla, registro reg){
-	sem_wait(&semaforoMemtable);
+	pthread_mutex_lock(&semaforoMemtable);
 	log_info(g_logger,"Comienzo insert");
 	//Me fijo si hay un nodo con esa tabla, si hay lo obtengo
 	nodo_tabla * nodo = NULL;
@@ -71,11 +71,11 @@ void memtable_insert(char* nombre_tabla, registro reg){
 				reg_aux->value=string_duplicate(reg.value);
 				reg_aux->timestamp = reg.timestamp;
 				log_info(g_logger,"Valor actualizado en memtable");
-				sem_post(&semaforoMemtable);
+				pthread_mutex_unlock(&semaforoMemtable);
 				return;
 			}else{
 				log_info(g_logger,"Valor no actualizado en memtable");
-				sem_post(&semaforoMemtable);
+				pthread_mutex_unlock(&semaforoMemtable);
 				return;
 			}
 		}
@@ -85,11 +85,11 @@ void memtable_insert(char* nombre_tabla, registro reg){
 	memcpy(reg_aux,&reg,sizeof(registro));
 	list_add(nodo->lista_registros,reg_aux);
 	log_info(g_logger,"Valor insertado en memtable");
-	sem_post(&semaforoMemtable);
+	pthread_mutex_unlock(&semaforoMemtable);
 }
 
 int memtable_dump(){
-	sem_wait(&semaforoMemtable);
+	pthread_mutex_lock(&semaforoMemtable);
 	log_info(g_logger,"Comienzo DUMP");
 	//Itero entre las tablas de la memtable
 	for(int i = 0; i < list_size(memtable_list); i++){
@@ -98,13 +98,13 @@ int memtable_dump(){
 		int status = fs_create_tmp(nodo->nombre_tabla,nodo->lista_registros);
 		if(status != 0){
 			log_info(g_logger,"Error al realizar dump");
-			sem_post(&semaforoMemtable);
+			pthread_mutex_unlock(&semaforoMemtable);
 			return status;
 		}
 	}
 	log_info(g_logger,"Genere todos los .tmp");
 	list_clean(memtable_list);
 	log_info(g_logger,"Dump realizado exitosamente");
-	sem_post(&semaforoMemtable);
+	pthread_mutex_unlock(&semaforoMemtable);
 	return 0;
 }

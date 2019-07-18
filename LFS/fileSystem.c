@@ -414,7 +414,7 @@ void compactarTabla(char* tabla){
 		return;
 	}
 	int cantidadACompactar = 0;
-	sem_wait(&semaforoMemtable);
+	pthread_mutex_lock(&semaforoMemtable);
 	//Itero entre los archivos temporales para renombrarlos
 	while((tablesde=readdir(tabledir))!= NULL){
 		if(string_contains(tablesde->d_name,"tmp") && !string_contains(tablesde->d_name,"tmpc")){
@@ -433,7 +433,7 @@ void compactarTabla(char* tabla){
 	}
 
 	closedir(tabledir);
-	sem_post(&semaforoMemtable);
+	pthread_mutex_unlock(&semaforoMemtable);
 
 	//Si son 0 a compactar entonces vuelvo porque no tiene sentido seguir
 	if(cantidadACompactar ==  0){
@@ -664,14 +664,14 @@ void bloquearTabla(char* tabla){
 		nodo_bloqueo* bloqueo = (nodo_bloqueo*)list_get(listaBloqueos,i);
 		if(strcmp(bloqueo->tabla,tabla) == 0){
 			encontrada = 1;
-			sem_wait(&(bloqueo->bloqueo));
+			pthread_mutex_lock(&(bloqueo->bloqueo));
 		}
 	}
 	//Si no encontre la tabla en la lista la creo
 	if(encontrada == 0){
 		nodo_bloqueo* bloqueo = malloc(sizeof(nodo_bloqueo));
 		bloqueo->tabla = string_duplicate(tabla);
-		sem_init(&(bloqueo->bloqueo),0,0);
+		pthread_mutex_init(&(bloqueo->bloqueo),NULL);
 		list_add(listaBloqueos,bloqueo);
 	}
 }
@@ -681,7 +681,7 @@ void liberarBloqueoTabla(char* tabla){
 	for(int i=0;i<list_size(listaBloqueos);i++){
 		nodo_bloqueo* bloqueo = (nodo_bloqueo*)list_get(listaBloqueos,i);
 		if(strcmp(bloqueo->tabla,tabla) == 0){
-			sem_post(&(bloqueo->bloqueo));
+			pthread_mutex_unlock(&(bloqueo->bloqueo));
 		}
 	}
 }
@@ -690,7 +690,7 @@ void bloquearTodasTablas(){
 	//Reccorro la lista hasta encontrar la tabla y obtener el valor
 	for(int i=0;i<list_size(listaBloqueos);i++){
 		nodo_bloqueo* bloqueo = (nodo_bloqueo*)list_get(listaBloqueos,i);
-		sem_wait(&(bloqueo->bloqueo));
+		pthread_mutex_unlock(&(bloqueo->bloqueo));
 	}
 }
 
@@ -698,6 +698,6 @@ void liberarTodasTablas(){
 	//Reccorro la lista hasta encontrar la tabla y obtener el valor
 	for(int i=0;i<list_size(listaBloqueos);i++){
 		nodo_bloqueo* bloqueo = (nodo_bloqueo*)list_get(listaBloqueos,i);
-		sem_post(&(bloqueo->bloqueo));
+		pthread_mutex_unlock(&(bloqueo->bloqueo));
 	}
 }
