@@ -332,13 +332,12 @@ resultado describe(char* nombreTabla,char* id)
 	contenidoDescribe* cd = malloc(sizeof(contenidoDescribe));
 	cd->nombreTabla = nombreTabla;
 	describe->contenido = cd;
+	pthread_mutex_lock(&mTablas);
 
 	Memoria* mem;
 	if(cd->nombreTabla!=NULL){
 
-		pthread_mutex_lock(&mTablas);
 		metadataTabla* tabla = buscarTabla(cd->nombreTabla);
-		pthread_mutex_unlock(&mTablas);
 
 		Criterio* criterio = toConsistencia(tabla->consistency);
 		mem = masApropiada(criterio,describe);
@@ -346,9 +345,7 @@ resultado describe(char* nombreTabla,char* id)
 	else{
 //		mem = masApropiada(&sc,describe);
 		mem = list_find(pool,sigueConectada);
-		pthread_mutex_lock(&mTablas);
 		list_clean(tablas);
-		pthread_mutex_unlock(&mTablas);
 
 		if(mem==NULL){
 			log_warning(g_logger, "No hay memorias disponibles para realizar el describe.");
@@ -404,7 +401,6 @@ resultado describe(char* nombreTabla,char* id)
 
 				if(list_size(tablaLFS)>1){
 
-					pthread_mutex_lock(&mTablas);
 					list_add_all(tablas,tablaLFS);
 					log_info(g_logger,"Describe realizado con éxito");
 
@@ -414,13 +410,11 @@ resultado describe(char* nombreTabla,char* id)
 					{
 						log_info(g_logger,"Tablas indexada n°:%d -> %s", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
 					}
-					pthread_mutex_unlock(&mTablas);
 
 
 				}
 				else if(list_size(tablaLFS)==1){
 
-					pthread_mutex_lock(&mTablas);
 					agregarTabla(tablaLFS);
 
 
@@ -430,7 +424,6 @@ resultado describe(char* nombreTabla,char* id)
 					{
 						log_info(g_logger,"Tablas indexada n°:%d -> %s", i ,((metadataTabla*)list_get(tablas,i))->nombreTabla);
 					}
-					pthread_mutex_unlock(&mTablas);
 
 
 				}
@@ -440,6 +433,8 @@ resultado describe(char* nombreTabla,char* id)
 				res.resultado = OK;
 			}
 	}
+	pthread_mutex_unlock(&mTablas);
+
 	free(buffer);
 	free(describe);
 	free(msg);
