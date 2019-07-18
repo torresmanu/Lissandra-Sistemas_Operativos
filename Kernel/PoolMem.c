@@ -159,8 +159,10 @@ void obtenerMemoriaDescribe()
 
 	MemDescribe = malloc(sizeof(Memoria));
 	MemDescribe->id = 22;
-	MemDescribe->ipMemoria = config_get_string_value(g_config,"IP_MEMORIA");
-	MemDescribe->puerto = config_get_string_value(g_config, "PUERTO_MEMORIA");
+	char* auxip = config_get_string_value(g_config,"IP_MEMORIA");
+	MemDescribe->ipMemoria = strdup(auxip);
+	char* auxPuerto = config_get_string_value(g_config, "PUERTO_MEMORIA");
+	MemDescribe->puerto = strdup(auxPuerto);
 	MemDescribe->insertsTotales = 0;
 	MemDescribe->selectsTotales = 0;
 	MemDescribe->totalOperaciones = 0;

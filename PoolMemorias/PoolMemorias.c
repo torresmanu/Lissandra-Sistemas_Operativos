@@ -82,13 +82,11 @@ void escucharConexiones(){
 
 			if(*tipoCliente==1){
 				log_info(g_logger, "Nueva conexion del kernel");
-				int memoryNumber = config_get_int_value(g_config, "MEMORY_NUMBER");
 				send(*conexion_cliente,&memoryNumber,sizeof(memoryNumber),0);
 				iniciarHiloKernel(&cliente,&longc,conexion_cliente);
 			}
 			else if(*tipoCliente==0){
 				log_info(g_logger, "Nueva conexion de una memoria");
-				int memoryNumber = config_get_int_value(g_config, "MEMORY_NUMBER");
 				send(*conexion_cliente,&memoryNumber,sizeof(memoryNumber),0);
 				iniciarHiloMemoria(&cliente,&longc,conexion_cliente);
 			}
@@ -284,14 +282,19 @@ int conectarAlKernel(int conexion_servidor){
 
 void journalConRetardo(){
 	while(ejecutando){
+		pthread_mutex_lock(&mRJournal);
 		usleep(retardoJournaling*1000);
+		pthread_mutex_unlock(&mRJournal);
+
 		journal();
 	}
 }
 
 void gossipingConRetardo(){
 	while(ejecutando){
+		pthread_mutex_lock(&mRGossip);
 		usleep(retardoGossiping*1000);
+		pthread_mutex_unlock(&mRGossip);
 
 		gossiping();
 	}
@@ -301,15 +304,46 @@ void gossipingConRetardo(){
 void actualizarRetardos(){
 
 	config_destroy(g_config);
-
 	g_config = config_create(pathConfig);
 
+	while(g_config==NULL){
+		g_config = config_create(pathConfig);
+	}
+
+	while(!config_has_property(g_config,"RETARDO_JOURNAL")){
+		config_destroy(g_config);
+		g_config = config_create(pathConfig);
+	}
+	pthread_mutex_lock(&mRJournal);
 	retardoJournaling = config_get_int_value(g_config,"RETARDO_JOURNAL");
+	pthread_mutex_unlock(&mRJournal);
 
+	while(!config_has_property(g_config,"RETARDO_GOSSIPING")){
+		config_destroy(g_config);
+		g_config = config_create(pathConfig);
+	}
+	pthread_mutex_lock(&mRGossip);
 	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
+	pthread_mutex_unlock(&mRGossip);
 
+	while(!config_has_property(g_config,"RETARDO_MEM")){
+		config_destroy(g_config);
+		g_config = config_create(pathConfig);
+	}
+	pthread_mutex_lock(&mRMem);
 	retardoMemoria = config_get_int_value(g_config,"RETARDO_MEM");
+	pthread_mutex_unlock(&mRMem);
+
+	while(!config_has_property(g_config,"RETARDO_FS")){
+		config_destroy(g_config);
+		g_config = config_create(pathConfig);
+	}
+	pthread_mutex_lock(&mRLfs);
+	retardoLFS = config_get_int_value(g_config,"RETARDO_FS");
+	pthread_mutex_unlock(&mRLfs);
+
 }
+
 
 void monitorearConfig() {
     int length, i = 0;
@@ -365,8 +399,12 @@ bool iniciar_programa()
 	pthread_mutex_init(&mMemoriasConocidas,NULL);
 	pthread_mutex_init(&mBitmap,NULL);
 	pthread_mutex_init(&mConexion,NULL);
-//	pthread_mutex_init(&mConexionKernel,NULL);
 	pthread_mutex_init(&mJournal,NULL);
+
+	pthread_mutex_init(&mRJournal,NULL);
+	pthread_mutex_init(&mRGossip,NULL);
+	pthread_mutex_init(&mRMem,NULL);
+	pthread_mutex_init(&mRLfs,NULL);
 
 
 	estaHaciendoJournal = false;
@@ -399,7 +437,9 @@ bool iniciar_programa()
 	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
 	retardoMemoria = config_get_int_value(g_config,"RETARDO_MEM");
 	retardoLFS = config_get_int_value(g_config,"RETARDO_FS");
-
+	memoryNumber = config_get_int_value(g_config,"MEMORY_NUMBER");
+	char* auxIP = config_get_string_value(g_config,"IP_PROPIA");
+	char* auxPuerto = config_get_string_value(g_config,"PUERTO");
 
 	TAM_MEMORIA_PRINCIPAL = config_get_int_value(g_config,"TAM_MEM");
 
@@ -428,9 +468,9 @@ bool iniciar_programa()
 	pthread_mutex_init(&mMemYo,NULL);
 
 	pthread_mutex_lock(&mMemYo);
-	yo->ip = config_get_string_value(g_config,"IP_PROPIA");;
-	yo->puerto=config_get_string_value(g_config,"PUERTO");
-	yo->numero = config_get_int_value(g_config,"MEMORY_NUMBER");
+	yo->ip = strdup(auxIP);
+	yo->puerto=strdup(auxPuerto);
+	yo->numero = memoryNumber;
 	yo->socket=-1;
 	yo->estado = 1;
 	ponerTimestampActual(yo);
@@ -456,8 +496,8 @@ void iniciarTablaSeeds(){
 
 	while(ips[i]!=NULL){
 		Memoria* mem = malloc(sizeof(Memoria));
-		mem->ip = ips[i];
-		mem->puerto = puertos[i];
+		mem->ip = strdup(ips[i]);
+		mem->puerto = strdup(puertos[i]);
 		mem->numero = -1;
 		mem->socket = -1;
 		mem->estado = 0;
@@ -481,7 +521,8 @@ bool handshake(){
 
 	int size_to_send;
 
-	usleep(retardoLFS*1000);
+	retardarLfs();
+
 	char* pi = serializarPaquete(&resParser, &size_to_send);
 	send(serverSocket, pi, size_to_send, 0);
 	free(pi);
@@ -550,7 +591,7 @@ resultado mandarALFS(resultadoParser resParser){
 
 	int size_to_send;
 
-	usleep(retardoLFS*1000);
+	retardarLfs();
 	char* pi = serializarPaquete(&resParser, &size_to_send);
 	pthread_mutex_lock(&mConexion);
 
@@ -591,6 +632,19 @@ resultado recibir(){
 	return res;
 }
 
+void retardarMem(){
+	pthread_mutex_lock(&mRMem);
+	usleep(retardoMemoria*1000);
+	pthread_mutex_unlock(&mRMem);
+
+}
+
+void retardarLfs(){
+	pthread_mutex_lock(&mRLfs);
+	usleep(retardoLFS*1000);
+	pthread_mutex_unlock(&mRLfs);
+}
+
 resultado select_t(char *nombre_tabla, int key){
 	Pagina* pagina;
 
@@ -604,7 +658,7 @@ resultado select_t(char *nombre_tabla, int key){
 
 		int posicion=(pagina->indice_registro)*offset;
 
-		usleep(retardoMemoria*1000);
+		retardarMem();
 
 		registro = malloc(sizeof(Registro));
 
@@ -872,7 +926,7 @@ void enviarInsert(void *element){ //ver los casos de error
 		cont->nombreTabla = malloc(strlen(((NodoTablaPaginas*)element)->segmento->nombre_tabla)+1);
 		strcpy(cont->nombreTabla,((NodoTablaPaginas*)element)->segmento->nombre_tabla);
 
-		usleep(retardoMemoria*1000);
+		retardarMem();
 
 		pthread_mutex_lock(&mMemPrincipal);
 		memcpy(&cont->key,&(memoria[(indice*offset)+tamValue]),sizeof(uint16_t));
@@ -918,7 +972,7 @@ void enviarInsert(void *element){ //ver los casos de error
 
 void guardarEnMemoria(Registro registro, int posLibre){
 
-	usleep(retardoMemoria*1000);
+	retardarMem();
 
 	pthread_mutex_lock(&mMemPrincipal);
 	memcpy(&memoria[(posLibre*offset)],registro.value,strlen(registro.value)+1);
@@ -979,7 +1033,7 @@ bool encuentraPagina(Segmento* segmento,uint16_t key, Pagina** pagina){
 
 		int posicion=(((Pagina *)elemento)->indice_registro)*offset;
 		int i=0;
-		usleep(retardoMemoria*1000);
+		retardarMem();
 
 		pthread_mutex_lock(&mMemPrincipal);
 		memcpy(&i,&(memoria[posicion+tamValue]),sizeof(uint16_t));
@@ -1143,7 +1197,7 @@ void drop(char* nombre_tabla){
 void actualizarRegistro(Pagina *pagina,char *value,uint64_t timestamp){
 
 	int posicion=(pagina->indice_registro)*offset;
-	usleep(retardoMemoria*1000);
+	retardarMem();
 
 	uint64_t ts;
 

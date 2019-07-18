@@ -79,5 +79,8 @@ void drop(char* nombre_tabla);
 
 void correrScript(void);
 
+void retardarLfs();
+void retardarMem();
+
 #endif /* POOLMEMORIAS_H_ */
 

@@ -73,7 +73,7 @@ t_config* g_config;
 t_list* tabla_segmentos;
 t_list* tabla_paginas_global;
 
-
+int memoryNumber;
 int posLibres;
 char pathDirectorio[256];
 
@@ -108,5 +108,9 @@ pthread_mutex_t mConexion;
 pthread_mutex_t mConexionKernel;
 pthread_mutex_t mJournal;
 pthread_mutex_t mMemYo;
+
+//Retardos
+pthread_mutex_t mRJournal,mRGossip,mRMem,mRLfs;
+
 
 #endif /* GLOBALES_H_ */

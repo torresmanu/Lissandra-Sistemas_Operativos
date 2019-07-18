@@ -12,6 +12,10 @@ int main(void) {
 	pthread_mutex_init(&mExit,NULL);
 	pthread_mutex_init(&mTablas,NULL);
 	pthread_mutex_init(&mPool,NULL);
+	pthread_mutex_init(&mQuantum,NULL);
+	pthread_mutex_init(&mMetaRefresh,NULL);
+	pthread_mutex_init(&mSleepExec,NULL);
+
 
 	iniciar_programa();
 
@@ -76,19 +80,25 @@ void iniciar_programa(void)
 	iniciarEstados();
 
 	//Obtengo el quantum
+	pthread_mutex_lock(&mQuantum);
 	quantum = config_get_int_value(g_config,"QUANTUM");
+	pthread_mutex_unlock(&mQuantum);
 
 	//Nivel de multiprocesamiento
 	nivelMultiprocesamiento = config_get_int_value(g_config,"MULTIPROCESAMIENTO");
 
 	//Tasa de refresh de la metada
+	pthread_mutex_lock(&mMetaRefresh);
 	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
+	pthread_mutex_unlock(&mMetaRefresh);
 
 	//Tasa de refresh de la metada
 	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
 
 	//Tiempo de pausa en la ejecucion
+	pthread_mutex_lock(&mSleepExec);
 	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
+	pthread_mutex_unlock(&mSleepExec);
 
 	//Pongo el WATCH en el directorio del kernel
 	getcwd(pathDirectorioActual, sizeof(pathDirectorioActual));
@@ -243,9 +253,12 @@ void ejecutador(char* idEjecutador){ // ACTUA COMO ESTADO EXEC
 		if(deboSalir(s)) // ACA PUEDE ESTAR ROMPIENDO
 			return;
 
+		pthread_mutex_lock(&mQuantum);
 		for(int i=0; i < quantum ;i++) //ver caso en que falla, ejecutarS podria retornar un estado
 		{
+			pthread_mutex_lock(&mSleepExec);
 			usleep(sleepEjecucion*1000);
+			pthread_mutex_unlock(&mSleepExec);
 
 			e = ejecutarScript(s,idEjecutador);
 
@@ -279,6 +292,8 @@ void ejecutador(char* idEjecutador){ // ACTUA COMO ESTADO EXEC
 			}
 
 		}
+		pthread_mutex_unlock(&mQuantum);
+
 		if(e.resultado == OK && !terminoScript(s)){
 			log_info(g_logger,"Fin de quantum, vuelvo a ready");
 			mandarAready(s);
@@ -310,7 +325,9 @@ void realizarDescribeGlobal()
 {
 	while(1)
 	{
+		pthread_mutex_lock(&mMetaRefresh);
 		usleep(metadataRefresh*1000);
+		pthread_mutex_unlock(&mMetaRefresh);
 
 		pthread_mutex_lock(&mPool);
 		establecerConexionPool(idDescribe);
@@ -594,16 +611,36 @@ void controlConfig()
 
 void actualizarRetardos()
 {
-	// Un problema de sincronización
-
 	config_destroy(g_config);
 	g_config = config_create("Kernel.config");
 
-	// Obtengo los nuevos valores
-	quantum = config_get_int_value(g_config,"QUANTUM");
-	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
-	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
+	while(g_config==NULL){
+		g_config = config_create("Kernel.config");
+	}
 
+	while(!config_has_property(g_config,"QUANTUM")){
+		config_destroy(g_config);
+		g_config = config_create("Kernel.config");
+	}
+	pthread_mutex_lock(&mQuantum);
+	quantum = config_get_int_value(g_config,"QUANTUM");
+	pthread_mutex_unlock(&mQuantum);
+
+	while(!config_has_property(g_config,"METADATA_REFRESH")){
+		config_destroy(g_config);
+		g_config = config_create("Kernel.config");
+	}
+	pthread_mutex_lock(&mMetaRefresh);
+	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
+	pthread_mutex_unlock(&mMetaRefresh);
+
+	while(!config_has_property(g_config,"SLEEP_EJECUCION")){
+		config_destroy(g_config);
+		g_config = config_create("Kernel.config");
+	}
+	pthread_mutex_lock(&mSleepExec);
+	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
+	pthread_mutex_unlock(&mSleepExec);
 }
 
 ////////////////////////////////////////////////////

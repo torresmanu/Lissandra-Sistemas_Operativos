@@ -11,6 +11,10 @@
 // Semaforos
 pthread_mutex_t usoConfig;
 pthread_mutex_t mTablas;
+pthread_mutex_t mQuantum;
+pthread_mutex_t mMetaRefresh;
+pthread_mutex_t mSleepExec;
+
 
 //las puse aca para que no me rompa, buscar un lugar mejor
 t_log* g_logger;
