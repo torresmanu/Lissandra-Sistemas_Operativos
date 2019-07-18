@@ -90,5 +90,7 @@ void mostrarMemoryLoad(void*);
 void limpiarMetricasMemoria(void*);
 void limpiarMetricasCriterio(Criterio*);
 
+void verde();
+void reset();
 
 #endif /* KERNEL_H_ */

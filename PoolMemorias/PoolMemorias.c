@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 }
 
 void escucharConexiones(){
-	int conexion_servidor = iniciarServidor();
+	conexion_servidor = iniciarServidor();
 
 	struct sockaddr_in cliente;
 	socklen_t longc = sizeof(cliente);
@@ -1217,6 +1217,8 @@ void actualizarRegistro(Pagina *pagina,char *value,uint64_t timestamp){
 
 void terminar_programa()
 {
+
+	close(conexion_servidor);
 
 	pthread_cancel(threadJournal);
 	pthread_cancel(threadGossiping);

@@ -186,6 +186,14 @@ void agregarScriptAEstado(void* elem, nombreEstado estado)  // Aca hace las comp
 	}
 }
 
+void verde(){
+  printf("\033[1;32m");
+}
+
+void reset(){
+  printf("\033[0m");
+}
+
 void leerConsola()
 {
 	printf("\nBienvenido! Welcome! Youkoso!\n");
@@ -284,9 +292,9 @@ void ejecutador(char* idEjecutador){ // ACTUA COMO ESTADO EXEC
 			}
 
 			if (terminoScript(s)) {
-				printf("\n");
-				log_info(g_logger, "Termino script");
-				printf("\n");
+				verde();
+				printf("Termino script\n");
+				reset();
 				mandarAexit(s);
 				break;
 			}

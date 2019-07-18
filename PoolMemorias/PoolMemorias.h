@@ -16,6 +16,7 @@
 #define EVENT_SIZE  (sizeof(struct inotify_event))
 #define BUF_LEN     (1024 * (EVENT_SIZE + 16))
 
+int conexion_servidor;
 
 void monitorearConfig();
 bool iniciar_programa();
