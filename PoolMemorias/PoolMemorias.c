@@ -252,6 +252,9 @@ int iniciarServidor() {
 	servidor.sin_port = htons(puerto);
 	servidor.sin_addr.s_addr = INADDR_ANY;
 
+	int aceptar = 1;
+	setsockopt(conexion_servidor, SOL_SOCKET, SO_REUSEADDR, &aceptar, sizeof(int));
+
 	if(bind(conexion_servidor, (struct sockaddr *)&servidor, sizeof(servidor)) < 0) {
 		log_error(g_logger,"Error al asociar el puerto a la conexion. Posiblemente el puerto se encuentre ocupado");
 	    close(conexion_servidor);
@@ -831,9 +834,12 @@ void consola(){
 			res.resultado=EnJOURNAL;
 			res.mensaje = NULL;
 		}
-		else
+		else{
+			pthread_mutex_lock(&mJournal);
 			res = parsear_mensaje(&resParser);
+			pthread_mutex_unlock(&mJournal);
 
+		}
 		if(res.resultado == OK)
 		{
 			log_info(g_logger,res.mensaje);
