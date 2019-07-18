@@ -11,6 +11,7 @@ int main(void) {
 	pthread_mutex_init(&mReady,NULL);
 	pthread_mutex_init(&mExit,NULL);
 	pthread_mutex_init(&mTablas,NULL);
+	pthread_mutex_init(&mPool,NULL);
 
 	iniciar_programa();
 
@@ -303,8 +304,12 @@ void realizarDescribeGlobal()
 {
 	while(1)
 	{
-		usleep(metadataRefresh*1000); // Lo paso a ms
+		usleep(metadataRefresh*1000);
+
+		pthread_mutex_lock(&mPool);
 		establecerConexionPool(idDescribe);
+		pthread_mutex_unlock(&mPool);
+
 		describe(NULL,idDescribe);
 	}
 }
@@ -313,8 +318,11 @@ void realizarGossipingAutomatico(){
 
 	while(1){
 		usleep(retardoGossiping*1000);
+
+		pthread_mutex_lock(&mPool);
 		establecerConexionPool(idGossiping);
 		gossiping();
+		pthread_mutex_unlock(&mPool);
 	}
 }
 
@@ -360,13 +368,10 @@ resultado describe(char* nombreTabla,char* id)
 
 	pthread_mutex_lock(&(mem->mutexConex));
 	int *conexion = dictionary_get(mem->conexiones,id);
-	pthread_mutex_unlock(&(mem->mutexConex));
-
-
 	send(*conexion, msg, size, 0);
-	// Pido el describe a la memoria
 	char* buffer = malloc(sizeof(int));
 	valueResponse = recv(*conexion,buffer,sizeof(int),0);
+	pthread_mutex_unlock(&(mem->mutexConex));
 
 	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
 
@@ -474,8 +479,8 @@ int gestionarConexionAMemoria(Memoria* mem,char* id)
 	if(*conex!=-1)
 		return *conex;
 
-	if(mem->estado==0)
-		return -1;
+//	if(mem->estado==0)
+//		return -1;
 
 	struct addrinfo hints;
 	struct addrinfo* serverInfo;
@@ -494,7 +499,7 @@ int gestionarConexionAMemoria(Memoria* mem,char* id)
 
 	if(res == -1)
 	{
-		log_error(g_logger, "Memoria N° %d inaccesible: %s",mem->id, strerror(errno));
+//		log_error(g_logger, "Memoria N° %d inaccesible: %s",mem->id, strerror(errno));
 	}
 	else
 	{

@@ -100,10 +100,12 @@ bool conectarMemoria(Memoria* mem){
 	freeaddrinfo(serverInfo);	// No lo necesitamos mas
 
 	if(status ==-1){
+		pthread_mutex_lock(&mMemoriasConocidas);
 		close(mem->socket);
 		mem->socket=-1;
 		mem->estado=0;
 		ponerTimestampActual(mem);
+		pthread_mutex_unlock(&mMemoriasConocidas);
 		return false;
 	}
 
@@ -152,7 +154,12 @@ int recibirYmandar(int socket){
 int mandarTabla(int socket){
 	uint32_t totalSize;
 
+	pthread_mutex_lock(&mMemoriasConocidas);
+	pthread_mutex_lock(&mMemYo);
 	ponerTimestampActual(yo);
+	pthread_mutex_unlock(&mMemYo);
+	pthread_mutex_unlock(&mMemoriasConocidas);
+
 
 	pthread_mutex_lock(&mMemoriasConocidas);
 	char *tablaSerializada = serializarTabla(&totalSize);

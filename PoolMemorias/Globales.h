@@ -107,5 +107,6 @@ pthread_mutex_t mBitmap;
 pthread_mutex_t mConexion;
 pthread_mutex_t mConexionKernel;
 pthread_mutex_t mJournal;
+pthread_mutex_t mMemYo;
 
 #endif /* GLOBALES_H_ */

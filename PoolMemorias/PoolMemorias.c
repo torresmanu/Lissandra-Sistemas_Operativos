@@ -425,13 +425,16 @@ bool iniciar_programa()
 	pthread_mutex_unlock(&mMemoriasConocidas);
 
 	yo = malloc(sizeof(Memoria));
+	pthread_mutex_init(&mMemYo,NULL);
 
+	pthread_mutex_lock(&mMemYo);
 	yo->ip = config_get_string_value(g_config,"IP_PROPIA");;
 	yo->puerto=config_get_string_value(g_config,"PUERTO");
 	yo->numero = config_get_int_value(g_config,"MEMORY_NUMBER");
 	yo->socket=-1;
 	yo->estado = 1;
 	ponerTimestampActual(yo);
+	pthread_mutex_unlock(&mMemYo);
 
 	iniciarTablaSeeds();
 
