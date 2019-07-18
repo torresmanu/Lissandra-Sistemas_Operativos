@@ -253,19 +253,13 @@ void conectarMemorias(void* elem){
 			pthread_mutex_lock(&(mem->mEstado));
 			if(mem->estado==1){
 				int resultado = gestionarConexionAMemoria(mem,id);
-				if(resultado<0)
-					sacarMemoria(mem);
 			}
-			else
-				sacarMemoria(mem);
 			pthread_mutex_unlock(&(mem->mEstado));
 
 		}
-
 		pthread_mutex_lock(&(crit->mutex));
 		list_iterate(crit->memorias,conectar);
 		pthread_mutex_unlock(&(crit->mutex));
-
 	}
 
 	list_iterate(criterios,conectarAsociadas);

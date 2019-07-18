@@ -245,6 +245,8 @@ void ejecutador(char* idEjecutador){ // ACTUA COMO ESTADO EXEC
 
 		for(int i=0; i < quantum ;i++) //ver caso en que falla, ejecutarS podria retornar un estado
 		{
+			usleep(sleepEjecucion*1000);
+
 			e = ejecutarScript(s,idEjecutador);
 
 			// Describe automatico post create
@@ -257,6 +259,10 @@ void ejecutador(char* idEjecutador){ // ACTUA COMO ESTADO EXEC
 			if (e.resultado == OK){
 				log_info(g_logger,"%s", e.mensaje);
 			}
+
+//			if(e.mensaje!=NULL)
+//				free(e.mensaje);
+
 			else if(e.resultado == ERROR){
 				log_error(g_logger, "Error en request n°: %d", s->pc);
 				log_error(g_logger, "Request abortada");
@@ -271,7 +277,7 @@ void ejecutador(char* idEjecutador){ // ACTUA COMO ESTADO EXEC
 				mandarAexit(s);
 				break;
 			}
-			usleep(sleepEjecucion*1000);
+
 		}
 		if(e.resultado == OK && !terminoScript(s)){
 			log_info(g_logger,"Fin de quantum, vuelvo a ready");
@@ -379,11 +385,13 @@ resultado describe(char* nombreTabla,char* id)
 	{
 		log_error(g_logger,strerror(errno));
 		res.resultado = ERROR;
+		res.mensaje=NULL;
 	}
 	else if(valueResponse == 0)
 	{
 		log_error(g_logger,"Posiblemente la memoria se desconectó.");
 		res.resultado = MEMORIA_CAIDA;
+		res.mensaje=NULL;
 
 		pthread_mutex_lock(&(mem->mEstado));
 		sacarMemoria(mem);
@@ -397,6 +405,7 @@ resultado describe(char* nombreTabla,char* id)
 
 		if(statusRespuesta<0 || res.resultado == ERROR)
 			{
+				res.mensaje=NULL;
 				log_error(g_logger,"Describe fallido");
 			}
 			else

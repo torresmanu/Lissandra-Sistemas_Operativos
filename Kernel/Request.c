@@ -88,6 +88,7 @@ resultado ejecutar(Criterio* criterio, resultadoParser* request,char* id){
 	if(mem == NULL){
 		log_info(g_logger, "No hay memorias disponibles");
 		res.resultado = ERROR;
+		res.mensaje=NULL;
 
 	}
 	else{
@@ -109,9 +110,10 @@ resultado ejecutar(Criterio* criterio, resultadoParser* request,char* id){
 		if(res.resultado==FULL){
 			enviarJournal(mem,id);
 			res = enviarRequest(mem, request,id);
+			res.mensaje=NULL;
 		}
 		if(res.resultado == MEMORIA_CAIDA){
-			enviarRequest(mem,request,id);
+			res = enviarRequest(mem,request,id);
 		}
 	}
 	return res;
@@ -134,7 +136,7 @@ resultado recibir(int conexion){
 	}
 	else if(valueResponse == 0)
 	{	res.resultado = MEMORIA_CAIDA;
-		log_error(g_logger, "Posible desconexión de memoria.");
+		res.mensaje = NULL;
 	}
 	else
 	{
@@ -174,6 +176,7 @@ resultado enviarRequest(Memoria* mem, resultadoParser* request,char* id)
 	int enviado = send(conexion, msg, size, 0);
 	if(enviado<=0){
 		res.resultado = MEMORIA_CAIDA;
+		res.mensaje=NULL;
 	}
 	res = recibir(conexion);
 
@@ -181,6 +184,7 @@ resultado enviarRequest(Memoria* mem, resultadoParser* request,char* id)
 		pthread_mutex_lock(&(mem->mEstado));
 		sacarMemoria(mem);
 		pthread_mutex_unlock(&(mem->mEstado));
+		res.mensaje=NULL;
 
 	}
 	return res;
@@ -392,12 +396,6 @@ void enviarJournal(void* element,char* id){
 	resultado res = recibir(conexion);
 	res.contenido = NULL;
 	free(pi);
-
-	if(res.resultado==MEMORIA_CAIDA){
-		pthread_mutex_lock(&(mem->mEstado));
-		sacarMemoria(mem);
-		pthread_mutex_unlock(&(mem->mEstado));
-	}
 
 	free(res.mensaje);
 	if(res.contenido!=NULL)
