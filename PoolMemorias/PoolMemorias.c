@@ -831,9 +831,12 @@ void consola(){
 			res.resultado=EnJOURNAL;
 			res.mensaje = NULL;
 		}
-		else
+		else{
+			pthread_mutex_lock(&mJournal);
 			res = parsear_mensaje(&resParser);
+			pthread_mutex_unlock(&mJournal);
 
+		}
 		if(res.resultado == OK)
 		{
 			log_info(g_logger,res.mensaje);
