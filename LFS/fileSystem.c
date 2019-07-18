@@ -440,6 +440,8 @@ void compactarTabla(char* tabla){
 			}else{
 				cantidadACompactar ++;
 			}
+			free(tmpPath);
+			free(tmpcPath);
 		}
 	}
 

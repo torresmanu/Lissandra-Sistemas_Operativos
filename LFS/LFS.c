@@ -231,6 +231,7 @@ resultado select_acc(char* tabla,uint16_t key)
 	}
 
 	free(metadata.consistency);
+	free(metadata.nombreTabla);
 
 	//Paso 3: Escanear la partición objetivo, todos los archivos temporales
 	//y la memoria temporal de dicha tabla (si existe) buscando la key deseada.
