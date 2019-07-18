@@ -62,6 +62,7 @@ int iniciar_programa()
 
 	sem_init(&semaforo,0,1);
 	sem_init(&semaforoMemtable,0,1);
+	sem_init(&semaforoMetadata,0,1);
 
 	//Inicializo el FS Propio
 	int status = inicializarFSPropio();
@@ -345,7 +346,7 @@ resultado describe(char* tabla)
 	res.accionEjecutar = DESCRIBE;
 
 	t_list* listaMetadata;
-
+	sem_wait(&semaforoMetadata);
 	if(tabla != NULL){
 		if(existeMetadata(tabla) == 0){
 			listaMetadata = list_create();
@@ -380,7 +381,7 @@ resultado describe(char* tabla)
 		res.mensaje = "Ok.";
 		res.resultado = OK;
 	}
-
+	sem_post(&semaforoMetadata);
 	return res;
 }
 

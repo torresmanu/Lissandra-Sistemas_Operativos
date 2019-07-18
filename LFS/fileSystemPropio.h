@@ -42,4 +42,5 @@ void deserializarRegistro(char* strReg,registro* reg);
 
 sem_t semaforo;
 
+
 #endif /* FILESYSTEM_H_ */

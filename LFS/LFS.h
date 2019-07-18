@@ -43,6 +43,7 @@ int tamValue;
 int tamanioBloque;
 char* puntoMontaje;
 char* magicNumber;
+sem_t semaforoMetadata;
 
 typedef struct {
 	char* nombreTabla;
