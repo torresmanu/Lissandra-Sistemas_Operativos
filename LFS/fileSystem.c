@@ -25,14 +25,19 @@ registro* obtenerRegistroDeArchivoPropio(fs_file* file, int key){
 			if(reg == NULL){
 				reg = malloc(sizeof(registro));
 				memcpy(reg,auxReg,sizeof(registro));
+				break;
 			}
 			//Si ya tengo un registro comparo los timestamp
 			else if(auxReg->timestamp > reg->timestamp){
 				memcpy(reg,auxReg,sizeof(registro));
+				break;
 			}
 		}
+		free(auxReg->value);
 	}
-
+	if(auxReg != NULL){
+		free(auxReg);
+	}
 	return reg;
 }
 
@@ -129,7 +134,7 @@ registro* fs_select_partition(char* nombreTabla, int key, int partition){
 	//FILE* partitionFile = fopen(partitionPath,"r");
 	//Abro el archivo para el FS propio
 	fs_file* partitionFile = fs_fopen(partitionPath);
-  free(partitionPath);
+	free(partitionPath);
 	//Si el file es null significa que no encuentro la particion
 	if(partitionFile == NULL){
 		return NULL;
@@ -167,7 +172,7 @@ registro* fs_select_temporal(char* nombreTabla, int key){
 			//FILE* temporalFile = fopen(temporalPath,"r");
 			//Abro el archivo del FS propio
 			fs_file* temporalFile = fs_fopen(temporalPath);
-      free(temporalPath);
+			free(temporalPath);
 			//Si el file es null significa que no encuentro el archivo
 			if(temporalFile != NULL){
 				//Obtengo el registro para el FS Ubuntu
@@ -189,6 +194,11 @@ registro* fs_select_temporal(char* nombreTabla, int key){
 		}
 	}
 	closedir(tabledir);
+	free(tablesPath);
+	if(regAux != NULL){
+		free(regAux->value);
+		free(regAux);
+	}
 	return reg;
 }
 
@@ -363,6 +373,7 @@ int fs_create_tmp(char* tabla,t_list* regList){
 		}
 		i++;
 	}
+	free(tablesPath);
 
 	//Creo el archivo para el FS Ubuntu
 	/*FILE* file = fopen(strUltimoTemp,"w");

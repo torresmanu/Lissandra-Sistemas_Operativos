@@ -83,6 +83,7 @@ int obtenerSiguienteBloque(){
 	char* fsBitmapPath = string_duplicate(puntoMontaje);
 	string_append(&fsBitmapPath,"/metadata/bitmap.bin");
 	FILE* f = fopen(fsBitmapPath,"r+");
+	free(fsBitmapPath);
 	//Si f no es null entonces el archivo ya existe
 	if(f == NULL){
 		return -2;
@@ -231,9 +232,12 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 	//Calculo en que bloque esta el registro
 	int posBloqueInicial = position*size/tamanioBloque;
 	int posBloqueInicialRel = position*size-posBloqueInicial*tamanioBloque;
-	char * bloque;
+	char * bloque = NULL;
 	//Obtengo el bloque calculado anteriormente
 	for(int i= 0;i<=posBloqueInicial;i++){
+		if(bloque != NULL){
+			free(bloque);
+		}
 		bloque = string_duplicate(fs->bloques[i]);
 	}
 	//Abro el archivo bloque
@@ -244,6 +248,7 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 	string_append(&bloquePath,bloque);
 	string_append(&bloquePath,".bin");
 	FILE* fBloque = fopen(bloquePath,"r");
+	free(bloquePath);
 	if(fBloque == NULL){
 		resultado = NULL;
 		log_error(g_logger,"[fs_fread]Devuelvo NULL");
@@ -259,7 +264,11 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 	fclose(fBloque);
 	//Chequeo si me quedo algo por leer
 	if(posBloqueInicialRel+size>tamanioBloque){
+		bloque = NULL;
 		for(int i= 0;i<=posBloqueInicial+1;i++){
+			if(bloque != NULL){
+				free(bloque);
+			}
 			bloque = string_duplicate(fs->bloques[i]);
 		}
 		//Abro el archivo bloque
@@ -270,6 +279,7 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 		string_append(&bloquePathFinal,bloque);
 		string_append(&bloquePathFinal,".bin");
 		FILE* fBloqueFinal = fopen(bloquePathFinal,"r");
+		free(bloquePathFinal);
 		if(fBloqueFinal == NULL){
 			resultado = NULL;
 			log_error(g_logger,"[fs_fread]Devuelvo NULL");
@@ -285,7 +295,11 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 		fclose(fBloqueFinal);
 	}
 	if(size>tamanioBloque*2-posBloqueInicialRel){
+		bloque = NULL;
 		for(int i= 0;i<=posBloqueInicial+2;i++){
+			if(bloque != NULL){
+				free(bloque);
+			}
 			bloque = string_duplicate(fs->bloques[i]);
 		}
 		//Abro el archivo bloque
@@ -296,6 +310,7 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 		string_append(&bloquePathFinal2,bloque);
 		string_append(&bloquePathFinal2,".bin");
 		FILE* fBloqueFinal2 = fopen(bloquePathFinal2,"r");
+		free(bloquePathFinal2);
 		if(fBloqueFinal2 == NULL){
 			resultado = NULL;
 			log_error(g_logger,"[fs_fread]Devuelvo NULL");
@@ -307,6 +322,7 @@ void fs_fread(fs_file* fs,registro* resultado,int position){
 		fclose(fBloqueFinal2);
 	}
 	deserializarRegistro(buffer,resultado);
+	free(buffer);
 	pthread_mutex_unlock(&semaforo);
 }
 
@@ -337,6 +353,7 @@ int fs_fprint(fs_file* fs, registro* obj){
 		string_append(&bloquePath,strUltimoBloque);
 		string_append(&bloquePath,".bin");
 		FILE* fBloque = fopen(bloquePath,"a");
+		free(bloquePath);
 		if(fBloque == NULL){
 			pthread_mutex_unlock(&semaforo);
 			return -2;
@@ -390,6 +407,7 @@ int fs_fprint(fs_file* fs, registro* obj){
 		string_append(&bloquePathFinal,strUltimoBloque);
 		string_append(&bloquePathFinal,".bin");
 		FILE* fBloqueFinal = fopen(bloquePathFinal,"a");
+		free(bloquePathFinal);
 		if(fBloqueFinal == NULL){
 			pthread_mutex_unlock(&semaforo);
 			return -2;
@@ -443,6 +461,7 @@ int fs_fprint(fs_file* fs, registro* obj){
 		string_append(&bloquePathFinal2,strUltimoBloque);
 		string_append(&bloquePathFinal2,".bin");
 		FILE* fBloqueFinal2 = fopen(bloquePathFinal2,"a");
+		free(bloquePathFinal2);
 		if(fBloqueFinal2 == NULL){
 			pthread_mutex_unlock(&semaforo);
 			return -2;
@@ -466,6 +485,7 @@ int fs_fprint(fs_file* fs, registro* obj){
 	config_set_value(f,"SIZE",strSize);
 	config_save(f);
 	config_destroy(f);
+	free(buffer);
 	pthread_mutex_unlock(&semaforo);
 	return 0;
 }
