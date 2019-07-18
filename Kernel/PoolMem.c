@@ -101,16 +101,12 @@ void inicializarMemoria(Memoria* memNueva){
 	int centinela=-1;
 	int* conexion = malloc(sizeof(centinela));
 	memcpy(conexion,&centinela,sizeof(centinela));
-	pthread_mutex_lock(&(memNueva->mutexConex));
 	dictionary_put(memNueva->conexiones,idGossiping,conexion);
-	pthread_mutex_unlock(&(memNueva->mutexConex));
 
 	int centi=-1;
 	int* conex = malloc(sizeof(centi));
 	memcpy(conex,&centi,sizeof(centi));
-	pthread_mutex_lock(&(memNueva->mutexConex));
 	dictionary_put(memNueva->conexiones,idDescribe,conex);
-	pthread_mutex_unlock(&(memNueva->mutexConex));
 
 	inicializarConexiones(memNueva);
 
@@ -163,8 +159,10 @@ void obtenerMemoriaDescribe()
 
 	MemDescribe = malloc(sizeof(Memoria));
 	MemDescribe->id = 22;
-	MemDescribe->ipMemoria = config_get_string_value(g_config,"IP_MEMORIA");
-	MemDescribe->puerto = config_get_string_value(g_config, "PUERTO_MEMORIA");
+	char* auxip = config_get_string_value(g_config,"IP_MEMORIA");
+	MemDescribe->ipMemoria = strdup(auxip);
+	char* auxPuerto = config_get_string_value(g_config, "PUERTO_MEMORIA");
+	MemDescribe->puerto = strdup(auxPuerto);
 	MemDescribe->insertsTotales = 0;
 	MemDescribe->selectsTotales = 0;
 	MemDescribe->totalOperaciones = 0;
@@ -216,8 +214,9 @@ void gossiping(){
 
 			break;
 		}
-		else
+		else{
 			*conexion=-1;
+		}
 	}
 	if(status<0)
 		log_warning(g_logger,"No hay memorias activas para hacer gossiping");
@@ -256,19 +255,13 @@ void conectarMemorias(void* elem){
 			pthread_mutex_lock(&(mem->mEstado));
 			if(mem->estado==1){
 				int resultado = gestionarConexionAMemoria(mem,id);
-				if(resultado<0)
-					sacarMemoria(mem);
 			}
-			else
-				sacarMemoria(mem);
 			pthread_mutex_unlock(&(mem->mEstado));
 
 		}
-
 		pthread_mutex_lock(&(crit->mutex));
 		list_iterate(crit->memorias,conectar);
 		pthread_mutex_unlock(&(crit->mutex));
-
 	}
 
 	list_iterate(criterios,conectarAsociadas);
@@ -324,7 +317,7 @@ void establecerConexionPool(char* id)
 	for(int i = 0; i<pool->elements_count; i++)
 	{
 		mem = list_get(pool,i);
-
+		log_info(g_logger,"memoria num: %d", mem->id);
 		pthread_mutex_lock(&(mem->mutexConex));
 		int* conexion=dictionary_get(mem->conexiones,id);
 		pthread_mutex_unlock(&(mem->mutexConex));

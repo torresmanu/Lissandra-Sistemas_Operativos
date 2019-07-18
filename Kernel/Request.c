@@ -88,6 +88,7 @@ resultado ejecutar(Criterio* criterio, resultadoParser* request,char* id){
 	if(mem == NULL){
 		log_info(g_logger, "No hay memorias disponibles");
 		res.resultado = ERROR;
+		res.mensaje=NULL;
 
 	}
 	else{
@@ -109,9 +110,10 @@ resultado ejecutar(Criterio* criterio, resultadoParser* request,char* id){
 		if(res.resultado==FULL){
 			enviarJournal(mem,id);
 			res = enviarRequest(mem, request,id);
+			res.mensaje=NULL;
 		}
 		if(res.resultado == MEMORIA_CAIDA){
-			enviarRequest(mem,request,id);
+			res = enviarRequest(mem,request,id);
 		}
 	}
 	return res;
@@ -134,7 +136,7 @@ resultado recibir(int conexion){
 	}
 	else if(valueResponse == 0)
 	{	res.resultado = MEMORIA_CAIDA;
-		log_error(g_logger, "Posible desconexión de memoria.");
+		res.mensaje = NULL;
 	}
 	else
 	{
@@ -174,6 +176,7 @@ resultado enviarRequest(Memoria* mem, resultadoParser* request,char* id)
 	int enviado = send(conexion, msg, size, 0);
 	if(enviado<=0){
 		res.resultado = MEMORIA_CAIDA;
+		res.mensaje=NULL;
 	}
 	res = recibir(conexion);
 
@@ -181,6 +184,7 @@ resultado enviarRequest(Memoria* mem, resultadoParser* request,char* id)
 		pthread_mutex_lock(&(mem->mEstado));
 		sacarMemoria(mem);
 		pthread_mutex_unlock(&(mem->mEstado));
+		res.mensaje=NULL;
 
 	}
 	return res;
@@ -228,7 +232,6 @@ resultado ejecutarRequest(resultadoParser *r,char* id)
 			if(r->accionEjecutar == INSERT && ((contenidoInsert*)(r->contenido))->timestamp == 0){
 				gettimeofday(&te, NULL);
 				((contenidoInsert*)(r->contenido))->timestamp = te.tv_sec*1000LL + te.tv_usec/1000;
-				printf("TIMESTAMP insertado %"PRIu64"\n",((contenidoInsert*)(r->contenido))->timestamp);
 			}
 
 			estado = ejecutar(cons,r,id); // EJECUTO
@@ -390,13 +393,8 @@ void enviarJournal(void* element,char* id){
 
 	send(conexion, pi, size_to_send, 0);
 	resultado res = recibir(conexion);
+	res.contenido = NULL;
 	free(pi);
-
-	if(res.resultado==MEMORIA_CAIDA){
-		pthread_mutex_lock(&(mem->mEstado));
-		sacarMemoria(mem);
-		pthread_mutex_unlock(&(mem->mEstado));
-	}
 
 	free(res.mensaje);
 	if(res.contenido!=NULL)

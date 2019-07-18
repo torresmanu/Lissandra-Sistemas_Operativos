@@ -11,6 +11,11 @@ int main(void) {
 	pthread_mutex_init(&mReady,NULL);
 	pthread_mutex_init(&mExit,NULL);
 	pthread_mutex_init(&mTablas,NULL);
+	pthread_mutex_init(&mPool,NULL);
+	pthread_mutex_init(&mQuantum,NULL);
+	pthread_mutex_init(&mMetaRefresh,NULL);
+	pthread_mutex_init(&mSleepExec,NULL);
+
 
 	iniciar_programa();
 
@@ -75,19 +80,25 @@ void iniciar_programa(void)
 	iniciarEstados();
 
 	//Obtengo el quantum
+	pthread_mutex_lock(&mQuantum);
 	quantum = config_get_int_value(g_config,"QUANTUM");
+	pthread_mutex_unlock(&mQuantum);
 
 	//Nivel de multiprocesamiento
 	nivelMultiprocesamiento = config_get_int_value(g_config,"MULTIPROCESAMIENTO");
 
 	//Tasa de refresh de la metada
+	pthread_mutex_lock(&mMetaRefresh);
 	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
+	pthread_mutex_unlock(&mMetaRefresh);
 
 	//Tasa de refresh de la metada
 	retardoGossiping = config_get_int_value(g_config,"RETARDO_GOSSIPING");
 
 	//Tiempo de pausa en la ejecucion
+	pthread_mutex_lock(&mSleepExec);
 	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
+	pthread_mutex_unlock(&mSleepExec);
 
 	//Pongo el WATCH en el directorio del kernel
 	getcwd(pathDirectorioActual, sizeof(pathDirectorioActual));
@@ -175,6 +186,14 @@ void agregarScriptAEstado(void* elem, nombreEstado estado)  // Aca hace las comp
 	}
 }
 
+void verde(){
+  printf("\033[1;32m");
+}
+
+void reset(){
+  printf("\033[0m");
+}
+
 void leerConsola()
 {
 	printf("\nBienvenido! Welcome! Youkoso!\n");
@@ -242,8 +261,13 @@ void ejecutador(char* idEjecutador){ // ACTUA COMO ESTADO EXEC
 		if(deboSalir(s)) // ACA PUEDE ESTAR ROMPIENDO
 			return;
 
+		pthread_mutex_lock(&mQuantum);
 		for(int i=0; i < quantum ;i++) //ver caso en que falla, ejecutarS podria retornar un estado
 		{
+			pthread_mutex_lock(&mSleepExec);
+			usleep(sleepEjecucion*1000);
+			pthread_mutex_unlock(&mSleepExec);
+
 			e = ejecutarScript(s,idEjecutador);
 
 			// Describe automatico post create
@@ -257,6 +281,10 @@ void ejecutador(char* idEjecutador){ // ACTUA COMO ESTADO EXEC
 				if(e.mensaje!=NULL)
 					log_info(g_logger,"%s", e.mensaje);
 			}
+
+//			if(e.mensaje!=NULL)
+//				free(e.mensaje);
+
 			else if(e.resultado == ERROR){
 				log_error(g_logger, "Error en request n°: %d", s->pc);
 				log_error(g_logger, "Request abortada");
@@ -265,14 +293,16 @@ void ejecutador(char* idEjecutador){ // ACTUA COMO ESTADO EXEC
 			}
 
 			if (terminoScript(s)) {
-				printf("\n");
-				log_info(g_logger, "Termino script");
-				printf("\n");
+				verde();
+				printf("Termino script\n");
+				reset();
 				mandarAexit(s);
 				break;
 			}
-			usleep(sleepEjecucion*1000);
+
 		}
+		pthread_mutex_unlock(&mQuantum);
+
 		if(e.resultado == OK && !terminoScript(s)){
 			log_info(g_logger,"Fin de quantum, vuelvo a ready");
 			mandarAready(s);
@@ -304,8 +334,14 @@ void realizarDescribeGlobal()
 {
 	while(1)
 	{
-		usleep(metadataRefresh*1000); // Lo paso a ms
+		pthread_mutex_lock(&mMetaRefresh);
+		usleep(metadataRefresh*1000);
+		pthread_mutex_unlock(&mMetaRefresh);
+
+		pthread_mutex_lock(&mPool);
 		establecerConexionPool(idDescribe);
+		pthread_mutex_unlock(&mPool);
+
 		describe(NULL,idDescribe);
 	}
 }
@@ -314,8 +350,11 @@ void realizarGossipingAutomatico(){
 
 	while(1){
 		usleep(retardoGossiping*1000);
+
+		pthread_mutex_lock(&mPool);
 		establecerConexionPool(idGossiping);
 		gossiping();
+		pthread_mutex_unlock(&mPool);
 	}
 }
 
@@ -361,13 +400,10 @@ resultado describe(char* nombreTabla,char* id)
 
 	pthread_mutex_lock(&(mem->mutexConex));
 	int *conexion = dictionary_get(mem->conexiones,id);
-	pthread_mutex_unlock(&(mem->mutexConex));
-
-
 	send(*conexion, msg, size, 0);
-	// Pido el describe a la memoria
 	char* buffer = malloc(sizeof(int));
 	valueResponse = recv(*conexion,buffer,sizeof(int),0);
+	pthread_mutex_unlock(&(mem->mutexConex));
 
 	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
 
@@ -375,11 +411,13 @@ resultado describe(char* nombreTabla,char* id)
 	{
 		log_error(g_logger,strerror(errno));
 		res.resultado = ERROR;
+		res.mensaje=NULL;
 	}
 	else if(valueResponse == 0)
 	{
 		log_error(g_logger,"Posiblemente la memoria se desconectó.");
 		res.resultado = MEMORIA_CAIDA;
+		res.mensaje=NULL;
 
 		pthread_mutex_lock(&(mem->mEstado));
 		sacarMemoria(mem);
@@ -393,6 +431,7 @@ resultado describe(char* nombreTabla,char* id)
 
 		if(statusRespuesta<0 || res.resultado == ERROR)
 			{
+				res.mensaje=NULL;
 				log_error(g_logger,"Describe fallido");
 			}
 			else
@@ -475,8 +514,8 @@ int gestionarConexionAMemoria(Memoria* mem,char* id)
 	if(*conex!=-1)
 		return *conex;
 
-	if(mem->estado==0)
-		return -1;
+//	if(mem->estado==0)
+//		return -1;
 
 	struct addrinfo hints;
 	struct addrinfo* serverInfo;
@@ -495,7 +534,7 @@ int gestionarConexionAMemoria(Memoria* mem,char* id)
 
 	if(res == -1)
 	{
-		log_error(g_logger, "Memoria N° %d inaccesible: %s",mem->id, strerror(errno));
+//		log_error(g_logger, "Memoria N° %d inaccesible: %s",mem->id, strerror(errno));
 	}
 	else
 	{
@@ -581,16 +620,36 @@ void controlConfig()
 
 void actualizarRetardos()
 {
-	// Un problema de sincronización
-
 	config_destroy(g_config);
 	g_config = config_create("Kernel.config");
 
-	// Obtengo los nuevos valores
-	quantum = config_get_int_value(g_config,"QUANTUM");
-	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
-	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
+	while(g_config==NULL){
+		g_config = config_create("Kernel.config");
+	}
 
+	while(!config_has_property(g_config,"QUANTUM")){
+		config_destroy(g_config);
+		g_config = config_create("Kernel.config");
+	}
+	pthread_mutex_lock(&mQuantum);
+	quantum = config_get_int_value(g_config,"QUANTUM");
+	pthread_mutex_unlock(&mQuantum);
+
+	while(!config_has_property(g_config,"METADATA_REFRESH")){
+		config_destroy(g_config);
+		g_config = config_create("Kernel.config");
+	}
+	pthread_mutex_lock(&mMetaRefresh);
+	metadataRefresh = config_get_int_value(g_config,"METADATA_REFRESH");
+	pthread_mutex_unlock(&mMetaRefresh);
+
+	while(!config_has_property(g_config,"SLEEP_EJECUCION")){
+		config_destroy(g_config);
+		g_config = config_create("Kernel.config");
+	}
+	pthread_mutex_lock(&mSleepExec);
+	sleepEjecucion = config_get_int_value(g_config,"SLEEP_EJECUCION");
+	pthread_mutex_unlock(&mSleepExec);
 }
 
 ////////////////////////////////////////////////////

@@ -29,6 +29,8 @@ pthread_mutex_t mNew;
 pthread_mutex_t mReady;
 pthread_mutex_t mExit;
 pthread_mutex_t mConfiguracion;
+pthread_mutex_t mPool;
+
 
 // VARIABLES DEL CONFIG
 int quantum; 					// Cantidad de Scripts en el estado EXEC
@@ -88,5 +90,7 @@ void mostrarMemoryLoad(void*);
 void limpiarMetricasMemoria(void*);
 void limpiarMetricasCriterio(Criterio*);
 
+void verde();
+void reset();
 
 #endif /* KERNEL_H_ */
