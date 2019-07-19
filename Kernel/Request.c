@@ -390,13 +390,10 @@ void enviarJournal(void* element,char* id){
 
 	pthread_mutex_lock(&(mem->mutexConex));
 	int conexion = obtenerConexion(mem,id);
-	log_warning(g_logger, "Conexion: %d", conexion);
-	log_warning(g_logger, "Memoria ID: %d", mem->id);
 	if(conexion<0)
 		return;
 
 	int i = send(conexion, pi, size_to_send, 0);
-	log_warning(g_logger, "Cantidad enviada: %d", i);
 	resultado res = recibir(conexion);
 
 	if(res.resultado==MEMORIA_CAIDA){
