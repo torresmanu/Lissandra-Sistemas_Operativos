@@ -393,6 +393,7 @@ resultado describe(char* nombreTabla,char* id)
 			res.contenido=NULL;
 			res.mensaje=NULL;
 			res.resultado=ERROR;
+			pthread_mutex_unlock(&mTablas);
 			return res;
 		}
 	}

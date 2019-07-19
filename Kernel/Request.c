@@ -207,7 +207,7 @@ resultado ejecutarScript(Script *s,char* id){
 
 	resultadoParser *r = list_get(s->instrucciones,s->pc);
 
-	printf("Va por la request N°: %d\n", s->pc);
+	printf("Va por la request N°: %d\n", (s->pc + 1));
 	resultado estado = ejecutarRequest(r,id);
 
 	(s->pc)++;
@@ -265,6 +265,7 @@ resultado ejecutarRequest(resultadoParser *r,char* id)
 		}
 		else{
 			log_error(g_logger, "No se encontró la tabla");
+			estado.mensaje = string_duplicate("No se encontró la tabla");
 			estado.resultado=ERROR;
 		}
 	}
