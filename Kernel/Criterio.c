@@ -15,16 +15,19 @@ void iniciarCriterios(){
 	//list_add(sc.memorias,criterioSC());  Directamente la inicializo con la unica memoria que puede tener y asignada por archivo de configuración?
 	iniciarEstadisticas(sc);
 	pthread_mutex_init(&(sc.mutex),NULL);
+	pthread_mutex_init(&(sc.mMetricsC),NULL);
 
 	shc.tipo = SHC;
 	shc.memorias = list_create();
 	iniciarEstadisticas(shc);
 	pthread_mutex_init(&(shc.mutex),NULL);
+	pthread_mutex_init(&(shc.mMetricsC),NULL);
 
 	ec.tipo = EC;
 	ec.memorias = list_create();
 	iniciarEstadisticas(ec);
 	pthread_mutex_init(&(ec.mutex),NULL);
+	pthread_mutex_init(&(ec.mMetricsC),NULL);
 
 
 	criterios = list_create();
@@ -36,11 +39,14 @@ void iniciarCriterios(){
 
 void iniciarEstadisticas(Criterio c)
 {
+	pthread_mutex_lock(&(c.mMetricsC));
 	c.amountReads = 0;
 	c.amountTotales = 0;
 	c.amountWrites = 0;
 	c.timeTotalReads = 0;
 	c.timeTotalWrites = 0;
+	pthread_mutex_unlock(&(c.mMetricsC));
+
 }
 
 void liberarCriterios(){

@@ -691,6 +691,7 @@ void mostrarMetrics(Criterio* crit)
 
 	// Metricas de read and writes
 	log_info(g_logger, "Métricas del criterio: %s", mostrarConsistencia(crit->tipo));
+	pthread_mutex_lock(&(crit->mMetricsC));
 	log_info(g_logger, "Reads / 30s %s: %d", mostrarConsistencia(crit->tipo), crit->amountReads);
 	log_info(g_logger, "Writes / 30s %s: %d", mostrarConsistencia(crit->tipo), crit->amountWrites);
 	if(crit->amountReads == 0)
@@ -715,6 +716,8 @@ void mostrarMetrics(Criterio* crit)
 	// Dejo en cero todooo
 	limpiarMetricasCriterio(crit);
 
+	pthread_mutex_unlock(&(crit->mMetricsC));
+
 	pthread_mutex_lock(&(crit->mutex));
 	list_iterate(crit->memorias,limpiarMetricasMemoria);
 	pthread_mutex_unlock(&(crit->mutex));
@@ -724,6 +727,8 @@ void mostrarMetrics(Criterio* crit)
 void mostrarMemoryLoad(void* elem)
 {
 	Memoria* mem = (Memoria*)elem;
+	pthread_mutex_lock(&(mem->mMetricsM));
+
 	if(mem->totalOperaciones > 0)
 	{
 		int load = ((mem->insertsTotales + mem->selectsTotales) * 100) / mem->totalOperaciones;
@@ -733,8 +738,10 @@ void mostrarMemoryLoad(void* elem)
 	{
 		log_info(g_logger, "Memory Load (Memoria %zu): %d%%", mem->id, 0);
 	}
-}
+	pthread_mutex_unlock(&(mem->mMetricsM));
 
+}
+//no meter mutexs adentro
 void limpiarMetricasCriterio(Criterio* c)
 {
 	c->amountReads = 0;
@@ -747,8 +754,11 @@ void limpiarMetricasCriterio(Criterio* c)
 void limpiarMetricasMemoria(void * elem)
 {
 	Memoria* mem = (Memoria*)elem;
+	pthread_mutex_lock(&(mem->mMetricsM));
 	mem->insertsTotales = 0;
 	mem->selectsTotales = 0;
 	mem->totalOperaciones = 0;
+	pthread_mutex_unlock(&(mem->mMetricsM));
+
 }
 
