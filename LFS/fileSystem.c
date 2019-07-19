@@ -195,10 +195,10 @@ registro* fs_select_temporal(char* nombreTabla, int key){
 	}
 	closedir(tabledir);
 	free(tablesPath);
-	if(regAux != NULL){
-		free(regAux->value);
-		free(regAux);
-	}
+//	if(regAux != NULL){
+//		free(regAux->value);
+//		free(regAux);
+//	}
 	return reg;
 }
 
