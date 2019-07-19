@@ -144,7 +144,8 @@ resultado recibir(int conexion){
 
 	if(valueResponse < 0)
 	{
-		res.resultado=ERROR;
+		res.resultado = MEMORIA_CAIDA;
+		res.mensaje = NULL;
 		log_error(g_logger,"Error al recibir los datos.");
 	}
 	else if(valueResponse == 0)
