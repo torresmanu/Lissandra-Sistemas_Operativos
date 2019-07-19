@@ -96,6 +96,7 @@ void inicializarMemoria(Memoria* memNueva){
 	memNueva->totalOperaciones = 0;
 	pthread_mutex_init(&(memNueva->mutexConex),NULL);
 	pthread_mutex_init(&(memNueva->mEstado),NULL);
+	pthread_mutex_init(&(memNueva->mMetricsM),NULL);
 	memNueva->conexiones = dictionary_create();
 
 	int centinela=-1;
@@ -168,6 +169,7 @@ void obtenerMemoriaDescribe()
 	MemDescribe->totalOperaciones = 0;
 	pthread_mutex_init(&(MemDescribe->mutexConex),NULL);
 	pthread_mutex_init(&(MemDescribe->mEstado),NULL);
+	pthread_mutex_init(&(MemDescribe->mMetricsM),NULL);
 	MemDescribe->conexiones = dictionary_create();
 	pthread_mutex_lock(&(MemDescribe->mEstado));
 	MemDescribe->estado=1;

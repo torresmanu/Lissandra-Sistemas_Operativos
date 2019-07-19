@@ -97,14 +97,27 @@ resultado ejecutar(Criterio* criterio, resultadoParser* request,char* id){
 
 		// Para las metricas
 		if(res.resultado == OK && request->accionEjecutar == SELECT){
+			pthread_mutex_lock(&(mem->mMetricsM));
 			(mem->selectsTotales)++;
+			pthread_mutex_unlock(&(mem->mMetricsM));
+
+			pthread_mutex_lock(&(criterio->mMetricsC));
 			(criterio->amountReads)++;
+			pthread_mutex_unlock(&(criterio->mMetricsC));
 		}
 		else if(res.resultado == OK && request->accionEjecutar == INSERT){
+			pthread_mutex_lock(&(mem->mMetricsM));
 			(mem->insertsTotales)++;
+			pthread_mutex_unlock(&(mem->mMetricsM));
+
+			pthread_mutex_lock(&(criterio->mMetricsC));
 			(criterio->amountWrites)++;
+			pthread_mutex_unlock(&(criterio->mMetricsC));
+
 		}
+		pthread_mutex_lock(&(mem->mMetricsM));
 		(mem->totalOperaciones)++;
+		pthread_mutex_unlock(&(mem->mMetricsM));
 
 		// Si esta llena..
 		if(res.resultado==FULL){
@@ -201,8 +214,10 @@ resultado ejecutarScript(Script *s,char* id){
 	return estado;
 }
 
-void contabilizarTiempo(Criterio* c, resultadoParser* r, long tiempo)
+void contabilizarTiempo(Criterio* c, resultadoParser* r, uint64_t tiempo)
 {
+	pthread_mutex_lock(&(c->mMetricsC));
+
 	if(r->accionEjecutar == SELECT)
 	{
 		c->timeTotalReads += tiempo;
@@ -211,6 +226,8 @@ void contabilizarTiempo(Criterio* c, resultadoParser* r, long tiempo)
 	{
 		c->timeTotalWrites += tiempo;
 	}
+	pthread_mutex_unlock(&(c->mMetricsC));
+
 }
 
 resultado ejecutarRequest(resultadoParser *r,char* id)
@@ -224,6 +241,7 @@ resultado ejecutarRequest(resultadoParser *r,char* id)
 			log_info(g_logger,"Uso la tabla: %s",tabla->nombreTabla);
 			Criterio* cons = toConsistencia(tabla->consistency);
 			struct timeval te;
+			uint64_t tInicio,tFinal,tTotal;
 			if(r->accionEjecutar == SELECT || r->accionEjecutar == INSERT)
 			{
 				gettimeofday(&te, NULL);

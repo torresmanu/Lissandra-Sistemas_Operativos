@@ -33,6 +33,7 @@ typedef struct{
 	int insertsTotales;
 	pthread_mutex_t mutexConex;
 	pthread_mutex_t mEstado;
+	pthread_mutex_t mMetricsM;
 	uint16_t estado;
 	uint64_t timestamp;
 }Memoria;
@@ -48,6 +49,7 @@ typedef struct{
 	int amountWrites;
 	int amountTotales;
 	pthread_mutex_t mutex;
+	pthread_mutex_t mMetricsC;
 }Criterio;
 
 Criterio sc,shc,ec;
