@@ -323,7 +323,7 @@ void establecerConexionPool(char* id)
 		pthread_mutex_unlock(&(mem->mutexConex));
 
 		pthread_mutex_lock(&(mem->mEstado));
-		if(!estoyConectado(conexion)){
+		if(!estoyConectado(conexion) || mem->estado == 0){
 			int res = gestionarConexionAMemoria(mem,id);
 			if(res<0)
 				sacarMemoria(mem);
