@@ -512,7 +512,7 @@ int gestionarConexionAMemoria(Memoria* mem,char* id)
 	int* conex = dictionary_get(mem->conexiones,id);
 	pthread_mutex_unlock(&(mem->mutexConex));
 
-	if(*conex!=-1)
+	if(*conex!=-1 && mem->estado == 1)
 		return *conex;
 
 //	if(mem->estado==0)

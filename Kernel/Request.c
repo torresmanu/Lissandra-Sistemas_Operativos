@@ -409,12 +409,26 @@ void enviarJournal(void* element,char* id){
 
 	pthread_mutex_lock(&(mem->mutexConex));
 	int conexion = obtenerConexion(mem,id);
+	if(conexion<0)
+		return;
+
+	int i = send(conexion, pi, size_to_send, 0);
+	resultado res = recibir(conexion);
+
+	if(res.resultado==MEMORIA_CAIDA){
+		pthread_mutex_lock(&(mem->mEstado));
+		mem->estado=0;
+		ponerTimestampActual(mem);
+		int* conex = dictionary_get(mem->conexiones,id);
+		*conex=-1;
+		pthread_mutex_unlock(&(mem->mEstado));
+		res.mensaje = NULL;
+	}
+
 	pthread_mutex_unlock(&(mem->mutexConex));
 
-	send(conexion, pi, size_to_send, 0);
-	resultado res = recibir(conexion);
 	res.contenido = NULL;
-	free(pi);
+	//free(pi);
 
 	free(res.mensaje);
 	if(res.contenido!=NULL)
@@ -425,6 +439,18 @@ void enviarJournal(void* element,char* id){
 resultado journal(char* id){
 
 	void enviarJournal2(void* elem){
+		Memoria* mem = elem;
+		pthread_mutex_lock(&(mem->mEstado));
+		if(mem->estado==0){
+			pthread_mutex_lock(&(mem->mutexConex));
+			int* conex = dictionary_get(mem->conexiones,id);
+			*conex=-1;
+			pthread_mutex_unlock(&(mem->mutexConex));
+			pthread_mutex_unlock(&(mem->mEstado));
+			return;
+		}
+		pthread_mutex_unlock(&(mem->mEstado));
+
 		enviarJournal(elem,id);
 	}
 
