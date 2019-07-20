@@ -207,7 +207,6 @@ resultado select_acc(char* tabla,uint16_t key)
 {
 	//Chequeo que no este bloqueada la tabla
 	bloquearTabla(tabla);
-	liberarBloqueoTabla(tabla);
 
 	resultado res;
 	res.accionEjecutar = SELECT;
@@ -221,6 +220,7 @@ resultado select_acc(char* tabla,uint16_t key)
 		res.contenido = NULL;
 		res.mensaje="La tabla no existe.";
 		res.resultado=ERROR;
+		liberarBloqueoTabla(tabla);
 		return res;
 	}
 
@@ -238,7 +238,7 @@ resultado select_acc(char* tabla,uint16_t key)
 	registro* regMemTable = memtable_select(tabla,key);
 	registro* regFs = fs_select(tabla,key,particion);
 	//Paso 4: Comparo la de mayor timestamp
-
+	liberarBloqueoTabla(tabla);
 	if(regMemTable == NULL && regFs == NULL){
 		res.contenido = NULL;
 		log_info(g_logger,"No se encontro el registro");
