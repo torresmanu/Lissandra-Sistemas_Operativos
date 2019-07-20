@@ -273,8 +273,14 @@ void ejecutador(char* idEjecutador){ // ACTUA COMO ESTADO EXEC
 			// Describe automatico post create
 			if(e.accionEjecutar == CREATE)
 			{
-				describe(NULL,idEjecutador);
+				resultadoParser r;
+				r.accionEjecutar=DESCRIBE;
+				contenidoDescribe* cont=malloc(sizeof(contenidoDescribe));
+				cont->nombreTabla=NULL;
+				r.contenido=cont;
+				ejecutarRequest(&r,idEjecutador);
 			}
+
 
 			//Logueo el resultado
 			if (e.resultado == OK){

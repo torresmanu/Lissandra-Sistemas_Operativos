@@ -62,9 +62,9 @@ char* obtenerMetadataPath(char* nombreTabla){
 }
 
 char* obtenerTablePath(){
-	char* puntoMontura = getStringConfig("PUNTO_MONTAJE");
+	char* puntoMontura = puntoMontaje;
 	char* metadataPath= string_new();
-	string_append(&metadataPath, puntoMontura);
+	string_append(&metadataPath, puntoMontaje);
 	string_append(&metadataPath, "/tables/");
 	return metadataPath;
 }
