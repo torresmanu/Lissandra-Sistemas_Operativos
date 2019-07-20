@@ -126,7 +126,8 @@ resultado ejecutar(Criterio* criterio, resultadoParser* request,char* id){
 			res.mensaje=NULL;
 		}
 		if(res.resultado == MEMORIA_CAIDA){
-			res = enviarRequest(mem,request,id);
+//			res = enviarRequest(mem,request,id);
+			res = ejecutar(criterio,request,id);
 		}
 	}
 	return res;
@@ -307,10 +308,12 @@ resultado ejecutarRequest(resultadoParser *r,char* id)
 			}
 			case DESCRIBE:
 			{
+				pthread_mutex_lock(&mTablas);
 				contenidoDescribe* cont = r->contenido;
 				estado = describe(cont->nombreTabla,id);
 				if(estado.resultado == MEMORIA_CAIDA)
-					ejecutarRequest(r,id);
+					describe(cont->nombreTabla,id);
+				pthread_mutex_unlock(&mTablas);
 
 				break;
 			}

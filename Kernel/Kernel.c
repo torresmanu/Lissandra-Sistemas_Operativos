@@ -342,7 +342,9 @@ void realizarDescribeGlobal()
 		establecerConexionPool(idDescribe);
 		pthread_mutex_unlock(&mPool);
 
+		pthread_mutex_lock(&mTablas);
 		describe(NULL,idDescribe);
+		pthread_mutex_unlock(&mTablas);
 	}
 }
 
@@ -372,7 +374,6 @@ resultado describe(char* nombreTabla,char* id)
 	contenidoDescribe* cd = malloc(sizeof(contenidoDescribe));
 	cd->nombreTabla = nombreTabla;
 	describe->contenido = cd;
-	pthread_mutex_lock(&mTablas);
 
 	Memoria* mem;
 	if(cd->nombreTabla!=NULL){
@@ -393,7 +394,6 @@ resultado describe(char* nombreTabla,char* id)
 			res.contenido=NULL;
 			res.mensaje=NULL;
 			res.resultado=ERROR;
-			pthread_mutex_unlock(&mTablas);
 			return res;
 		}
 	}
@@ -408,13 +408,24 @@ resultado describe(char* nombreTabla,char* id)
 
 	memcpy(&acc,buffer,sizeof(int));								// Me fijo que accion para saber como deserializar
 
-	if(valueResponse < 0)
-	{
-		log_error(g_logger,strerror(errno));
-		res.resultado = ERROR;
-		res.mensaje=NULL;
-	}
-	else if(valueResponse == 0)
+//	if(valueResponse < 0)
+//	{
+//		log_error(g_logger,strerror(errno));
+//		res.resultado = ERROR;
+//		res.mensaje=NULL;
+//	}
+//	else if(valueResponse == 0)
+//	{
+//		log_error(g_logger,"Posiblemente la memoria se desconectó.");
+//		res.resultado = MEMORIA_CAIDA;
+//		res.mensaje=NULL;
+//
+//		pthread_mutex_lock(&(mem->mEstado));
+//		sacarMemoria(mem);
+//		pthread_mutex_unlock(&(mem->mEstado));
+//
+//	}
+	if(valueResponse <= 0)
 	{
 		log_error(g_logger,"Posiblemente la memoria se desconectó.");
 		res.resultado = MEMORIA_CAIDA;
@@ -474,7 +485,7 @@ resultado describe(char* nombreTabla,char* id)
 				res.resultado = OK;
 			}
 	}
-	pthread_mutex_unlock(&mTablas);
+//	pthread_mutex_unlock(&mTablas);
 
 	free(buffer);
 	free(describe);
