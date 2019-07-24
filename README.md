@@ -1,5 +1,11 @@
 # tp-2019-1c-creativOS
 
+## Enunciado:
+https://docs.google.com/document/d/1QlzXwpSvI5ua2lbO8pF6ZgjlgMndFlwzlAci7qhZmqE/edit#
+
+## Pruebas finales:
+https://docs.google.com/document/d/1m_V2AXpfo8SpeOr330Rwj3uKIe-GHJ3VNfO38FNNc6Q/edit#
+
 ## Pasos previos a levantar los proyectos en Eclipse:
 1. Si ya estaban instaladas algunas commons en el sistema, pararse en la carpeta de esas commons y ejecutar `sudo make uninstall`
 
